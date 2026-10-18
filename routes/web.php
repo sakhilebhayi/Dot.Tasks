@@ -49,6 +49,9 @@ Route::middleware([
 
     Route::get('/labels', fn () => view('labels.index'))->name('labels.index');
 
+    // Deleted tasks: list and restore (admins and the owner restore)
+    Route::get('/removed', fn () => view('removed.index'))->name('removed.index');
+
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 
     Route::get('/escalations', fn () => view('escalations.index'))->name('escalations.index');

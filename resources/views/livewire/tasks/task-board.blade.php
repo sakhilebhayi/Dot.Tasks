@@ -40,7 +40,7 @@
                         @endcan
                         @can('delete', $archived)
                             <button type="button" wire:click="deleteTask({{ $archived->id }}, true)"
-                                    wire:confirm="Delete &quot;{{ $archived->title }}&quot; and any subtasks? It cannot be restored from the app."
+                                    wire:confirm="Delete &quot;{{ $archived->title }}&quot; and any subtasks? An admin or the owner can restore it from Removed."
                                     class="px-3 py-1 text-xs font-medium border-0 text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">Delete</button>
                         @endcan
                     </div>

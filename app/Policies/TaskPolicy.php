@@ -75,6 +75,19 @@ class TaskPolicy
         return $this->update($user, $task);
     }
 
+    /**
+     * Bring a DELETED task back from the Removed page: as strong an act as deleting it, so admins
+     * and the owner only. (restore() above is the editor-level "un-archive".) The board is looked up
+     * with archived boards included, because a deleted task on an archived board is still the
+     * team's to restore once the board is.
+     */
+    public function restoreDeleted(User $user, Task $task): bool
+    {
+        $board = TaskList::withArchived()->with('team')->find($task->task_list_id);
+
+        return $this->holds($user, $board?->team, 'delete');
+    }
+
     /** Deleting is for admins and the owner. */
     public function delete(User $user, Task $task): bool
     {

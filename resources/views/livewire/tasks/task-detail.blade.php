@@ -202,7 +202,7 @@
                                 @else
                                     Delete this task?
                                 @endif
-                                It disappears for everyone and cannot be restored from the app.
+                                It disappears for everyone. An admin or the owner can restore it from Removed.
                             </p>
                             <div class="flex gap-2">
                                 <button type="button" wire:click="deleteTask(true)" class="px-3 py-1.5 text-sm font-medium border-0 text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>

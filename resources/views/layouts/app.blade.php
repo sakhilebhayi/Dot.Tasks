@@ -225,6 +225,7 @@
                 <span class="material-symbols-rounded nav-icon">sell</span>
                 Labels
             </a>
+            <a href="{{ route('removed.index') }}" class="nav-item {{ request()->routeIs('removed.index') ? 'active' : '' }}"><span class="material-symbols-rounded nav-icon">restore_from_trash</span> Removed</a>
             <div class="sidebar-divider" style="margin:10px 0;"></div>
             <a href="{{ route('profile.show') }}" class="nav-item {{ request()->routeIs('profile.show') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">manage_accounts</span>

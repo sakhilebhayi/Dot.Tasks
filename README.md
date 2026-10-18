@@ -30,6 +30,7 @@ Dot.Tasks is the personal and team task management platform in the InfoDot ecosy
 - Team labels (admins manage them from a fixed colour palette, editors put them on tasks)
 - Task assignment, scoped server-side to the task's team; assignee and labels can be set when the task is created
 - Archive (reversible, with an Archived list) and soft delete for tasks, archive for boards; subtasks are handled explicitly and need a confirmation
+- A **Removed** page for deleted tasks: admins and the owner restore them (see Removed tasks below); a daily purge deletes them for good after 90 days
 - Comments with `@Full Name` mentions of team members; mentioned people, the task's assignee and its creator are notified once each (never the author, never anyone outside the team)
 - "Blocked by" dependencies between tasks on one board: no loops, and a blocked task cannot be moved to Done until its blockers are done
 - Escalation queue for tasks more than 7 days overdue (the list owner approves or rejects)
@@ -49,7 +50,7 @@ Roles are Jetstream team roles. An InfoDot `viewer` signs in here as `viewer`; o
 |---|---|---|---|
 | Read boards and tasks | yes | yes | yes |
 | Create boards and tasks; move, assign, label, comment, archive and restore tasks | | yes | yes |
-| Delete tasks, archive boards, create/rename/recolour/delete labels | | | yes |
+| Delete tasks, archive boards, create/rename/recolour/delete labels; restore deleted tasks from Removed | | | yes |
 
 ## Domain Models
 
@@ -155,7 +156,7 @@ php artisan serve
    php artisan queue:work redis --tries=3 --timeout=90
    ```
 
-7. **Run the scheduler.** Three jobs run from `routes/console.php`: `tasks:check-due-soon` (07:00, notifies assignees of tasks due within two days), `tasks:detect-escalation-candidates` (07:30, proposes escalating tasks more than 7 days overdue) and `tasks:publish-metrics` (02:10 UTC, sends daily aggregate numbers to Dot.Analytics once configured, see below). Laravel only runs them if something calls the scheduler every minute. Without it **no due-soon reminders are sent and nothing is proposed for escalation**, and no error says so. Use `deploy/scheduler.cron` (cron) or `deploy/scheduler.service` + `deploy/scheduler.timer` (systemd), which run:
+7. **Run the scheduler.** Four jobs run from `routes/console.php`: `tasks:check-due-soon` (07:00, notifies assignees of tasks due within two days), `tasks:detect-escalation-candidates` (07:30, proposes escalating tasks more than 7 days overdue), `tasks:purge-removed` (03:10 UTC, deletes tasks removed for more than `REMOVED_RETENTION_DAYS` days, see Removed tasks below) and `tasks:publish-metrics` (02:10 UTC, sends daily aggregate numbers to Dot.Analytics once configured, see below). Laravel only runs them if something calls the scheduler every minute. Without it **no due-soon reminders are sent and nothing is proposed for escalation**, and no error says so. Use `deploy/scheduler.cron` (cron) or `deploy/scheduler.service` + `deploy/scheduler.timer` (systemd), which run:
    ```bash
    * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
    ```
@@ -308,6 +309,24 @@ What is sent for a company (company = a team linked to InfoDot, not a personal t
 - Safe to repeat: `taken_at` is the start of the UTC day, and Analytics treats the same company, platform, `taken_at` and period as one snapshot, so a re-run or a retry the same day cannot double count.
 - Analytics can never break or slow this app: 5 second timeout, no redirects followed, 3 tries with backoff (60 s, then 5 min), every failure caught and logged without the body or the secret, and after 5 failures in a row calls pause for 60 seconds (a cache-based circuit breaker). A snapshot that cannot be delivered is simply replaced by the next day's.
 - Requests are signed with HMAC-SHA256 over `"{timestamp}.{raw body}"` (`X-InfoDot-Timestamp`, `X-InfoDot-Signature: sha256=<hex>`), made at send time so a retry carries a fresh timestamp.
+
+### Removed tasks
+
+Deleting a task is soft: the row stays, marked deleted. **Removed** in the sidebar (`/removed`) lists every task the current company has deleted, newest first, with a type filter (tasks / subtasks), a board filter, search (title and description) and pagination. It shows when a task was deleted, not who deleted it: nothing records that. (Archived tasks and boards are a different, reversible state with their own Restore buttons: a board's Archived list and the dashboard.)
+
+**Restoring** (admins and the owner only; editors and viewers see the list but no Restore button, and the call answers 403):
+
+- A subtask cannot come back while its parent task is still deleted or archived, and no task can come back while its board is archived. The page names what to restore first ("Restore the parent task Quarterly stock count first") and the restore is refused with the same message if forced. The topmost deleted ancestor is the one named.
+- Restoring a task also brings back the subtasks (any depth) deleted in the same delete. `TaskArchiveService::delete()` stamps the whole cascade with one `deleted_at`, so "deleted with it" is an exact match on that stamp; a subtask deleted on its own earlier stays removed and is restored separately.
+- A task that was archived before it was deleted comes back still archived (restore it from the board's Archived list).
+- Nothing is replayed: no notification is sent, no recurrence is spawned. Dependent state is re-derived: an assignee who has left the team is cleared; blockers that are still deleted do not block (the relations already leave deleted tasks out), a restored blocker blocks its waiting tasks again and the notice says how many; a restored recurring task resumes its series when it is next completed. Open boards refresh live.
+- Each restore appends one row to `record_restorations` (company, user, task id, a title snapshot, how many subtasks came back). The model refuses to update or delete a row.
+
+**Permanent deletion.** There is no button for it. `php artisan tasks:purge-removed` runs daily at 03:10 UTC and hard-deletes tasks deleted more than `REMOVED_RETENTION_DAYS` days ago (default 90, minimum 1; the command refuses to run with less).
+
+- A purged task takes all its subtasks with it, whatever their own age (the database cascades them anyway). A task with a live subtask beneath it is kept, as are its ancestors, so a live row is never deleted by the cascade. A task that a live task still points at as the head of its recurring series is kept too, because deleting it would rewrite that live task. Comments, label links, dependency links, escalation proposals and AI logs of a purged task go with it; labels and users are never touched.
+- `--dry-run` reports exactly what a real run would delete (it executes the deletes in a transaction and rolls it back) and changes nothing. A second run deletes nothing. Each run logs one `tasks.purge-removed` line with the cutoff, the counts purged and the counts kept.
+- The scheduler must be running (see the deployment checklist). Set `REMOVED_RETENTION_DAYS` in `.env` to change the window. `record_restorations` rows are kept.
 
 ### Real-Time Health Check
 
