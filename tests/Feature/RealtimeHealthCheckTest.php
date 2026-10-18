@@ -39,10 +39,7 @@ class RealtimeHealthCheckTest extends TestCase
         fclose($server);
 
         $response->assertOk()
-            ->assertJsonPath('status', 'ok')
-            ->assertJsonPath('checks.broadcasting_config.status', 'ok')
-            ->assertJsonPath('checks.queue_connection.status', 'ok')
-            ->assertJsonPath('checks.reverb_process.status', 'ok');
+            ->assertJsonPath('status', 'ok');
     }
 
     public function test_reports_degraded_when_broadcast_driver_is_not_reverb(): void
@@ -51,8 +48,7 @@ class RealtimeHealthCheckTest extends TestCase
 
         $this->getJson('/up/realtime')
             ->assertStatus(503)
-            ->assertJsonPath('status', 'degraded')
-            ->assertJsonPath('checks.broadcasting_config.status', 'fail');
+            ->assertJsonPath('status', 'degraded');
     }
 
     public function test_reports_degraded_when_reverb_credentials_are_missing(): void
@@ -66,8 +62,7 @@ class RealtimeHealthCheckTest extends TestCase
         ]);
 
         $this->getJson('/up/realtime')
-            ->assertStatus(503)
-            ->assertJsonPath('checks.broadcasting_config.status', 'fail');
+            ->assertStatus(503);
     }
 
     public function test_reports_degraded_when_reverb_process_is_unreachable(): void
@@ -82,8 +77,7 @@ class RealtimeHealthCheckTest extends TestCase
 
         $this->getJson('/up/realtime')
             ->assertStatus(503)
-            ->assertJsonPath('status', 'degraded')
-            ->assertJsonPath('checks.reverb_process.status', 'fail');
+            ->assertJsonPath('status', 'degraded');
     }
 
     public function test_reports_degraded_when_redis_queue_connection_is_unreachable(): void
@@ -96,7 +90,17 @@ class RealtimeHealthCheckTest extends TestCase
         ]);
 
         $this->getJson('/up/realtime')
-            ->assertStatus(503)
-            ->assertJsonPath('checks.queue_connection.status', 'fail');
+            ->assertStatus(503);
+    }
+
+    public function test_public_response_exposes_only_the_overall_status(): void
+    {
+        config(['broadcasting.default' => 'log', 'queue.default' => 'database']);
+
+        $response = $this->getJson('/up/realtime')->assertStatus(503);
+
+        $this->assertSame(['status' => 'degraded'], $response->json());
+        $this->assertStringNotContainsString('BROADCAST_CONNECTION', $response->getContent());
+        $this->assertStringNotContainsString('127.0.0.1', $response->getContent());
     }
 }

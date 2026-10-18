@@ -6,6 +6,8 @@ use App\Events\TaskBoardUpdated;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Services\TaskRecurrenceService;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
@@ -62,6 +64,12 @@ class TaskBoard extends Component
     public function moveTask(int $taskId, string $newStatus): void
     {
         $this->authorize('update', $this->taskList);
+
+        // A tampered client can send any string here; reject anything that is
+        // not a real status instead of letting the enum column 500.
+        Validator::make(['newStatus' => $newStatus], [
+            'newStatus' => ['required', Rule::in(Task::STATUSES)],
+        ])->validate();
 
         $task = Task::findOrFail($taskId);
         abort_unless($task->task_list_id === $this->taskList->id, 403);

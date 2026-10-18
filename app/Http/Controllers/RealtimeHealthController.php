@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Redis;
 
 /**
@@ -34,10 +35,14 @@ class RealtimeHealthController extends Controller
 
         $healthy = collect($checks)->every(fn (array $check) => $check['status'] === 'ok');
 
-        return response()->json([
-            'status' => $healthy ? 'ok' : 'degraded',
-            'checks' => $checks,
-        ], $healthy ? 200 : 503);
+        // This route is unauthenticated, so the response is only ok/degraded.
+        // Per-check detail (config values, hosts/ports, exception messages)
+        // goes to the log for on-call instead of to anyone who asks.
+        if (! $healthy) {
+            Log::warning('Realtime health check degraded', ['checks' => $checks]);
+        }
+
+        return response()->json(['status' => $healthy ? 'ok' : 'degraded'], $healthy ? 200 : 503);
     }
 
     private function checkBroadcastingConfig(): array

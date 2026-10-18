@@ -41,7 +41,7 @@ class SmartViews extends Component
         return $this->teamTaskQuery()
             ->whereDate('due_date', '<=', Carbon::today())
             ->orderBy('due_date')
-            ->orderBy('priority')
+            ->orderByPriorityRank()
             ->get();
     }
 
@@ -76,9 +76,7 @@ class SmartViews extends Component
 
     private function teamTaskQuery()
     {
-        $teamId = auth()->user()->currentTeam->id;
-
-        return Task::whereHas('taskList', fn ($q) => $q->where('team_id', $teamId))
+        return Task::forTeam(auth()->user()->currentTeam)
             ->whereNotNull('due_date')
             ->where('status', '!=', 'done')
             ->with(['taskList', 'assignee', 'labels']);

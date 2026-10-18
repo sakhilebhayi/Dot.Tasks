@@ -10,6 +10,8 @@ use App\Notifications\NewCommentNotification;
 use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
 use App\Services\TaskRecurrenceService;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -76,6 +78,10 @@ class TaskDetail extends Component
         // the request payload by primary key, so this guards against a
         // tampered request pointing at another team's task.
         $this->authorize('update', $this->task);
+
+        Validator::make(['status' => $status], [
+            'status' => ['required', Rule::in(Task::STATUSES)],
+        ])->validate();
 
         $this->task->update(['status' => $status]);
 
@@ -149,11 +155,15 @@ class TaskDetail extends Component
         $this->breaking = true;
         $this->aiError = null;
 
-        $service = app(AiTaskBreakdownService::class);
-        $result = $service->breakdown($this->task, auth()->id());
+        $result = app(AiTaskBreakdownService::class)->breakdown($this->task, auth()->id());
 
-        if ($result === null) {
-            $this->aiError = 'AI breakdown failed. Please try again.';
+        if ($result['source'] !== AiTaskBreakdownService::SOURCE_AI) {
+            // Never fall back to canned subtasks: say plainly that the AI is
+            // unavailable and create nothing.
+            $this->aiError = match ($result['reason'] ?? null) {
+                'not_configured' => 'AI breakdown unavailable: no API key is configured.',
+                default => 'AI breakdown unavailable: the AI service did not return a usable answer. Please try again later.',
+            };
             $this->breaking = false;
 
             return;

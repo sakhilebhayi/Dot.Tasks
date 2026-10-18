@@ -54,7 +54,7 @@ Route::middleware([
             ->orderBy('sort_order')
             ->get();
 
-        $teamTasks = fn () => Task::whereHas('taskList', fn ($q) => $q->where('team_id', $team->id));
+        $teamTasks = fn () => Task::forTeam($team);
 
         $taskCounts = [
             'todo' => $teamTasks()->where('status', 'todo')->count(),

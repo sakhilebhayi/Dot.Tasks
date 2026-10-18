@@ -36,6 +36,9 @@ class TaskPolicy
      */
     public function escalate(User $user, Task $task): bool
     {
-        return $user->id === $task->taskList->owner_id;
+        $taskList = $task->taskList;
+
+        return $user->id === $taskList->owner_id
+            && $user->belongsToTeam($taskList->team);
     }
 }

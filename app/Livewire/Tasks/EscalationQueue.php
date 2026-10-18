@@ -18,8 +18,18 @@ class EscalationQueue extends Component
     #[Computed]
     public function pendingProposals(): Collection
     {
+        $team = auth()->user()->currentTeam;
+
+        if (! $team) {
+            return collect();
+        }
+
+        // Scoped to the current team (tenant boundary) AND to lists the user
+        // owns (only the list owner may act on a proposal, see
+        // TaskPolicy::escalate()).
         return TaskEscalationProposal::where('status', 'pending')
-            ->whereHas('task.taskList', fn ($query) => $query->where('owner_id', auth()->id()))
+            ->whereHas('task', fn ($task) => $task->forTeam($team)
+                ->whereHas('taskList', fn ($list) => $list->where('owner_id', auth()->id())))
             ->with('task.taskList')
             ->latest()
             ->get();
