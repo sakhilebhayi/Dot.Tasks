@@ -92,7 +92,9 @@
         select.dot-input option { background:#1a1a1f; }
     </style>
     @livewireStyles
-    <script defer src="https://unpkg.com/alpinejs@3.10.2/dist/cdn.min.js"></script>
+    {{-- Alpine is NOT loaded from a CDN here: Livewire 3 ships and starts its own. A second copy (the unpkg
+         3.10.x tag that used to sit here) replaced window.Alpine, so every Livewire re-render threw
+         "window.Alpine.cloneNode is not a function" and the DOM never updated (the bell never opened). --}}
 </head>
 <body>
     <x-banner />
