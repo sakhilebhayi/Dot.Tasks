@@ -129,7 +129,7 @@ php artisan serve
    php artisan queue:work redis --tries=3 --timeout=90
    ```
 
-7. **Run the scheduler.** Two jobs run from `routes/console.php`: `tasks:check-due-soon` (07:00, notifies assignees of tasks due within two days) and `tasks:detect-escalation-candidates` (07:30, proposes escalating tasks more than 7 days overdue). Laravel only runs them if something calls the scheduler every minute. Without it **no due-soon reminders are sent and nothing is proposed for escalation**, and no error says so. Use `deploy/scheduler.cron` (cron) or `deploy/scheduler.service` + `deploy/scheduler.timer` (systemd), which run:
+7. **Run the scheduler.** Three jobs run from `routes/console.php`: `tasks:check-due-soon` (07:00, notifies assignees of tasks due within two days), `tasks:detect-escalation-candidates` (07:30, proposes escalating tasks more than 7 days overdue) and `tasks:publish-metrics` (02:10 UTC, sends daily aggregate numbers to Dot.Analytics once configured, see below). Laravel only runs them if something calls the scheduler every minute. Without it **no due-soon reminders are sent and nothing is proposed for escalation**, and no error says so. Use `deploy/scheduler.cron` (cron) or `deploy/scheduler.service` + `deploy/scheduler.timer` (systemd), which run:
    ```bash
    * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
    ```
@@ -255,6 +255,33 @@ Dot.Tasks tells [Dot.Notify](https://github.com/sakhilebhayi/Dot.Notify) about f
 - A team is only addressed once it is linked to InfoDot (`teams.infodot_team_uuid`), and a person only if they have an email address; otherwise the event is skipped.
 - Notify can never break or slow a user action: 5 second timeout, 3 tries with backoff (60 s, then 5 min), every failure is caught and logged without addresses or secrets, and after 5 failures in a row calls pause for 60 seconds (a cache-based circuit breaker; the in-app notification is written by its own code and is unaffected).
 - Requests are signed with HMAC-SHA256 over `"{timestamp}.{raw body}"` (`X-InfoDot-Timestamp`, `X-InfoDot-Signature`). The idempotency key is `{event}:{subject id}:{sha1 of the recipient email}:{bucket}` (bucket: the task's last-updated time for an assignment, the due date for a reminder, the proposal id for an escalation, the task id for a mention), so retries and double dispatches collapse in Notify.
+
+### Daily metrics to Dot.Analytics
+
+Dot.Tasks publishes **one daily snapshot of aggregate numbers per company** to [Dot.Analytics](https://github.com/sakhilebhayi/Dot.Analytics), so its dashboards and briefings show real figures. Analytics only receives; this app never reads anything back from it, so an Analytics outage or a wrong setting changes nothing here (`tasks:publish-metrics`, `App\Services\Analytics\MetricsCollector`, `POST /api/ingest/snapshots`).
+
+What is sent for a company (company = a team linked to InfoDot, not a personal team):
+
+```json
+{ "platform": "tasks", "company_uuid": "<the team's InfoDot uuid>", "taken_at": "2026-11-05T00:00:00Z", "period": "day", "metrics": { ... } }
+```
+
+| Key | Meaning |
+|---|---|
+| `open` | tasks that are not done |
+| `overdue` | open tasks due before today |
+| `created_7d` | tasks created in the last 7 days |
+
+`completed_7d`, which Analytics' catalogue also lists for Tasks, is **not sent**: Dot.Tasks does not record when a task was completed (the dashboard's "completed this week" is only "done and last edited this week"), and a guess would not be a measurement. It will be added once completion is recorded.
+
+**Aggregates only.** Never a name, email, title, reason, note or any other row. Counts leave out archived and deleted rows, every query is scoped to the one company, and "today" and the windows are in UTC.
+
+- **Nothing is sent until `ANALYTICS_INGEST_URL` and `ANALYTICS_INGEST_SECRET` are both set.** `ANALYTICS_INGEST_URL` is the full address ending `/api/ingest/snapshots`. `ANALYTICS_INGEST_SECRET` must equal `ANALYTICS_INGEST_SECRET_<PLATFORM KEY>` in Dot.Analytics' `.env`; `ANALYTICS_PLATFORM_KEY` defaults to `tasks`.
+- **The scheduler must run** (`* * * * * php artisan schedule:run`, see the checklist above): `tasks:publish-metrics` is scheduled daily at 02:10 UTC. **A queue worker is required** (`php artisan queue:work`); with `QUEUE_CONNECTION=sync` the snapshots would be sent inline by the command, which is also fine.
+- Try it safely: `php artisan tasks:publish-metrics --dry-run` prints each payload and sends nothing (it works with no configuration). `--company=<InfoDot team uuid>` limits a run to one company.
+- Safe to repeat: `taken_at` is the start of the UTC day, and Analytics treats the same company, platform, `taken_at` and period as one snapshot, so a re-run or a retry the same day cannot double count.
+- Analytics can never break or slow this app: 5 second timeout, no redirects followed, 3 tries with backoff (60 s, then 5 min), every failure caught and logged without the body or the secret, and after 5 failures in a row calls pause for 60 seconds (a cache-based circuit breaker). A snapshot that cannot be delivered is simply replaced by the next day's.
+- Requests are signed with HMAC-SHA256 over `"{timestamp}.{raw body}"` (`X-InfoDot-Timestamp`, `X-InfoDot-Signature: sha256=<hex>`), made at send time so a retry carries a fresh timestamp.
 
 ### Real-Time Health Check
 

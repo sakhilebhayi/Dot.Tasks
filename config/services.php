@@ -45,6 +45,16 @@ return [
         'timeout' => 5,
     ],
 
+    // Daily aggregate snapshots published to Dot.Analytics (POST {url}, full URL ending /api/ingest/snapshots).
+    // Both url and secret must be set or nothing is sent. The secret is the value of Analytics'
+    // ANALYTICS_INGEST_SECRET_<PLATFORM KEY> setting; the platform key is how Analytics knows which secret to check.
+    'analytics' => [
+        'url' => env('ANALYTICS_INGEST_URL'),
+        'secret' => env('ANALYTICS_INGEST_SECRET'),
+        'platform' => env('ANALYTICS_PLATFORM_KEY', 'tasks'),
+        'timeout' => 5,
+    ],
+
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
