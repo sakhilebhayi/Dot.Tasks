@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\Factory;
 use Illuminate\Support\Facades\Http;
-use Laravel\Jetstream\Jetstream;
 use Tests\TestCase;
 
 /**
@@ -29,11 +28,6 @@ class InfoDotTeamSyncTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        // This checkout has no JetstreamServiceProvider (app/Providers is not in git), so the
-        // roles it would register are declared here, the same two Dot.Auction defines.
-        Jetstream::role('admin', 'Administrator', ['create', 'read', 'update', 'delete']);
-        Jetstream::role('editor', 'Editor', ['read', 'create', 'update']);
 
         config(['ecosystem.infodot' => [
             'redeem_url' => self::URL, 'platform' => 'tasks', 'secret' => 'secret-for-tests', 'timeout' => 2, 'provision' => true,
