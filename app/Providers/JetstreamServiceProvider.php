@@ -50,12 +50,16 @@ class JetstreamServiceProvider extends ServiceProvider
             'read',
             'update',
             'delete',
-        ])->description('Administrator users can perform any action.');
+        ])->description('Administrators can do everything, including deleting and archiving, and managing labels. The team owner has this role too.');
 
         Jetstream::role('editor', 'Editor', [
             'read',
             'create',
             'update',
-        ])->description('Editor users have the ability to read, create, and update.');
+        ])->description('Editors create and update boards and tasks, move, assign, label and comment on them. They cannot delete anything or manage labels.');
+
+        Jetstream::role('viewer', 'Viewer', [
+            'read',
+        ])->description('Viewers can read boards and tasks. They cannot create, change, move, assign, label or comment on anything.');
     }
 }

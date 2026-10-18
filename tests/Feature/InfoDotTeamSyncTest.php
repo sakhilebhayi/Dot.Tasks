@@ -97,7 +97,7 @@ class InfoDotTeamSyncTest extends TestCase
         $this->assertSame('admin', $carl->fresh()->teamRole($team->fresh())->key);
     }
 
-    public function test_a_role_this_app_does_not_have_falls_back_to_the_least_powerful_one_it_has(): void
+    public function test_an_infodot_viewer_becomes_a_read_only_viewer_here(): void
     {
         $this->signIn('ann@acme.test', [$this->company(self::ACME, 'Acme Ltd', 'owner')], self::ACME);
         $this->signIn('vic@acme.test', [$this->company(self::ACME, 'Acme Ltd', 'viewer')], self::ACME);
@@ -105,7 +105,7 @@ class InfoDotTeamSyncTest extends TestCase
         $team = Team::where('infodot_team_uuid', self::ACME)->firstOrFail();
         $vic = User::where('email', 'vic@acme.test')->firstOrFail();
 
-        $this->assertSame('editor', $vic->teamRole($team)->key);
+        $this->assertSame('viewer', $vic->teamRole($team)->key);
     }
 
     public function test_a_person_removed_in_infodot_loses_the_company_here_at_next_sign_in(): void

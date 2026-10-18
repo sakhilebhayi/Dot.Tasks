@@ -65,7 +65,7 @@ class SmartViews extends Component
     public function completeTask(int $taskId): void
     {
         $task = Task::findOrFail($taskId);
-        $this->authorize('update', $task);
+        $this->authorize('move', $task);
 
         $task->update(['status' => 'done']);
         app(TaskRecurrenceService::class)->spawnNextOccurrence($task);
@@ -79,7 +79,7 @@ class SmartViews extends Component
         return Task::forTeam(auth()->user()->currentTeam)
             ->whereNotNull('due_date')
             ->where('status', '!=', 'done')
-            ->with(['taskList', 'assignee', 'labels']);
+            ->with(['taskList.team', 'assignee', 'labels']);
     }
 
     public function render(): View

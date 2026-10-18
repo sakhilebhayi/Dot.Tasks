@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 class TaskBoard extends Component
@@ -73,6 +74,7 @@ class TaskBoard extends Component
 
         $task = Task::findOrFail($taskId);
         abort_unless($task->task_list_id === $this->taskList->id, 403);
+        $this->authorize('move', $task);
 
         $task->update(['status' => $newStatus]);
 
@@ -89,6 +91,8 @@ class TaskBoard extends Component
      * action broadcasts a TaskBoardUpdated event -- just invalidates the
      * cached computed property so the next render re-fetches current state.
      */
+    #[On('task-created')]
+    #[On('task-updated')]
     public function refreshBoard(): void
     {
         unset($this->tasksByStatus);

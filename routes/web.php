@@ -5,6 +5,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RealtimeHealthController;
 use App\Http\Controllers\TaskListController;
 use App\Models\Task;
+use App\Models\TaskList;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
@@ -71,9 +72,13 @@ Route::middleware([
     Route::get('/today', fn () => view('tasks.today'))->name('tasks.today');
     Route::get('/upcoming', fn () => view('tasks.upcoming'))->name('tasks.upcoming');
 
-    Route::get('/lists/create', fn () => view('task-lists.create'))->name('task-lists.create');
+    Route::get('/lists/create', fn () => view('task-lists.create'))
+        ->middleware('can:create,'.TaskList::class)
+        ->name('task-lists.create');
     Route::post('/lists', [TaskListController::class, 'store'])->name('task-lists.store');
     Route::get('/lists/{taskList}', [TaskListController::class, 'show'])->name('task-lists.show');
+
+    Route::get('/labels', fn () => view('labels.index'))->name('labels.index');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
 

@@ -126,6 +126,10 @@
                 <span class="material-symbols-rounded nav-icon">event_upcoming</span>
                 Upcoming
             </a>
+            <a href="{{ route('labels.index') }}" class="nav-item {{ request()->routeIs('labels.index') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">sell</span>
+                Labels
+            </a>
             <div class="sidebar-divider" style="margin:10px 0;"></div>
             <a href="{{ route('profile.show') }}" class="nav-item {{ request()->routeIs('profile.show') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">manage_accounts</span>

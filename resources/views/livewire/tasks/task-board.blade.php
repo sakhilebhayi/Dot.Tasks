@@ -1,14 +1,17 @@
 <div>
+    @php $canWork = auth()->user()->can('create', [\App\Models\Task::class, $taskList]); @endphp
     <div class="flex items-center gap-3 mb-4">
         <div class="relative flex-1 max-w-xs">
             <span class="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" style="font-size:16px;">search</span>
             <input type="text" wire:model.live.debounce.300ms="search" placeholder="Search tasks..."
                    class="w-full pl-8 pr-3 py-2 text-sm rounded-md border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white focus:ring-indigo-500 focus:border-indigo-500" />
         </div>
-        <button wire:click="$dispatch('open-create-task', { status: 'todo' })"
-                class="ml-auto inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
-            + Add Task
-        </button>
+        @can('create', [\App\Models\Task::class, $taskList])
+            <button wire:click="$dispatch('open-create-task', { status: 'todo' })"
+                    class="ml-auto inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-md hover:bg-indigo-700">
+                + Add Task
+            </button>
+        @endcan
     </div>
 
     @if(collect($this->tasksByStatus)->every(fn ($c) => $c->isEmpty()))
@@ -25,9 +28,11 @@
     <div class="flex gap-4 overflow-x-auto pb-4">
         @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $status => $label)
             <div class="shrink-0 w-72 bg-gray-100 dark:bg-gray-900 rounded-xl p-3"
-                 x-data
-                 x-on:dragover.prevent
-                 x-on:drop.prevent="$wire.moveTask($event.dataTransfer.getData('taskId'), '{{ $status }}')">
+                 @if($canWork)
+                     x-data
+                     x-on:dragover.prevent
+                     x-on:drop.prevent="$wire.moveTask($event.dataTransfer.getData('taskId'), '{{ $status }}')"
+                 @endif>
 
                 <div class="flex items-center justify-between mb-3">
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">{{ $label }}</h3>
@@ -39,8 +44,10 @@
                 <div class="space-y-2 min-h-8">
                     @forelse($this->tasksByStatus[$status] as $task)
                         <div class="bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer group"
-                             draggable="true"
-                             x-on:dragstart="$event.dataTransfer.setData('taskId', '{{ $task->id }}')"
+                             @if($canWork)
+                                 draggable="true"
+                                 x-on:dragstart="$event.dataTransfer.setData('taskId', '{{ $task->id }}')"
+                             @endif
                              wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })">
                             <p class="text-sm text-gray-900 dark:text-white font-medium mb-2">
                                 {{ $task->title }}
@@ -63,6 +70,13 @@
                                     <span class="text-xs {{ $task->due_date->isPast() && $task->status !== 'done' ? 'text-red-500 font-semibold' : 'text-gray-400 dark:text-gray-500' }}">{{ $task->due_date->format('M j') }}</span>
                                 @endif
                             </div>
+                            @if($task->labels->isNotEmpty())
+                                <div class="flex flex-wrap gap-1 mt-1.5">
+                                    @foreach($task->labels as $label)
+                                        <x-label-chip :label="$label" />
+                                    @endforeach
+                                </div>
+                            @endif
                             <div class="flex items-center justify-between mt-1.5">
                                 @if($task->subtasks->isNotEmpty())
                                     <p class="text-xs text-gray-400 dark:text-gray-500">
@@ -83,10 +97,12 @@
                     @endforelse
                 </div>
 
-                <button wire:click="$dispatch('open-create-task', { status: '{{ $status }}' })"
-                        class="mt-2 w-full text-xs text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
-                    + Add task
-                </button>
+                @if($canWork)
+                    <button wire:click="$dispatch('open-create-task', { status: '{{ $status }}' })"
+                            class="mt-2 w-full text-xs text-gray-400 dark:text-gray-600 hover:text-gray-600 dark:hover:text-gray-400 py-1 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors">
+                        + Add task
+                    </button>
+                @endif
             </div>
         @endforeach
     </div>

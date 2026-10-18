@@ -3,12 +3,14 @@
 namespace App\Livewire\Tasks;
 
 use App\Events\TaskBoardUpdated;
+use App\Models\Label;
 use App\Models\Task;
 use App\Models\TaskComment;
 use App\Models\User;
 use App\Notifications\NewCommentNotification;
 use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
+use App\Services\TaskLabelService;
 use App\Services\TaskRecurrenceService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -20,6 +22,9 @@ use Livewire\Component;
 
 class TaskDetail extends Component
 {
+    /** Everything the drawer shows, loaded together. */
+    private const RELATIONS = ['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team'];
+
     public ?Task $task = null;
 
     #[Validate('required|string')]
@@ -39,7 +44,7 @@ class TaskDetail extends Component
     #[On('open-task')]
     public function openTask(int $taskId): void
     {
-        $task = Task::with(['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team'])->findOrFail($taskId);
+        $task = Task::with(self::RELATIONS)->findOrFail($taskId);
         $this->authorize('view', $task);
 
         $this->task = $task;
@@ -67,6 +72,17 @@ class TaskDetail extends Component
         return $this->task->taskList->team->allUsers();
     }
 
+    /** The team's labels, for the picker. Same team as the task, so a label id from another team is never offered. */
+    #[Computed]
+    public function teamLabels()
+    {
+        if (! $this->task) {
+            return collect();
+        }
+
+        return Label::where('team_id', $this->task->taskList->team_id)->orderBy('name')->get();
+    }
+
     public function updateStatus(string $status): void
     {
         if (! $this->task) {
@@ -77,7 +93,7 @@ class TaskDetail extends Component
         // whatever the client claims — Livewire re-hydrates $this->task from
         // the request payload by primary key, so this guards against a
         // tampered request pointing at another team's task.
-        $this->authorize('update', $this->task);
+        $this->authorize('move', $this->task);
 
         Validator::make(['status' => $status], [
             'status' => ['required', Rule::in(Task::STATUSES)],
@@ -90,7 +106,7 @@ class TaskDetail extends Component
         }
 
         broadcast(new TaskBoardUpdated($this->task->taskList))->toOthers();
-        $this->task = $this->task->fresh(['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team']);
+        $this->task = $this->task->fresh(self::RELATIONS);
         $this->dispatch('task-updated');
     }
 
@@ -100,7 +116,7 @@ class TaskDetail extends Component
             return;
         }
 
-        $this->authorize('update', $this->task);
+        $this->authorize('assign', $this->task);
 
         $assignee = null;
 
@@ -113,11 +129,25 @@ class TaskDetail extends Component
 
         $this->task->update(['assignee_id' => $assignee?->id]);
 
-        if ($assignee) {
+        if ($assignee && $assignee->id !== auth()->id()) {
             $assignee->notify(new TaskAssignedNotification($this->task));
         }
 
-        $this->task = $this->task->fresh(['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team']);
+        $this->task = $this->task->fresh(self::RELATIONS);
+    }
+
+    public function toggleLabel(int $labelId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('label', $this->task);
+
+        app(TaskLabelService::class)->toggle($this->task, $labelId);
+
+        $this->task = $this->task->fresh(self::RELATIONS);
+        $this->dispatch('task-updated');
     }
 
     public function addComment(): void
@@ -126,7 +156,7 @@ class TaskDetail extends Component
             return;
         }
 
-        $this->authorize('update', $this->task);
+        $this->authorize('comment', $this->task);
 
         $this->validateOnly('commentBody');
 
@@ -141,7 +171,7 @@ class TaskDetail extends Component
         }
 
         $this->commentBody = '';
-        $this->task = $this->task->fresh(['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team']);
+        $this->task = $this->task->fresh(self::RELATIONS);
     }
 
     public function aiBreakdown(): void
@@ -182,7 +212,7 @@ class TaskDetail extends Component
         }
 
         $this->breaking = false;
-        $this->task = $this->task->fresh(['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team']);
+        $this->task = $this->task->fresh(self::RELATIONS);
     }
 
     public function render(): View

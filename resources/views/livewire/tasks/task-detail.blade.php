@@ -14,12 +14,18 @@
 
                 {{-- Status + Priority --}}
                 <div class="flex gap-3 mb-5">
-                    <select wire:change="updateStatus($event.target.value)"
-                            class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                        @foreach(['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'] as $val => $lbl)
-                            <option value="{{ $val }}" @selected($task->status === $val)>{{ $lbl }}</option>
-                        @endforeach
-                    </select>
+                    @can('move', $task)
+                        <select wire:change="updateStatus($event.target.value)" aria-label="Status"
+                                class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                            @foreach(['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'] as $val => $lbl)
+                                <option value="{{ $val }}" @selected($task->status === $val)>{{ $lbl }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <span class="text-sm px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                            {{ ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'][$task->status] ?? $task->status }}
+                        </span>
+                    @endcan
                     <span class="text-sm px-2 py-1 rounded
                         {{ match($task->priority) {
                             'urgent' => 'bg-red-100 text-red-700',
@@ -37,14 +43,49 @@
 
                 {{-- Assignee --}}
                 <div class="mb-5">
-                    <label class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Assignee</label>
-                    <select wire:change="assignTask($event.target.value ? $event.target.value : null)"
-                            class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
-                        <option value="">Unassigned</option>
-                        @foreach($this->assignableUsers as $member)
-                            <option value="{{ $member->id }}" @selected($task->assignee_id === $member->id)>{{ $member->name }}</option>
-                        @endforeach
-                    </select>
+                    <label for="task-assignee" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Assignee</label>
+                    @can('assign', $task)
+                        <select id="task-assignee" wire:change="assignTask($event.target.value ? $event.target.value : null)"
+                                class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                            <option value="">Unassigned</option>
+                            @foreach($this->assignableUsers as $member)
+                                <option value="{{ $member->id }}" @selected($task->assignee_id === $member->id)>{{ $member->name }}</option>
+                            @endforeach
+                        </select>
+                    @else
+                        <p id="task-assignee" class="text-sm text-gray-700 dark:text-gray-300">{{ $task->assignee?->name ?? 'Unassigned' }}</p>
+                    @endcan
+                </div>
+
+                {{-- Labels --}}
+                <div class="mb-5">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Labels</h3>
+                    @error('labels')<p class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
+                    @can('label', $task)
+                        @if($this->teamLabels->isEmpty())
+                            <p class="text-xs text-gray-400 dark:text-gray-500">The team has no labels yet.
+                                @can('create', [\App\Models\Label::class, $task->taskList->team])
+                                    <a href="{{ route('labels.index') }}" class="underline">Create one</a>.
+                                @endcan
+                            </p>
+                        @else
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach($this->teamLabels as $label)
+                                    @php $on = $task->labels->contains('id', $label->id); @endphp
+                                    <button type="button" wire:click="toggleLabel({{ $label->id }})" aria-pressed="{{ $on ? 'true' : 'false' }}"
+                                            class="rounded {{ $on ? 'ring-1 ring-gray-400 dark:ring-gray-500' : 'opacity-60 hover:opacity-100' }}">
+                                        <x-label-chip :label="$label" class="{{ $on ? 'bg-gray-100 dark:bg-gray-800' : '' }}" />
+                                    </button>
+                                @endforeach
+                            </div>
+                        @endif
+                    @else
+                        @forelse($task->labels as $label)
+                            <x-label-chip :label="$label" />
+                        @empty
+                            <p class="text-xs text-gray-400 dark:text-gray-500">No labels.</p>
+                        @endforelse
+                    @endcan
                 </div>
 
                 {{-- Description --}}
@@ -60,11 +101,13 @@
                         <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
                             Subtasks ({{ $task->subtasks->count() }})
                         </h3>
-                        <button wire:click="aiBreakdown" wire:loading.attr="disabled"
-                                class="text-xs px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-full hover:bg-indigo-100 disabled:opacity-50">
-                            <span wire:loading.remove wire:target="aiBreakdown">✨ AI Breakdown</span>
-                            <span wire:loading wire:target="aiBreakdown">Breaking down...</span>
-                        </button>
+                        @can('update', $task)
+                            <button wire:click="aiBreakdown" wire:loading.attr="disabled"
+                                    class="text-xs px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-full hover:bg-indigo-100 disabled:opacity-50">
+                                <span wire:loading.remove wire:target="aiBreakdown">✨ AI Breakdown</span>
+                                <span wire:loading wire:target="aiBreakdown">Breaking down...</span>
+                            </button>
+                        @endcan
                     </div>
                     @if($aiError)
                         <p class="text-xs text-red-600 mb-2">{{ $aiError }}</p>
@@ -84,7 +127,7 @@
                             @endforeach
                         </div>
                     @else
-                        <p class="text-xs text-gray-400 dark:text-gray-500">No subtasks yet. Use AI Breakdown to generate them.</p>
+                        <p class="text-xs text-gray-400 dark:text-gray-500">No subtasks yet.@can('update', $task) Use AI Breakdown to generate them.@endcan</p>
                     @endif
                 </div>
 
@@ -106,15 +149,17 @@
                         <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">No comments yet.</p>
                     @endforelse
 
-                    <form wire:submit="addComment" class="mt-3">
-                        <textarea wire:model="commentBody" rows="2" placeholder="Add a comment..."
-                                  class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm focus:ring-indigo-500 mb-2"></textarea>
-                        @error('commentBody')<p class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
-                        <button type="submit"
-                                class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
-                            Comment
-                        </button>
-                    </form>
+                    @can('comment', $task)
+                        <form wire:submit="addComment" class="mt-3">
+                            <textarea wire:model="commentBody" rows="2" placeholder="Add a comment..." aria-label="Add a comment"
+                                      class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm focus:ring-indigo-500 mb-2"></textarea>
+                            @error('commentBody')<p class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
+                            <button type="submit"
+                                    class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+                                Comment
+                            </button>
+                        </form>
+                    @endcan
                 </div>
             </div>
         </div>
