@@ -59,6 +59,32 @@ Roles are Jetstream team roles. An InfoDot `viewer` signs in here as `viewer`; o
 - **TaskComment** — discussion on a task, with `@Name` mentions
 - **AiBreakdownLog** — prompt/response audit trail for each AI decomposition call
 
+## Responsive shell
+
+The app layout (`resources/views/layouts/app.blade.php`) is a fixed 260px sidebar plus a fixed top bar from **860px** up. Below that (`max-width: 859.98px`, with the matching `matchMedia('(min-width: 860px)')` in the layout script) the sidebar becomes an off-canvas drawer. Keep the two numbers in step if you move the breakpoint.
+
+| Hook | What it is |
+|---|---|
+| `#shell-menu-button` | The labelled "Menu" button in the top bar (`aria-controls="shell-drawer"`, `aria-expanded`). Shown below the breakpoint only. |
+| `#shell-drawer` | The sidebar itself (`<aside class="sidebar">`). Closed on a phone it is `visibility:hidden` and `inert`, so it cannot be focused or read. |
+| `#shell-backdrop` / `.shell-backdrop` | Tap target behind the open drawer. |
+| `.topbar` | The fixed top bar. `--topbar-h` (54px) is the single source for its height and for the content offset (`.content-wrap` padding-top). |
+| `.table-scroll` | Wrapper for anything wide. |
+
+Opening the drawer moves focus to its Close button, sets `inert` on the top bar and page content, and locks page scroll. Escape, the backdrop, Close, following a link, and growing past the breakpoint all close it; Escape, the backdrop and Close also return focus to the Menu button. It is a small inline script, not Alpine, so it keeps working if a script is slow. Livewire 3 supplies Alpine; do not add a second copy from a CDN (it breaks every Livewire re-render).
+
+Team switching, Team settings and Log out live in the sidebar footer (the stock Jetstream bar that used to hold them rendered under the top bar and is no longer included).
+
+**Adding a wide table:** wrap it, do not widen the page.
+
+```blade
+<div class="table-scroll">
+    <table style="min-width:40rem;"> ... </table>
+</div>
+```
+
+**Page pieces:** `.page-pad` (page padding, tighter on phones), `.page-head` (title row that wraps), `.kpi-grid` / `.kpi-tile` (3 columns on desktop, 2 on phones), `.list-grid` (adds a single column on phones), `.list-card`. The kanban board scrolls inside `.kanban-scroll` (scroll-snap on phones, one column per swipe); each card carries an always-visible "Move to..." select, which is the touch alternative to drag and drop.
+
 ## Tech Stack
 
 | Layer | Technology |

@@ -90,14 +90,101 @@
         .dot-badge { display:inline-flex; align-items:center; padding:2px 8px; border-radius:100px; font-size:11px; font-weight:600; }
         .dot-badge-accent { background:rgba(34,197,94,0.12); color:#22c55e; }
         select.dot-input option { background:#1a1a1f; }
+        /* ---- Responsive shell -------------------------------------------------
+           Breakpoint: below 860px (max-width:859.98px) the sidebar is an off-canvas
+           drawer (#shell-drawer) opened from #shell-menu-button in the top bar;
+           from 860px (min-width:860px) the layout above is unchanged. Keep both
+           numbers in step if you ever move it. See README "Responsive shell". */
+        :root { --topbar-h: 54px; }
+        .topbar { height:var(--topbar-h); }
+        .content-wrap { padding-top:var(--topbar-h); }
+        .shell-menu-btn, .shell-drawer-close, .shell-backdrop { display:none; }
+        .shell-menu-btn, .shell-drawer-close { align-items:center; justify-content:center; gap:8px; min-width:44px; min-height:44px; padding:0 12px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.05); color:#d4d4d8; font:600 13px/1 'Inter',system-ui,sans-serif; cursor:pointer; flex-shrink:0; }
+        .shell-menu-btn:hover, .shell-drawer-close:hover { background:rgba(255,255,255,0.1); color:#f4f4f5; }
+        .shell-menu-btn svg, .shell-drawer-close svg { width:18px; height:18px; flex-shrink:0; }
+        .shell-menu-btn:focus-visible, .shell-drawer-close:focus-visible, .sidebar a:focus-visible, .sidebar button:focus-visible, .sidebar summary:focus-visible { outline:2px solid #22c55e; outline-offset:2px; }
+
+        /* Sidebar footer: team switch + log out (the legacy Jetstream bar that held them sat hidden under the top bar) */
+        .sidebar-footer { max-height:55vh; overflow-y:auto; }
+        .team-switch summary { list-style:none; display:flex; align-items:center; gap:8px; min-height:36px; padding:6px; border-radius:8px; cursor:pointer; color:#a1a1aa; font-size:12px; font-weight:600; }
+        .team-switch summary::-webkit-details-marker { display:none; }
+        .team-switch summary:hover { background:rgba(255,255,255,0.05); color:#d4d4d8; }
+        .team-switch summary span:first-child { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .team-switch[open] summary { color:#f4f4f5; }
+        .team-switch .team-row, .team-switch a.team-row, .logout-btn { display:flex; align-items:center; gap:8px; width:100%; min-height:36px; padding:6px; border:0; border-radius:8px; background:none; color:#a1a1aa; font:500 12px/1.3 'Inter',system-ui,sans-serif; text-align:left; text-decoration:none; cursor:pointer; }
+        .team-switch .team-row:hover, .logout-btn:hover { background:rgba(255,255,255,0.05); color:#f4f4f5; }
+        .team-switch .team-row[aria-current="true"] { color:#22c55e; font-weight:600; }
+        .team-switch .team-row .team-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .logout-btn { margin-top:2px; }
+
+        /* Reusable page pieces (desktop values equal the inline styles they replaced) */
+        .page-pad { padding:2rem 2.5rem; }
+        .page-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; margin-bottom:2rem; }
+        .page-head > * { min-width:0; }
+        .page-head h1 { overflow-wrap:anywhere; }
+        .kpi-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1.25rem; }
+        .kpi-tile { min-width:0; background:rgba(20,20,22,0.9); border:1px solid rgba(255,255,255,0.07); border-radius:1rem; padding:1.5rem; }
+        .list-card { display:block; min-width:0; background:rgba(20,20,22,0.9); border:1px solid rgba(255,255,255,0.07); border-radius:1rem; padding:1.5rem; text-decoration:none; transition:border-color 0.2s,box-shadow 0.2s; }
+        .list-card:hover, .list-card:focus-visible { border-color:rgba(41,98,255,0.4); box-shadow:0 0 0 1px rgba(41,98,255,0.2); }
+
+        /* Wide tables and the kanban board scroll inside their own box, never the page */
+        .table-scroll { max-width:100%; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        .kanban-scroll { position:relative; max-width:100%; overflow-x:auto; overscroll-behavior-x:contain; -webkit-overflow-scrolling:touch; scroll-snap-type:x proximity; }
+        .kanban-scroll > .kanban-col { scroll-snap-align:start; }
+        .kanban-move { width:100%; min-height:32px; font-size:12px; border-radius:6px; }
+
+        @media (max-width:859.98px) {
+            html.shell-locked, html.shell-locked body { overflow:hidden; }
+            .topbar { left:0; padding:0 10px; gap:8px; }
+            .topbar-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            .topbar-title > * { margin:0; font-size:15px; line-height:1.3; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+            .topbar-team, .topbar-profile { display:none; }
+            .topbar-btn { width:44px; height:44px; border-radius:8px; }
+            .topbar-btn .material-symbols-rounded { font-size:20px; }
+            .shell-menu-btn { display:inline-flex; }
+            .content-wrap { margin-left:0; }
+
+            .sidebar { width:min(300px,86vw); height:100vh; height:100dvh; z-index:60; visibility:hidden; transform:translateX(-100%); transition:transform .22s ease, visibility 0s linear .22s; }
+            .sidebar.is-open { visibility:visible; transform:none; transition:transform .22s ease, visibility 0s; box-shadow:0 0 48px rgba(0,0,0,0.6); }
+            .sidebar-brand { padding-right:12px; }
+            .shell-drawer-close { display:inline-flex; margin-left:auto; padding:0 10px; }
+            .sidebar-nav { overscroll-behavior:contain; }
+            .nav-item { min-height:44px; padding:10px; }
+            .nav-item:hover { transform:none; }
+            .shell-backdrop { display:block; position:fixed; inset:0; z-index:55; background:rgba(0,0,0,0.62); opacity:0; visibility:hidden; transition:opacity .22s ease, visibility 0s linear .22s; }
+            .shell-backdrop.is-open { opacity:1; visibility:visible; transition:opacity .22s ease, visibility 0s; }
+            .team-switch summary, .team-switch .team-row, .team-switch a.team-row, .logout-btn { min-height:44px; }
+
+            .page-pad { padding:1.25rem 16px 2rem; }
+            .page-head { margin-bottom:1.25rem; }
+            .kpi-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:0.75rem; }
+            .kpi-tile { padding:1rem; }
+            .list-grid { grid-template-columns:minmax(0,1fr); }
+            .list-card { padding:1.25rem; }
+            .kanban-scroll { scroll-snap-type:x mandatory; }
+            .kanban-scroll > .kanban-col { width:min(18rem, calc(100vw - 4.5rem)); }
+            .kanban-move { min-height:44px; font-size:14px; }
+
+            /* Notification panel: pinned to the screen edges instead of a 320px box that runs off the left side */
+            .notif-panel { position:fixed !important; top:calc(var(--topbar-h) + 6px) !important; left:10px !important; right:10px !important; width:auto !important; max-height:calc(100vh - var(--topbar-h) - 20px) !important; max-height:calc(100dvh - var(--topbar-h) - 20px) !important; }
+        }
+        @media (pointer:coarse) { .nav-item { min-height:44px; } }
+        @media (prefers-reduced-motion: reduce) {
+            .sidebar, .sidebar.is-open, .shell-backdrop, .shell-backdrop.is-open { transition:none !important; }
+            .live-dot { animation:none; }
+        }
     </style>
     @livewireStyles
-    <script defer src="https://unpkg.com/alpinejs@3.10.2/dist/cdn.min.js"></script>
+    {{-- Alpine is NOT loaded from a CDN here: Livewire 3 ships and starts its own. A second copy (the unpkg
+         3.10.x tag that used to sit here) replaced window.Alpine, so every Livewire re-render threw
+         "window.Alpine.cloneNode is not a function" and the DOM never updated (the bell never opened). --}}
 </head>
 <body>
-    <x-banner />
+    <div data-shell-page><x-banner /></div>
 
-    <aside class="sidebar">
+    {{-- Off-canvas drawer below 860px, plain sidebar from 860px. The inline script at the end of
+         <body> drives it (no Alpine: this one has to keep working if a CDN script is slow). --}}
+    <aside id="shell-drawer" class="sidebar" aria-label="Dot.Tasks navigation">
         <div class="sidebar-brand">
             <div class="brand-icon" style="background:transparent;border:none;padding:0;">
                 <img src="{{ asset('images/mark-outlined.png') }}" alt="Dot.Tasks" style="width:36px;height:36px;border-radius:10px;object-fit:contain;" />
@@ -109,11 +196,15 @@
                     <span class="brand-subtitle">Task Management</span>
                 </div>
             </div>
+            <button type="button" class="shell-drawer-close" data-shell-close>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+                Close
+            </button>
         </div>
 
         <div class="sidebar-divider"></div>
 
-        <nav class="sidebar-nav">
+        <nav class="sidebar-nav" aria-label="Primary">
             <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">dashboard</span>
                 Dashboard
@@ -150,11 +241,47 @@
                     <div class="user-team">{{ Auth::user()->currentTeam->name ?? 'Personal' }}</div>
                 </div>
             </div>
+            @if (Laravel\Jetstream\Jetstream::hasTeamFeatures() && Auth::user()->currentTeam)
+            <details class="team-switch">
+                <summary>
+                    <span>Team: {{ Auth::user()->currentTeam->name }}</span>
+                    <span class="material-symbols-rounded" aria-hidden="true" style="font-size:18px;">unfold_more</span>
+                </summary>
+                <div>
+                    <a class="team-row" href="{{ route('teams.show', Auth::user()->currentTeam->id) }}">Team settings</a>
+                    @can('create', Laravel\Jetstream\Jetstream::newTeamModel())
+                        <a class="team-row" href="{{ route('teams.create') }}">Create new team</a>
+                    @endcan
+                    @if (Auth::user()->allTeams()->count() > 1)
+                        @foreach (Auth::user()->allTeams() as $switchTeam)
+                            <form method="POST" action="{{ route('current-team.update') }}">
+                                @csrf
+                                @method('PUT')
+                                <input type="hidden" name="team_id" value="{{ $switchTeam->id }}">
+                                <button type="submit" class="team-row" @if (Auth::user()->isCurrentTeam($switchTeam)) aria-current="true" @endif>
+                                    <span class="team-name">{{ Auth::user()->isCurrentTeam($switchTeam) ? $switchTeam->name.' (current)' : 'Switch to '.$switchTeam->name }}</span>
+                                </button>
+                            </form>
+                        @endforeach
+                    @endif
+                </div>
+            </details>
+            @endif
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit" class="logout-btn">Log out</button>
+            </form>
         </div>
         @endauth
     </aside>
 
-    <header class="topbar">
+    <button type="button" id="shell-backdrop" class="shell-backdrop" tabindex="-1" aria-label="Close menu" data-shell-close></button>
+
+    <header class="topbar" data-shell-page>
+        <button type="button" id="shell-menu-button" class="shell-menu-btn" aria-controls="shell-drawer" aria-expanded="false">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            <span>Menu</span>
+        </button>
         <div class="topbar-title">
             @isset($header){{ $header }}@else Dot.Tasks
             @endisset
@@ -168,19 +295,76 @@
             onclick="document.documentElement.classList.toggle('dark'); localStorage.setItem('dot-theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');"
             class="topbar-btn"
             title="Toggle dark mode"
+            aria-label="Toggle dark mode"
         >
             <span class="material-symbols-rounded">dark_mode</span>
         </button>
-        <a href="{{ route('profile.show') }}" class="topbar-btn" title="Profile">
+        <a href="{{ route('profile.show') }}" class="topbar-btn topbar-profile" title="Profile" aria-label="Profile">
             <span class="material-symbols-rounded">account_circle</span>
         </a>
     </header>
 
-    @livewire('navigation-menu')
-
-    <div class="content-wrap">
+    {{-- The stock Jetstream bar (@livewire('navigation-menu')) used to render here. It sat in the flow
+         under the fixed sidebar and top bar, adding a phantom 64px above every page and holding the only
+         team switcher and Log out, which nobody could click. Those now live in the sidebar footer. --}}
+    <div class="content-wrap" data-shell-page>
         <main>{{ $slot }}</main>
     </div>
+
+
+    <script>
+        // Drawer behaviour for the responsive shell (below 860px). Plain JS on purpose.
+        (function () {
+            var btn = document.getElementById('shell-menu-button');
+            var drawer = document.getElementById('shell-drawer');
+            var backdrop = document.getElementById('shell-backdrop');
+            if (!btn || !drawer || !backdrop) { return; }
+            var root = document.documentElement;
+            var wide = window.matchMedia('(min-width: 860px)');
+            var closeBtn = drawer.querySelector('.shell-drawer-close');
+            var pages = Array.prototype.slice.call(document.querySelectorAll('[data-shell-page]'));
+            var open = false;
+
+            function setInert(el, on) { if (on) { el.setAttribute('inert', ''); } else { el.removeAttribute('inert'); } }
+
+            function render() {
+                drawer.classList.toggle('is-open', open);
+                backdrop.classList.toggle('is-open', open);
+                root.classList.toggle('shell-locked', open);
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                pages.forEach(function (el) { setInert(el, open); });
+                // Closed on a phone: the drawer must not be focusable or readable. On wide screens it is just the sidebar.
+                setInert(drawer, !wide.matches && !open);
+            }
+
+            function setOpen(next, returnFocus) {
+                if (next && wide.matches) { return; }
+                open = next;
+                render();
+                if (open) {
+                    (closeBtn || drawer.querySelector('a')).focus();
+                } else if (returnFocus) {
+                    btn.focus();
+                }
+            }
+
+            btn.addEventListener('click', function () { setOpen(!open, false); });
+            backdrop.addEventListener('click', function () { setOpen(false, true); });
+            if (closeBtn) { closeBtn.addEventListener('click', function () { setOpen(false, true); }); }
+            document.addEventListener('keydown', function (e) {
+                if (open && (e.key === 'Escape' || e.key === 'Esc')) { e.preventDefault(); setOpen(false, true); }
+            });
+            // Following a link (or logging out) leaves the page: close without stealing focus back.
+            drawer.addEventListener('click', function (e) {
+                if (open && e.target.closest && e.target.closest('a[href]')) { setOpen(false, false); }
+            });
+            var onChange = function () { if (wide.matches) { open = false; } render(); };
+            if (wide.addEventListener) { wide.addEventListener('change', onChange); } else { wide.addListener(onChange); }
+            // Back/forward cache can restore the page mid-open.
+            window.addEventListener('pageshow', function () { open = false; render(); });
+            render();
+        })();
+    </script>
 
     @stack('modals')
     @livewireScripts

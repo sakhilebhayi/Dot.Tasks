@@ -1,5 +1,5 @@
 <x-app-layout>
-    <div style="padding:2rem 2.5rem;">
+    <div class="page-pad">
         <div style="margin-bottom:2rem;">
             <h1 style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#f4f4f5;margin:0 0 0.25rem;">Notifications</h1>
             <p style="font-size:0.8rem;color:#71717a;margin:0;">Task assignments, comments, and due-date reminders.</p>
