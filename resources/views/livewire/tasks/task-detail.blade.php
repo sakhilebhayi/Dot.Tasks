@@ -131,6 +131,51 @@
                     @endif
                 </div>
 
+                {{-- Archive / delete --}}
+                @canany(['archive', 'delete'], $task)
+                    <div class="mb-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        @error('archive')<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
+                        @error('delete')<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
+
+                        @if($confirming === 'archive')
+                            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                                @if($this->affectedSubtasks > 0)
+                                    Archiving this task also archives its {{ $this->affectedSubtasks }} {{ \Illuminate\Support\Str::plural('subtask', $this->affectedSubtasks) }}.
+                                @else
+                                    Archive this task?
+                                @endif
+                                It leaves the board and can be restored from the board's Archived list.
+                            </p>
+                            <div class="flex gap-2">
+                                <button type="button" wire:click="archiveTask(true)" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Archive</button>
+                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
+                            </div>
+                        @elseif($confirming === 'delete')
+                            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                                @if($this->affectedSubtasks > 0)
+                                    Deleting this task also deletes its {{ $this->affectedSubtasks }} {{ \Illuminate\Support\Str::plural('subtask', $this->affectedSubtasks) }}.
+                                @else
+                                    Delete this task?
+                                @endif
+                                It disappears for everyone and cannot be restored from the app.
+                            </p>
+                            <div class="flex gap-2">
+                                <button type="button" wire:click="deleteTask(true)" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
+                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
+                            </div>
+                        @else
+                            <div class="flex gap-2">
+                                @can('archive', $task)
+                                    <button type="button" wire:click="confirmArchive" class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Archive task</button>
+                                @endcan
+                                @can('delete', $task)
+                                    <button type="button" wire:click="confirmDelete" class="px-3 py-1.5 text-sm text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Delete task</button>
+                                @endcan
+                            </div>
+                        @endif
+                    </div>
+                @endcanany
+
                 {{-- Comments --}}
                 <div>
                     <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Comments</h3>

@@ -147,5 +147,7 @@
                 @endforeach
             </div>
         @endif
+
+        <livewire:tasks.archived-boards />
     </div>
 </x-app-layout>

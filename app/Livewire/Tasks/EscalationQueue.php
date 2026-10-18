@@ -39,7 +39,8 @@ class EscalationQueue extends Component
     {
         $proposal = TaskEscalationProposal::find($proposalId);
 
-        if (! $proposal) {
+        // Also gone if its task has since been archived, deleted or moved onto an archived board.
+        if (! $proposal || ! $proposal->task) {
             return;
         }
 
@@ -65,7 +66,8 @@ class EscalationQueue extends Component
     {
         $proposal = TaskEscalationProposal::find($proposalId);
 
-        if (! $proposal) {
+        // Also gone if its task has since been archived, deleted or moved onto an archived board.
+        if (! $proposal || ! $proposal->task) {
             return;
         }
 
@@ -85,7 +87,8 @@ class EscalationQueue extends Component
     {
         $proposal = TaskEscalationProposal::find($proposalId);
 
-        if (! $proposal) {
+        // Also gone if its task has since been archived, deleted or moved onto an archived board.
+        if (! $proposal || ! $proposal->task) {
             return;
         }
 

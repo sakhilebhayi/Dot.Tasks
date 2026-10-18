@@ -118,6 +118,10 @@
                 <span class="material-symbols-rounded nav-icon">dashboard</span>
                 Dashboard
             </a>
+            <a href="{{ route('tasks.mine') }}" class="nav-item {{ request()->routeIs('tasks.mine') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">person_check</span>
+                My tasks
+            </a>
             <a href="{{ route('tasks.today') }}" class="nav-item {{ request()->routeIs('tasks.today') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">today</span>
                 Today

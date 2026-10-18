@@ -24,6 +24,12 @@ class TaskRecurrenceService
             return null;
         }
 
+        // A series stops when its source is archived or deleted, or sits on an
+        // archived board: completing it then must not quietly make new work.
+        if ($completedTask->trashed() || $completedTask->isArchived() || $completedTask->taskList === null) {
+            return null;
+        }
+
         $anchorDate = $completedTask->recurrence_anchor === 'completion'
             ? Carbon::today()
             : ($completedTask->due_date ?? Carbon::today());

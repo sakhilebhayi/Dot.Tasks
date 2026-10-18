@@ -25,7 +25,10 @@ class CheckTasksDueSoon extends Command
         $windowEnd = Carbon::today()->addDays(2)->toDateString();
         $windowStart = Carbon::today()->toDateString();
 
+        // whereHas('taskList') leaves out tasks on archived boards; archived and
+        // deleted tasks are already excluded by the model's scopes.
         $tasks = Task::query()
+            ->whereHas('taskList')
             ->whereNotNull('due_date')
             ->whereNotNull('assignee_id')
             ->whereDate('due_date', '<=', $windowEnd)

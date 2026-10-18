@@ -2,14 +2,20 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Archivable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Carbon;
 
 class Task extends Model
 {
+    use Archivable;
+    use SoftDeletes;
+
     /** @var list<string> Allowed values of tasks.status (mirrors the column enum). */
     public const STATUSES = ['todo', 'in_progress', 'review', 'done'];
 
@@ -55,6 +61,49 @@ class Task extends Model
         $query->orderByRaw(
             "CASE {$query->getModel()->qualifyColumn('priority')} WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END"
         );
+    }
+
+    /**
+     * Case-insensitive text match on title and description. The text is
+     * matched literally: a % or _ typed into the search box is not a wildcard.
+     *
+     * @param  Builder<Task>  $query
+     */
+    public function scopeSearchText(Builder $query, string $text): void
+    {
+        $needle = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], mb_strtolower(trim($text))).'%';
+
+        $query->where(function (Builder $match) use ($needle) {
+            $match->whereRaw("LOWER({$this->qualifyColumn('title')}) LIKE ? ESCAPE '\\'", [$needle])
+                ->orWhereRaw("LOWER({$this->qualifyColumn('description')}) LIKE ? ESCAPE '\\'", [$needle]);
+        });
+    }
+
+    /**
+     * 'overdue' and 'today' mean not done yet; 'none' is simply no due date.
+     *
+     * @param  Builder<Task>  $query
+     */
+    public function scopeDueState(Builder $query, string $state): void
+    {
+        match ($state) {
+            'overdue' => $query->whereNotNull('tasks.due_date')->whereDate('tasks.due_date', '<', Carbon::today())->where('tasks.status', '!=', 'done'),
+            'today' => $query->whereDate('tasks.due_date', Carbon::today())->where('tasks.status', '!=', 'done'),
+            'none' => $query->whereNull('tasks.due_date'),
+            default => null,
+        };
+    }
+
+    /**
+     * Soonest due date first, tasks with no due date last. Portable CASE
+     * rather than NULLS LAST, which SQLite only learned recently.
+     *
+     * @param  Builder<Task>  $query
+     */
+    public function scopeOrderByDueDate(Builder $query): void
+    {
+        $query->orderByRaw("CASE WHEN {$query->getModel()->qualifyColumn('due_date')} IS NULL THEN 1 ELSE 0 END")
+            ->orderBy($query->getModel()->qualifyColumn('due_date'));
     }
 
     public function taskList(): BelongsTo

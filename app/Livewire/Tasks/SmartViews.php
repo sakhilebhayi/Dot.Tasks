@@ -4,7 +4,7 @@ namespace App\Livewire\Tasks;
 
 use App\Events\TaskBoardUpdated;
 use App\Models\Task;
-use App\Services\TaskRecurrenceService;
+use App\Services\TaskStatusService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -64,11 +64,10 @@ class SmartViews extends Component
     /** Mark a task done directly from this view, same as dragging it to "Done" on the board. */
     public function completeTask(int $taskId): void
     {
-        $task = Task::findOrFail($taskId);
+        $task = Task::find($taskId) ?? abort(404);
         $this->authorize('move', $task);
 
-        $task->update(['status' => 'done']);
-        app(TaskRecurrenceService::class)->spawnNextOccurrence($task);
+        app(TaskStatusService::class)->move($task, 'done');
 
         broadcast(new TaskBoardUpdated($task->taskList))->toOthers();
         unset($this->todayTasks, $this->upcomingTasksByDate);

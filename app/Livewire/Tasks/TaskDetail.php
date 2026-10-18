@@ -10,8 +10,9 @@ use App\Models\User;
 use App\Notifications\NewCommentNotification;
 use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
+use App\Services\TaskArchiveService;
 use App\Services\TaskLabelService;
-use App\Services\TaskRecurrenceService;
+use App\Services\TaskStatusService;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -32,6 +33,9 @@ class TaskDetail extends Component
 
     public bool $breaking = false;
 
+    /** The destructive action awaiting confirmation in the drawer: 'archive', 'delete' or null. */
+    public ?string $confirming = null;
+
     public ?string $aiError = null;
 
     /**
@@ -44,10 +48,11 @@ class TaskDetail extends Component
     #[On('open-task')]
     public function openTask(int $taskId): void
     {
-        $task = Task::with(self::RELATIONS)->findOrFail($taskId);
+        $task = Task::with(self::RELATIONS)->find($taskId) ?? abort(404);
         $this->authorize('view', $task);
 
         $this->task = $task;
+        $this->confirming = null;
         $this->aiError = null;
         $this->breaking = false;
         $this->commentBody = '';
@@ -56,6 +61,73 @@ class TaskDetail extends Component
     public function close(): void
     {
         $this->task = null;
+        $this->confirming = null;
+    }
+
+    /** Subtasks that archiving or deleting this task would take along, for the confirmation text. */
+    #[Computed]
+    public function affectedSubtasks(): int
+    {
+        return $this->task
+            ? app(TaskArchiveService::class)->subtaskCount($this->task, includeArchived: $this->confirming === 'delete')
+            : 0;
+    }
+
+    public function confirmArchive(): void
+    {
+        $this->authorize('archive', $this->task);
+        $this->confirming = 'archive';
+    }
+
+    public function confirmDelete(): void
+    {
+        $this->authorize('delete', $this->task);
+        $this->confirming = 'delete';
+    }
+
+    public function cancelConfirm(): void
+    {
+        $this->confirming = null;
+        $this->resetErrorBag();
+    }
+
+    /** Archive the task; with subtasks it needs $confirmed, then takes them along. */
+    public function archiveTask(bool $confirmed = false): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('archive', $this->task);
+
+        app(TaskArchiveService::class)->archive($this->task, $confirmed);
+
+        $this->afterRetire();
+    }
+
+    /** Soft delete the task (admins and the owner); with subtasks it needs $confirmed. */
+    public function deleteTask(bool $confirmed = false): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('delete', $this->task);
+
+        app(TaskArchiveService::class)->delete($this->task, $confirmed);
+
+        $this->afterRetire();
+    }
+
+    private function afterRetire(): void
+    {
+        $taskList = $this->task->taskList;
+
+        $this->task = null;
+        $this->confirming = null;
+
+        broadcast(new TaskBoardUpdated($taskList))->toOthers();
+        $this->dispatch('task-updated');
     }
 
     /**
@@ -99,11 +171,7 @@ class TaskDetail extends Component
             'status' => ['required', Rule::in(Task::STATUSES)],
         ])->validate();
 
-        $this->task->update(['status' => $status]);
-
-        if ($status === 'done') {
-            app(TaskRecurrenceService::class)->spawnNextOccurrence($this->task);
-        }
+        app(TaskStatusService::class)->move($this->task, $status);
 
         broadcast(new TaskBoardUpdated($this->task->taskList))->toOthers();
         $this->task = $this->task->fresh(self::RELATIONS);

@@ -28,7 +28,10 @@ class DetectEscalationCandidates extends Command
     {
         $cutoff = Carbon::today()->subDays(self::OVERDUE_THRESHOLD_DAYS)->toDateString();
 
+        // whereHas('taskList') leaves out tasks on archived boards; archived and
+        // deleted tasks are already excluded by the model's scopes.
         $tasks = Task::query()
+            ->whereHas('taskList')
             ->whereNotNull('due_date')
             ->whereDate('due_date', '<', $cutoff)
             ->where('status', '!=', 'done')

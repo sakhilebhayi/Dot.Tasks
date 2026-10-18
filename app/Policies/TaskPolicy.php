@@ -26,7 +26,10 @@ class TaskPolicy
 
     public function view(User $user, Task $task): bool
     {
-        return $user->belongsToTeam($task->taskList->team);
+        // taskList is null for a task on an archived board.
+        $team = $task->taskList?->team;
+
+        return $team !== null && $user->belongsToTeam($team);
     }
 
     /** Add a task to a board: authorized against the board it lands on. */
@@ -37,7 +40,7 @@ class TaskPolicy
 
     public function update(User $user, Task $task): bool
     {
-        return $this->holds($user, $task->taskList->team, 'update');
+        return $this->holds($user, $task->taskList?->team, 'update');
     }
 
     /** Change a task's status, from the board, the drawer or a smart view. */
@@ -61,9 +64,21 @@ class TaskPolicy
         return $this->update($user, $task);
     }
 
+    /** Archiving is reversible, so editors may do it. */
+    public function archive(User $user, Task $task): bool
+    {
+        return $this->update($user, $task);
+    }
+
+    public function restore(User $user, Task $task): bool
+    {
+        return $this->update($user, $task);
+    }
+
+    /** Deleting is for admins and the owner. */
     public function delete(User $user, Task $task): bool
     {
-        return $this->holds($user, $task->taskList->team, 'delete');
+        return $this->holds($user, $task->taskList?->team, 'delete');
     }
 
     /**
@@ -76,7 +91,8 @@ class TaskPolicy
     {
         $taskList = $task->taskList;
 
-        return $user->id === $taskList->owner_id
+        return $taskList !== null
+            && $user->id === $taskList->owner_id
             && $this->holds($user, $taskList->team, 'update');
     }
 }

@@ -29,8 +29,19 @@ class TaskListPolicy
         return $this->holds($user, $taskList->team, 'update');
     }
 
-    public function delete(User $user, TaskList $taskList): bool
+    /** Archiving a board hides it and everything on it: admins and the owner only. */
+    public function archive(User $user, TaskList $taskList): bool
     {
         return $this->holds($user, $taskList->team, 'delete');
+    }
+
+    public function restore(User $user, TaskList $taskList): bool
+    {
+        return $this->archive($user, $taskList);
+    }
+
+    public function delete(User $user, TaskList $taskList): bool
+    {
+        return $this->archive($user, $taskList);
     }
 }
