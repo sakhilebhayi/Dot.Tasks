@@ -5,12 +5,13 @@ namespace App\Livewire\Tasks;
 use App\Events\TaskBoardUpdated;
 use App\Models\Label;
 use App\Models\Task;
-use App\Models\TaskComment;
 use App\Models\User;
-use App\Notifications\NewCommentNotification;
 use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
+use App\Services\CommentMentions;
 use App\Services\TaskArchiveService;
+use App\Services\TaskCommentService;
+use App\Services\TaskDependencyService;
 use App\Services\TaskLabelService;
 use App\Services\TaskStatusService;
 use Illuminate\Support\Facades\Validator;
@@ -24,14 +25,17 @@ use Livewire\Component;
 class TaskDetail extends Component
 {
     /** Everything the drawer shows, loaded together. */
-    private const RELATIONS = ['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team'];
+    private const RELATIONS = ['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
 
-    #[Validate('required|string')]
+    #[Validate('required|string|max:5000')]
     public string $commentBody = '';
 
     public bool $breaking = false;
+
+    /** Bumped on every status change attempt so a refused one resets the select to the real status. */
+    public int $statusAttempts = 0;
 
     /** The destructive action awaiting confirmation in the drawer: 'archive', 'delete' or null. */
     public ?string $confirming = null;
@@ -155,6 +159,72 @@ class TaskDetail extends Component
         return Label::where('team_id', $this->task->taskList->team_id)->orderBy('name')->get();
     }
 
+    /** Mentions in the thread are matched against this task's team only. */
+    #[Computed]
+    public function mentions(): CommentMentions
+    {
+        return CommentMentions::forTeam($this->task->taskList->team);
+    }
+
+    /** Blockers that are not done yet, for the explanation next to the status. */
+    #[Computed]
+    public function openBlockers()
+    {
+        return $this->task ? app(TaskDependencyService::class)->openBlockers($this->task) : collect();
+    }
+
+    /**
+     * Other open tasks on this board that could block this one: not itself,
+     * not done, not already a blocker. Same board only, same as the server rule.
+     */
+    #[Computed]
+    public function blockerCandidates()
+    {
+        if (! $this->task) {
+            return collect();
+        }
+
+        return Task::where('task_list_id', $this->task->task_list_id)
+            ->whereKeyNot($this->task->id)
+            ->where('status', '!=', 'done')
+            ->whereNotIn('id', $this->task->blockedBy->pluck('id'))
+            ->orderBy('title')
+            ->limit(200)
+            ->get(['id', 'title']);
+    }
+
+    public function addBlocker(int $blockerId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        app(TaskDependencyService::class)->add($this->task, $blockerId);
+
+        $this->refreshTask();
+    }
+
+    public function removeBlocker(int $blockerId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        app(TaskDependencyService::class)->remove($this->task, $blockerId);
+
+        $this->refreshTask();
+    }
+
+    private function refreshTask(): void
+    {
+        $this->task = $this->task->fresh(self::RELATIONS);
+        $this->dispatch('task-updated');
+    }
+
     public function updateStatus(string $status): void
     {
         if (! $this->task) {
@@ -166,6 +236,9 @@ class TaskDetail extends Component
         // the request payload by primary key, so this guards against a
         // tampered request pointing at another team's task.
         $this->authorize('move', $this->task);
+
+        $this->statusAttempts++;
+        $this->resetErrorBag('status');
 
         Validator::make(['status' => $status], [
             'status' => ['required', Rule::in(Task::STATUSES)],
@@ -228,15 +301,7 @@ class TaskDetail extends Component
 
         $this->validateOnly('commentBody');
 
-        TaskComment::create([
-            'task_id' => $this->task->id,
-            'user_id' => auth()->id(),
-            'body' => $this->commentBody,
-        ]);
-
-        if ($this->task->assignee_id && $this->task->assignee_id !== auth()->id()) {
-            $this->task->assignee->notify(new NewCommentNotification($this->task));
-        }
+        app(TaskCommentService::class)->add($this->task, auth()->user(), $this->commentBody);
 
         $this->commentBody = '';
         $this->task = $this->task->fresh(self::RELATIONS);
@@ -275,6 +340,7 @@ class TaskDetail extends Component
                 'priority' => $sub['priority'] ?? 'medium',
                 'estimated_minutes' => $sub['estimated_minutes'] ?? null,
                 'status' => 'todo',
+                'creator_id' => auth()->id(),
                 'sort_order' => $i,
             ]);
         }

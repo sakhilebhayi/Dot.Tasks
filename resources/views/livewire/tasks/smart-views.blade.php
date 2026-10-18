@@ -10,6 +10,10 @@
         </a>
     </div>
 
+    @error('status')
+        <p role="alert" class="mb-3 px-3 py-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-300 rounded-md">{{ $message }}</p>
+    @enderror
+
     @if($view === 'today')
         @if($this->todayTasks->isEmpty())
             <div class="text-center py-16 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">

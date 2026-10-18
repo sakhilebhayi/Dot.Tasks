@@ -116,7 +116,7 @@ class TaskBoard extends Component
             ->whereNull('tasks.parent_id')
             ->when($assignee === 'none', fn ($q) => $q->whereNull('tasks.assignee_id'))
             ->when(is_int($assignee), fn ($q) => $q->where('tasks.assignee_id', $assignee))
-            ->with(['assignee', 'labels', 'subtasks'])
+            ->with(['assignee', 'labels', 'subtasks', 'blockedBy'])
             ->orderBy('tasks.sort_order')
             ->get()
             ->groupBy('status');
@@ -156,6 +156,7 @@ class TaskBoard extends Component
     public function moveTask(int $taskId, string $newStatus): void
     {
         $this->authorize('update', $this->taskList);
+        $this->resetErrorBag('status');
 
         // A tampered client can send any string here; reject anything that is
         // not a real status instead of letting the enum column 500.

@@ -29,9 +29,13 @@
             <input type="checkbox" wire:model.live="showDone" class="rounded border-gray-300 dark:border-gray-600"> Include done
         </label>
         @if($this->filtersActive)
-            <button type="button" wire:click="clearFilters" class="text-sm text-gray-500 dark:text-gray-400 underline">Clear filters</button>
+            <button type="button" wire:click="clearFilters" class="text-sm border-0 bg-transparent p-0 text-gray-500 dark:text-gray-400 underline">Clear filters</button>
         @endif
     </div>
+
+    @error('status')
+        <p role="alert" class="mb-3 px-3 py-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-300 rounded-md">{{ $message }}</p>
+    @enderror
 
     @if($this->tasks->isEmpty())
         <div class="text-center py-16 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
@@ -53,7 +57,7 @@
                                     title="Mark done" aria-label="Mark {{ $task->title }} done"></button>
                         @endif
                     @endcan
-                    <button type="button" class="flex-1 min-w-0 text-left" wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })">
+                    <button type="button" class="flex-1 min-w-0 text-left border-0 bg-transparent p-0" wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })">
                         <span class="block text-sm text-gray-900 dark:text-white font-medium truncate {{ $task->status === 'done' ? 'line-through opacity-60' : '' }}">{{ $task->title }}</span>
                         <span class="block text-xs text-gray-400 dark:text-gray-500">{{ $task->taskList->name }}</span>
                     </button>

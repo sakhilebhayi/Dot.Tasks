@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Archivable;
+use App\Models\Scopes\NotArchivedScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,6 +28,7 @@ class Task extends Model
         'title', 'description', 'status', 'priority', 'due_date',
         'estimated_minutes', 'sort_order', 'escalated_at',
         'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_parent_id',
+        'creator_id',
     ];
 
     protected $casts = [
@@ -114,6 +116,28 @@ class Task extends Model
     public function assignee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assignee_id');
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'creator_id');
+    }
+
+    /**
+     * The tasks that must be done before this one can be. Archived blockers
+     * stay in the list (they still block); deleted ones drop out.
+     */
+    public function blockedBy(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'blocked_by_id')
+            ->withoutGlobalScope(NotArchivedScope::class);
+    }
+
+    /** The tasks waiting on this one. */
+    public function blocking(): BelongsToMany
+    {
+        return $this->belongsToMany(Task::class, 'task_dependencies', 'blocked_by_id', 'task_id')
+            ->withoutGlobalScope(NotArchivedScope::class);
     }
 
     public function parent(): BelongsTo

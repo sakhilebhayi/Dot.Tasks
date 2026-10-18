@@ -15,7 +15,7 @@
                 {{-- Status + Priority --}}
                 <div class="flex gap-3 mb-5">
                     @can('move', $task)
-                        <select wire:change="updateStatus($event.target.value)" aria-label="Status"
+                        <select wire:key="status-{{ $statusAttempts }}" wire:change="updateStatus($event.target.value)" aria-label="Status"
                                 class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                             @foreach(['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'] as $val => $lbl)
                                 <option value="{{ $val }}" @selected($task->status === $val)>{{ $lbl }}</option>
@@ -40,6 +40,15 @@
                         <span class="text-sm text-gray-500 dark:text-gray-400">Due {{ $task->due_date->format('M j, Y') }}</span>
                     @endif
                 </div>
+
+                @error('status')
+                    <p role="alert" class="-mt-2 mb-4 text-xs text-red-600">{{ $message }}</p>
+                @enderror
+                @if($this->openBlockers->isNotEmpty() && $task->status !== 'done')
+                    <p class="-mt-2 mb-4 text-xs text-amber-600 dark:text-amber-400">
+                        This task cannot be marked done until {{ $this->openBlockers->count() === 1 ? 'its blocker is' : 'its blockers are' }} done.
+                    </p>
+                @endif
 
                 {{-- Assignee --}}
                 <div class="mb-5">
@@ -73,7 +82,7 @@
                                 @foreach($this->teamLabels as $label)
                                     @php $on = $task->labels->contains('id', $label->id); @endphp
                                     <button type="button" wire:click="toggleLabel({{ $label->id }})" aria-pressed="{{ $on ? 'true' : 'false' }}"
-                                            class="rounded {{ $on ? 'ring-1 ring-gray-400 dark:ring-gray-500' : 'opacity-60 hover:opacity-100' }}">
+                                            class="rounded border-0 bg-transparent p-0 {{ $on ? 'ring-1 ring-gray-400 dark:ring-gray-500' : 'opacity-60 hover:opacity-100' }}">
                                         <x-label-chip :label="$label" class="{{ $on ? 'bg-gray-100 dark:bg-gray-800' : '' }}" />
                                     </button>
                                 @endforeach
@@ -86,6 +95,42 @@
                             <p class="text-xs text-gray-400 dark:text-gray-500">No labels.</p>
                         @endforelse
                     @endcan
+                </div>
+
+                {{-- Dependencies --}}
+                <div class="mb-5">
+                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Blocked by</h3>
+                    @error('blocker')<p role="alert" class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
+                    @forelse($task->blockedBy as $blocker)
+                        <div wire:key="blocker-{{ $blocker->id }}" class="flex items-center gap-2 text-sm py-0.5">
+                            <span class="w-2 h-2 rounded-full {{ $blocker->status === 'done' ? 'bg-green-500' : 'bg-amber-500' }}" title="{{ $blocker->status === 'done' ? 'Done' : 'Not done yet' }}"></span>
+                            <span class="{{ $blocker->status === 'done' ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $blocker->title }}</span>
+                            @if($blocker->isArchived())<span class="text-xs text-gray-400">archived</span>@endif
+                            @can('update', $task)
+                                <button type="button" wire:click="removeBlocker({{ $blocker->id }})" class="ml-auto text-xs border-0 bg-transparent text-gray-400 hover:text-red-500" aria-label="Remove blocker {{ $blocker->title }}">Remove</button>
+                            @endcan
+                        </div>
+                    @empty
+                        <p class="text-xs text-gray-400 dark:text-gray-500">Nothing blocks this task.</p>
+                    @endforelse
+                    @can('update', $task)
+                        @if($this->blockerCandidates->isNotEmpty())
+                            <label for="add-blocker" class="sr-only">Add a blocker</label>
+                            <select id="add-blocker" wire:key="add-blocker-{{ $task->blockedBy->count() }}" wire:change="addBlocker($event.target.value)"
+                                    class="mt-1.5 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white max-w-full">
+                                <option value="">Add a blocker...</option>
+                                @foreach($this->blockerCandidates as $candidate)
+                                    <option value="{{ $candidate->id }}">{{ $candidate->title }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                    @endcan
+                    @if($task->blocking->isNotEmpty())
+                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-3 mb-1">Blocking</h3>
+                        @foreach($task->blocking as $waiting)
+                            <p wire:key="blocking-{{ $waiting->id }}" class="text-sm text-gray-700 dark:text-gray-300">{{ $waiting->title }}</p>
+                        @endforeach
+                    @endif
                 </div>
 
                 {{-- Description --}}
@@ -147,8 +192,8 @@
                                 It leaves the board and can be restored from the board's Archived list.
                             </p>
                             <div class="flex gap-2">
-                                <button type="button" wire:click="archiveTask(true)" class="px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Archive</button>
-                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
+                                <button type="button" wire:click="archiveTask(true)" class="px-3 py-1.5 text-sm font-medium border-0 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Archive</button>
+                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium border-0 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
                             </div>
                         @elseif($confirming === 'delete')
                             <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
@@ -160,16 +205,16 @@
                                 It disappears for everyone and cannot be restored from the app.
                             </p>
                             <div class="flex gap-2">
-                                <button type="button" wire:click="deleteTask(true)" class="px-3 py-1.5 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
-                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
+                                <button type="button" wire:click="deleteTask(true)" class="px-3 py-1.5 text-sm font-medium border-0 text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
+                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium border-0 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
                             </div>
                         @else
                             <div class="flex gap-2">
                                 @can('archive', $task)
-                                    <button type="button" wire:click="confirmArchive" class="px-3 py-1.5 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Archive task</button>
+                                    <button type="button" wire:click="confirmArchive" class="px-3 py-1.5 text-sm border-0 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Archive task</button>
                                 @endcan
                                 @can('delete', $task)
-                                    <button type="button" wire:click="confirmDelete" class="px-3 py-1.5 text-sm text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Delete task</button>
+                                    <button type="button" wire:click="confirmDelete" class="px-3 py-1.5 text-sm border-0 text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Delete task</button>
                                 @endcan
                             </div>
                         @endif
@@ -186,9 +231,7 @@
                                 <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $comment->user->name }}</span>
                                 <span class="text-xs text-gray-400">{{ $comment->created_at->diffForHumans() }}</span>
                             </div>
-                            <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-                                {{ $comment->body }}
-                            </p>
+                            <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 whitespace-pre-line">{!! $this->mentions->render($comment->body) !!}</p>
                         </div>
                     @empty
                         <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">No comments yet.</p>
@@ -199,6 +242,7 @@
                             <textarea wire:model="commentBody" rows="2" placeholder="Add a comment..." aria-label="Add a comment"
                                       class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm focus:ring-indigo-500 mb-2"></textarea>
                             @error('commentBody')<p class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
+                            <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">Type @ and a teammate's full name to notify them.</p>
                             <button type="submit"
                                     class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
                                 Comment

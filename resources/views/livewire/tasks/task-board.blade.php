@@ -3,13 +3,13 @@
     {{-- View switch: the live board, or what has been archived --}}
     <div class="flex items-center gap-1 mb-3 text-sm" role="tablist" aria-label="Board view">
         <button type="button" role="tab" aria-selected="{{ $this->showingArchived ? 'false' : 'true' }}" wire:click="$set('show', '')"
-                class="px-3 py-1 rounded-md {{ $this->showingArchived ? 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-medium' }}">Board</button>
+                class="px-3 py-1 rounded-md border-0 {{ $this->showingArchived ? 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' : 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-medium' }}">Board</button>
         <button type="button" role="tab" aria-selected="{{ $this->showingArchived ? 'true' : 'false' }}" wire:click="$set('show', 'archived')"
-                class="px-3 py-1 rounded-md {{ $this->showingArchived ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-medium' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' }}">Archived</button>
+                class="px-3 py-1 rounded-md border-0 {{ $this->showingArchived ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white font-medium' : 'bg-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200' }}">Archived</button>
         @can('archive', $taskList)
             <button type="button" wire:click="archiveBoard"
                     wire:confirm="Archive this board? It disappears for everyone, and so do its tasks in Today, reminders and escalation. You can restore it from the dashboard."
-                    class="ml-auto px-3 py-1 rounded-md text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">Archive board</button>
+                    class="ml-auto px-3 py-1 rounded-md border-0 bg-transparent text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">Archive board</button>
         @endcan
     </div>
 
@@ -36,18 +36,21 @@
                             <x-label-chip :label="$label" class="hidden sm:inline-flex" />
                         @endforeach
                         @can('restore', $archived)
-                            <button type="button" wire:click="restoreTask({{ $archived->id }})" class="px-3 py-1 text-xs font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">Restore</button>
+                            <button type="button" wire:click="restoreTask({{ $archived->id }})" class="px-3 py-1 text-xs font-medium border-0 text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">Restore</button>
                         @endcan
                         @can('delete', $archived)
                             <button type="button" wire:click="deleteTask({{ $archived->id }}, true)"
                                     wire:confirm="Delete &quot;{{ $archived->title }}&quot; and any subtasks? It cannot be restored from the app."
-                                    class="px-3 py-1 text-xs font-medium text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">Delete</button>
+                                    class="px-3 py-1 text-xs font-medium border-0 text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600">Delete</button>
                         @endcan
                     </div>
                 @endforeach
             </div>
         @endif
     @else
+    @error('status')
+        <p role="alert" class="mb-3 px-3 py-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-300 rounded-md">{{ $message }}</p>
+    @enderror
     <div class="flex flex-wrap items-center gap-2 mb-4">
         <div class="relative flex-1 min-w-[12rem] max-w-xs">
             <span class="material-symbols-rounded absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" style="font-size:16px;">search</span>
@@ -85,7 +88,7 @@
             </select>
         @endif
         @if($this->filtersActive)
-            <button type="button" wire:click="clearFilters" class="text-sm text-gray-500 dark:text-gray-400 underline">Clear filters</button>
+            <button type="button" wire:click="clearFilters" class="text-sm border-0 bg-transparent p-0 text-gray-500 dark:text-gray-400 underline">Clear filters</button>
         @endif
         @can('create', [\App\Models\Task::class, $taskList])
             <button wire:click="$dispatch('open-create-task', { status: 'todo' })"
@@ -155,6 +158,9 @@
                                     <span class="text-xs {{ $task->due_date->isPast() && $task->status !== 'done' ? 'text-red-500 font-semibold' : 'text-gray-400 dark:text-gray-500' }}">{{ $task->due_date->format('M j') }}</span>
                                 @endif
                             </div>
+                            @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done'))
+                                <p class="mt-1.5 text-xs text-amber-600 dark:text-amber-400" title="Cannot be marked done until its blockers are">Blocked by {{ $task->blockedBy->where('status', '!=', 'done')->count() }}</p>
+                            @endif
                             @if($task->labels->isNotEmpty())
                                 <div class="flex flex-wrap gap-1 mt-1.5">
                                     @foreach($task->labels as $label)

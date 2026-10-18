@@ -113,6 +113,7 @@ class CreateTask extends Component
             $task = Task::create([
                 'task_list_id' => $this->taskList->id,
                 'assignee_id' => $assignee?->id,
+                'creator_id' => auth()->id(),
                 'title' => $this->title,
                 'description' => $this->description ?: null,
                 'status' => $this->status,

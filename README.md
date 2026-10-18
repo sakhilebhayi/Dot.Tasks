@@ -24,23 +24,39 @@ Dot.Tasks is the personal and team task management platform in the InfoDot ecosy
 
 ## Core Features
 
-- AI task decomposition — break any goal into actionable subtasks, with time estimates per subtask (falls back to a fixed mock breakdown when `ANTHROPIC_API_KEY` is unset)
-- Drag-and-drop kanban board with search/filter by title or description
-- Task assignment, scoped server-side to the task's team
-- In-app notification bell (task assigned, new comment, task due soon) backed by Laravel's `database` notification channel
-- Labels, priorities, and due dates
-- Dashboard KPIs: total lists/tasks, in progress, completed, due today, overdue, completed this week
+- AI task decomposition — break any goal into subtasks with time estimates (needs `ANTHROPIC_API_KEY`; without one it says so and creates nothing)
+- Drag-and-drop kanban board with subtasks, priorities, due dates and recurring tasks (daily, weekly, monthly, every N days)
+- Filters on a board by assignee, priority, label, due state (overdue, today, none) and text, all kept in the URL so a filtered board can be bookmarked; a **My tasks** view of everything assigned to you across boards, most urgent first
+- Team labels (admins manage them from a fixed colour palette, editors put them on tasks)
+- Task assignment, scoped server-side to the task's team; assignee and labels can be set when the task is created
+- Archive (reversible, with an Archived list) and soft delete for tasks, archive for boards; subtasks are handled explicitly and need a confirmation
+- Comments with `@Full Name` mentions of team members; mentioned people, the task's assignee and its creator are notified once each (never the author, never anyone outside the team)
+- "Blocked by" dependencies between tasks on one board: no loops, and a blocked task cannot be moved to Done until its blockers are done
+- Escalation queue for tasks more than 7 days overdue (the list owner approves or rejects)
+- In-app notification bell (assigned, new comment, mentioned, due soon) on Laravel's `database` notification channel
+- Dashboard KPIs for the team, from one query
+- Roles: owner and admin do everything, editor works on tasks, viewer reads (see Roles below)
 - Class-based dark/light theme toggle
 - Ecosystem SSO from InfoDot hub
 
-> Recurring tasks/schedules, calendar view, and a built-in Pomodoro timer are **not implemented** — see `wiki.md` §8 for the full gap list against the original aspirational feature set.
+> Not implemented: a calendar view, a built-in Pomodoro timer, search beyond title and description (no full-text engine), and any integration with Dot.Projects. See `wiki.md` §8 for the known gaps.
+
+## Roles
+
+Roles are Jetstream team roles. An InfoDot `viewer` signs in here as `viewer`; owner and admin map to `admin`.
+
+| | viewer | editor | admin / owner |
+|---|---|---|---|
+| Read boards and tasks | yes | yes | yes |
+| Create boards and tasks; move, assign, label, comment, archive and restore tasks | | yes | yes |
+| Delete tasks, archive boards, create/rename/recolour/delete labels | | | yes |
 
 ## Domain Models
 
-- **TaskList** — a board; owns many tasks
-- **Task** — unit of work with status, priority, optional assignee and due date; subtasks are just tasks with a `parent_id`
-- **Label** — colour-coded category tag, many-to-many with tasks
-- **TaskComment** — discussion on a task
+- **TaskList** — a board; owns many tasks; can be archived
+- **Task** — unit of work with status, priority, optional assignee and due date; subtasks are just tasks with a `parent_id`; can be archived or soft deleted; can be blocked by other tasks of the same board
+- **Label** — team-scoped, colour-coded tag from a fixed palette, many-to-many with tasks
+- **TaskComment** — discussion on a task, with `@Name` mentions
 - **AiBreakdownLog** — prompt/response audit trail for each AI decomposition call
 
 ## Tech Stack
@@ -55,8 +71,9 @@ Dot.Tasks is the personal and team task management platform in the InfoDot ecosy
 | Auth | Laravel Sanctum (InfoDot SSO) |
 | AI | Anthropic Claude (`claude-sonnet-4-6`) |
 | Storage | AWS S3 / Local (Flysystem) |
-| Search | Laravel Scout · Meilisearch |
-| Queue | Redis · Laravel Horizon |
+| Search | SQL `LIKE` on task title and description (no search engine) |
+| Queue | Redis · `php artisan queue:work` (no Horizon) |
+| Scheduler | `php artisan schedule:run` from cron, every minute |
 
 ## Quick Start
 
@@ -107,12 +124,18 @@ php artisan serve
    php artisan migrate --force
    ```
 
-6. **Start the queue worker** (use `deploy/queue-worker.service` for systemd or `deploy/queue-worker.supervisord.conf` for Supervisor). Requires `QUEUE_CONNECTION=redis`, matching `.env.production.example`.
+6. **Start the queue worker** (use `deploy/queue-worker.service` for systemd or `deploy/queue-worker.supervisord.conf` for Supervisor). Requires `QUEUE_CONNECTION=redis`, matching `.env.production.example`. What needs it: the `TaskBoardUpdated` broadcast that keeps other people's open boards live. Without a worker those updates queue up and never go out. Notifications are written synchronously and do not wait for it.
    ```bash
    php artisan queue:work redis --tries=3 --timeout=90
    ```
 
-7. **Start the Reverb WebSocket server** (use `deploy/reverb.service` for systemd or `deploy/reverb.supervisord.conf` for Supervisor) -- never run this as a bare foreground command in production, it needs the same process supervision as the queue worker.
+7. **Run the scheduler.** Two jobs run from `routes/console.php`: `tasks:check-due-soon` (07:00, notifies assignees of tasks due within two days) and `tasks:detect-escalation-candidates` (07:30, proposes escalating tasks more than 7 days overdue). Laravel only runs them if something calls the scheduler every minute. Without it **no due-soon reminders are sent and nothing is proposed for escalation**, and no error says so. Use `deploy/scheduler.cron` (cron) or `deploy/scheduler.service` + `deploy/scheduler.timer` (systemd), which run:
+   ```bash
+   * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
+   ```
+   Check it with `php artisan schedule:list` (shows the next run of each job) and, after the first 07:00, by looking for `task_due_soon` rows in `notifications`.
+
+8. **Start the Reverb WebSocket server** (use `deploy/reverb.service` for systemd or `deploy/reverb.supervisord.conf` for Supervisor) -- never run this as a bare foreground command in production, it needs the same process supervision as the queue worker.
    ```bash
    php artisan reverb:start
    ```

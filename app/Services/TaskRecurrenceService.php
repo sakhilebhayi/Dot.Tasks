@@ -45,6 +45,7 @@ class TaskRecurrenceService
         $occurrence = Task::create([
             'task_list_id' => $completedTask->task_list_id,
             'assignee_id' => $completedTask->assignee_id,
+            'creator_id' => $completedTask->creator_id,
             'title' => $completedTask->title,
             'description' => $completedTask->description,
             'status' => 'todo',

@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the Dot.Tasks Laravel scheduler every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+Persistent=false
+Unit=scheduler.service
+
+[Install]
+WantedBy=timers.target

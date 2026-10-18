@@ -64,6 +64,8 @@ class SmartViews extends Component
     /** Mark a task done directly from this view, same as dragging it to "Done" on the board. */
     public function completeTask(int $taskId): void
     {
+        $this->resetErrorBag('status');
+
         $task = Task::find($taskId) ?? abort(404);
         $this->authorize('move', $task);
 

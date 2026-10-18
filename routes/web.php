@@ -1,12 +1,11 @@
 <?php
 
 use App\Http\Controllers\Auth\EcosystemAuthController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\RealtimeHealthController;
 use App\Http\Controllers\TaskListController;
-use App\Models\Task;
 use App\Models\TaskList;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Str;
 use Laravel\Jetstream\Jetstream;
@@ -36,38 +35,7 @@ Route::middleware([
     config('jetstream.auth_session'),
     'verified',
 ])->group(function () {
-    Route::get('/dashboard', function () {
-        // A user removed from their last team (or who never completed team
-        // setup) reaches this route with currentTeam genuinely null — the
-        // auth:sanctum/verified middleware group above only checks that the
-        // user is authenticated, not that they belong to a team. Without
-        // this guard, $team->taskLists() below throws "Attempt to read
-        // property 'id' on null".
-        $team = auth()->user()->currentTeam;
-
-        if (! $team) {
-            return redirect()->route('teams.create');
-        }
-
-        $lists = $team
-            ->taskLists()
-            ->withCount('tasks')
-            ->orderBy('sort_order')
-            ->get();
-
-        $teamTasks = fn () => Task::forTeam($team);
-
-        $taskCounts = [
-            'todo' => $teamTasks()->where('status', 'todo')->count(),
-            'in_progress' => $teamTasks()->where('status', 'in_progress')->count(),
-            'done' => $teamTasks()->where('status', 'done')->count(),
-            'due_today' => $teamTasks()->whereDate('due_date', Carbon::today())->where('status', '!=', 'done')->count(),
-            'overdue' => $teamTasks()->whereDate('due_date', '<', Carbon::today())->where('status', '!=', 'done')->count(),
-            'completed_week' => $teamTasks()->where('status', 'done')->where('updated_at', '>=', Carbon::now()->startOfWeek())->count(),
-        ];
-
-        return view('dashboard', compact('lists', 'taskCounts'));
-    })->name('dashboard');
+    Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/my-tasks', fn () => view('tasks.mine'))->name('tasks.mine');
     Route::get('/today', fn () => view('tasks.today'))->name('tasks.today');

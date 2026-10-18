@@ -36,7 +36,7 @@
                         <span class="material-symbols-rounded" style="font-size:16px;color:#7c3aed;">task_alt</span>
                     </div>
                 </div>
-                <div style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#f4f4f5;">{{ $lists->sum('tasks_count') }}</div>
+                <div style="font-family:'Syne',sans-serif;font-size:2rem;font-weight:800;color:#f4f4f5;">{{ $taskCounts['total'] }}</div>
             </div>
 
             <!-- In Progress -->

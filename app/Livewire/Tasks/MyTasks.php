@@ -78,6 +78,8 @@ class MyTasks extends Component
     /** Mark a task done from the list, exactly as dragging it to Done on its board would. */
     public function completeTask(int $taskId): void
     {
+        $this->resetErrorBag('status');
+
         $task = Task::forTeam($this->team())->find($taskId) ?? abort(404);
         $this->authorize('move', $task);
 
