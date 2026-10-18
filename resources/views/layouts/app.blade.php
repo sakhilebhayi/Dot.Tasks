@@ -13,6 +13,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script>tailwind.config = { darkMode: 'class', corePlugins: { preflight: false } }</script>
+    {{-- Only Echo/Reverb (task board realtime updates) needs the Vite bundle here --
+         Tailwind/Alpine stay CDN-loaded, unchanged, per this layout's existing convention. --}}
+    @vite(['resources/js/app.js'])
     <script>
         // Dark mode: this dashboard's own markup is intentionally fixed-dark (inline styles,
         // not Tailwind dark: classes), so this toggle mainly affects Jetstream-rendered pages
@@ -114,6 +117,22 @@
             <a href="{{ route('dashboard') }}" class="nav-item {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">dashboard</span>
                 Dashboard
+            </a>
+            <a href="{{ route('tasks.mine') }}" class="nav-item {{ request()->routeIs('tasks.mine') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">person_check</span>
+                My tasks
+            </a>
+            <a href="{{ route('tasks.today') }}" class="nav-item {{ request()->routeIs('tasks.today') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">today</span>
+                Today
+            </a>
+            <a href="{{ route('tasks.upcoming') }}" class="nav-item {{ request()->routeIs('tasks.upcoming') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">event_upcoming</span>
+                Upcoming
+            </a>
+            <a href="{{ route('labels.index') }}" class="nav-item {{ request()->routeIs('labels.index') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">sell</span>
+                Labels
             </a>
             <div class="sidebar-divider" style="margin:10px 0;"></div>
             <a href="{{ route('profile.show') }}" class="nav-item {{ request()->routeIs('profile.show') ? 'active' : '' }}">

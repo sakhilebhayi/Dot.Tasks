@@ -34,10 +34,68 @@
                     </div>
 
                     <div>
+                        <label for="new-task-assignee" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Assignee</label>
+                        <select id="new-task-assignee" wire:model="assigneeId"
+                                class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                            <option value="">Unassigned</option>
+                            @foreach($this->teamMembers as $member)
+                                <option value="{{ $member->id }}">{{ $member->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('assigneeId')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                    </div>
+
+                    @if($this->teamLabels->isNotEmpty())
+                        <fieldset>
+                            <legend class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Labels</legend>
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach($this->teamLabels as $label)
+                                    <label class="cursor-pointer">
+                                        <input type="checkbox" wire:model="labelIds" value="{{ $label->id }}" class="peer sr-only">
+                                        <x-label-chip :label="$label" class="peer-checked:bg-gray-200 dark:peer-checked:bg-gray-700 peer-checked:border-gray-500 peer-focus-visible:ring-2 peer-focus-visible:ring-indigo-500" />
+                                    </label>
+                                @endforeach
+                            </div>
+                            @error('labelIds')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                        </fieldset>
+                    @endif
+
+                    <div>
                         <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Estimate (minutes)</label>
                         <input wire:model="estimatedMinutes" type="number" min="1" placeholder="e.g. 30"
                                class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                     </div>
+
+                    <div>
+                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Repeat</label>
+                        <select wire:model.live="recurrenceType"
+                                class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                            <option value="">Doesn't repeat</option>
+                            <option value="daily">Daily</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="custom_days">Every N days</option>
+                        </select>
+                    </div>
+
+                    @if($recurrenceType)
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Every</label>
+                                <input wire:model="recurrenceInterval" type="number" min="1" max="365"
+                                       class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                                @error('recurrenceInterval')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
+                            </div>
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Based on</label>
+                                <select wire:model="recurrenceAnchor"
+                                        class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                                    <option value="due_date">Due date</option>
+                                    <option value="completion">Completion date</option>
+                                </select>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="flex gap-3 pt-1">
                         <button type="button" wire:click="cancel"

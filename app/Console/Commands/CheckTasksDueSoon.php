@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Task;
 use App\Notifications\TaskDueSoonNotification;
+use App\Services\Notify\NotifyClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -25,7 +26,10 @@ class CheckTasksDueSoon extends Command
         $windowEnd = Carbon::today()->addDays(2)->toDateString();
         $windowStart = Carbon::today()->toDateString();
 
+        // whereHas('taskList') leaves out tasks on archived boards; archived and
+        // deleted tasks are already excluded by the model's scopes.
         $tasks = Task::query()
+            ->whereHas('taskList')
             ->whereNotNull('due_date')
             ->whereNotNull('assignee_id')
             ->whereDate('due_date', '<=', $windowEnd)
@@ -56,6 +60,7 @@ class CheckTasksDueSoon extends Command
             }
 
             $assignee->notify(new TaskDueSoonNotification($task));
+            app(NotifyClient::class)->taskDueSoon($task, $assignee);
             $notified++;
         }
 
