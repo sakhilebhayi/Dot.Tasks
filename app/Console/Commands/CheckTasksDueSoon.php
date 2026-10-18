@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Task;
 use App\Notifications\TaskDueSoonNotification;
+use App\Services\Notify\NotifyClient;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -59,6 +60,7 @@ class CheckTasksDueSoon extends Command
             }
 
             $assignee->notify(new TaskDueSoonNotification($task));
+            app(NotifyClient::class)->taskDueSoon($task, $assignee);
             $notified++;
         }
 

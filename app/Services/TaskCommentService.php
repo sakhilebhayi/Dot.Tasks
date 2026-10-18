@@ -7,6 +7,7 @@ use App\Models\TaskComment;
 use App\Models\User;
 use App\Notifications\MentionedInCommentNotification;
 use App\Notifications\NewCommentNotification;
+use App\Services\Notify\NotifyClient;
 
 /**
  * Adds a comment and tells the right people, each at most once:
@@ -40,6 +41,7 @@ class TaskCommentService
 
         foreach ($mentioned->filter($isMember) as $user) {
             $user->notify(new MentionedInCommentNotification($task, $comment));
+            app(NotifyClient::class)->taskMentioned($task, $comment, $user, $author);
         }
 
         $mentionedIds = $mentioned->pluck('id');

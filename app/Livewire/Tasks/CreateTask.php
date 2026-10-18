@@ -7,6 +7,7 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
+use App\Services\Notify\NotifyClient;
 use App\Services\TaskLabelService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -133,6 +134,7 @@ class CreateTask extends Component
 
         if ($assignee && $assignee->id !== auth()->id()) {
             $assignee->notify(new TaskAssignedNotification($task));
+            app(NotifyClient::class)->taskAssigned($task, $assignee, auth()->user());
         }
 
         $this->resetForm();

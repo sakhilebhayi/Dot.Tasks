@@ -35,6 +35,16 @@ return [
         ],
     ],
 
+    // Email-worthy events go to Dot.Notify's ingest API (server to server, queued). The URL and the secret must
+    // both be set or nothing is sent. The secret is this app's NOTIFY_INGEST_SECRET_<PLATFORM KEY> value in
+    // Dot.Notify's .env, and the platform key is how Notify knows which secret to check.
+    'notify' => [
+        'url' => env('NOTIFY_INGEST_URL'),
+        'secret' => env('NOTIFY_INGEST_SECRET'),
+        'platform' => env('NOTIFY_PLATFORM_KEY', 'tasks'),
+        'timeout' => 5,
+    ],
+
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
         'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),

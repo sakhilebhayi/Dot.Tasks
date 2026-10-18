@@ -4,6 +4,7 @@ namespace App\Livewire\Tasks;
 
 use App\Events\TaskEscalated;
 use App\Models\TaskEscalationProposal;
+use App\Services\Notify\NotifyClient;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -58,6 +59,13 @@ class EscalationQueue extends Component
             'reviewed_by' => auth()->id(),
             'reviewed_at' => now(),
         ]);
+
+        // There is no in-app notification for an escalation. The email goes to the person whose task it is,
+        // unless they are the one approving it.
+        $assignee = $proposal->task->assignee;
+        if ($assignee && $assignee->id !== auth()->id()) {
+            app(NotifyClient::class)->taskEscalated($proposal->task, $proposal, $assignee);
+        }
 
         unset($this->pendingProposals);
     }

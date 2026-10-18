@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
+use App\Services\Notify\NotifyClient;
 use App\Services\TaskArchiveService;
 use App\Services\TaskCommentService;
 use App\Services\TaskDependencyService;
@@ -272,6 +273,7 @@ class TaskDetail extends Component
 
         if ($assignee && $assignee->id !== auth()->id()) {
             $assignee->notify(new TaskAssignedNotification($this->task));
+            app(NotifyClient::class)->taskAssigned($this->task, $assignee, auth()->user());
         }
 
         $this->task = $this->task->fresh(self::RELATIONS);

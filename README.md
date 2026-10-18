@@ -237,6 +237,25 @@ Requires `mod_proxy`, `mod_proxy_wstunnel`, and `mod_ssl` enabled (`a2enmod prox
 </VirtualHost>
 ```
 
+### Email through Dot.Notify
+
+Dot.Tasks tells [Dot.Notify](https://github.com/sakhilebhayi/Dot.Notify) about four events it already raises in-app, so the company can email them. Notify decides whether anything is sent; Dot.Tasks only reports what happened (`App\Services\Notify\NotifyClient`, `POST /api/ingest/events`).
+
+| Event | Sent to | When | Data sent |
+|---|---|---|---|
+| `task.assigned` | the new assignee | someone else assigns them a task (never self-assignment) | `task_title`, `board_name`, `assigned_by`, `due_date`, `url` |
+| `task.due_soon` | the assignee | `tasks:check-due-soon` raises the in-app reminder | `task_title`, `board_name`, `due_date`, `url` |
+| `task.escalated` | the task's assignee | a board owner approves an escalation (there is no in-app notification for this one); not sent to the approver | `task_title`, `board_name`, `owner_name`, `url` |
+| `task.mentioned` | the mentioned member | the same people who get the in-app mention notification | `task_title`, `board_name`, `mentioned_by`, `url` |
+
+`url` is the absolute `https` address of the board in this app. Comment text and task descriptions are never sent, and an email address travels only in `recipient.email`.
+
+- **Nothing is sent until `NOTIFY_INGEST_URL` and `NOTIFY_INGEST_SECRET` are both set**, and even then Notify sends nothing until the company has enabled the event (an active rule for it) in Dot.Notify. `NOTIFY_INGEST_SECRET` must equal `NOTIFY_INGEST_SECRET_<PLATFORM KEY>` in Notify's `.env`; `NOTIFY_PLATFORM_KEY` defaults to `tasks`.
+- **A queue worker is required** (`php artisan queue:work`, see the checklist above). Events are queued after the database transaction commits, never sent during the user's request; with `QUEUE_CONNECTION=sync` they would run inline, so use a real queue in production.
+- A team is only addressed once it is linked to InfoDot (`teams.infodot_team_uuid`), and a person only if they have an email address; otherwise the event is skipped.
+- Notify can never break or slow a user action: 5 second timeout, 3 tries with backoff (60 s, then 5 min), every failure is caught and logged without addresses or secrets, and after 5 failures in a row calls pause for 60 seconds (a cache-based circuit breaker; the in-app notification is written by its own code and is unaffected).
+- Requests are signed with HMAC-SHA256 over `"{timestamp}.{raw body}"` (`X-InfoDot-Timestamp`, `X-InfoDot-Signature`). The idempotency key is `{event}:{subject id}:{sha1 of the recipient email}:{bucket}` (bucket: the task's last-updated time for an assignment, the due date for a reminder, the proposal id for an escalation, the task id for a mention), so retries and double dispatches collapse in Notify.
+
 ### Real-Time Health Check
 
 `GET /up/realtime` checks broadcasting config, queue connection, and whether `reverb:start` is actually accepting connections -- independently, so it reports which link broke rather than a single healthy/unhealthy bit. See `app/Http/Controllers/RealtimeHealthController.php`.
