@@ -1,0 +1,8 @@
+# Dot.Tasks scheduler: Laravel runs its scheduled jobs (routes/console.php) only
+# when something calls `schedule:run` every minute. Without this entry no
+# due-soon reminders are sent and no escalations are proposed.
+#
+# Install for the web user:  crontab -u www-data deploy/scheduler.cron
+# (this replaces that user's crontab; merge by hand if it has other entries).
+# Adjust the path to wherever the app is deployed.
+* * * * * cd /var/www/html && /usr/bin/php artisan schedule:run >> /dev/null 2>&1

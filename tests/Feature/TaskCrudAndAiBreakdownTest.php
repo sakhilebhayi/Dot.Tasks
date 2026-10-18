@@ -53,12 +53,14 @@ class TaskCrudAndAiBreakdownTest extends TestCase
     }
 
     /**
-     * ANTHROPIC_API_KEY is empty in the test environment (phpunit.xml), so
-     * AiTaskBreakdownService::isConfigured() is false and breakdown() falls
-     * back to its fixed mock template rather than calling the Anthropic API.
+     * ANTHROPIC_API_KEY is empty in the test environment (phpunit.xml): the
+     * breakdown must report itself unavailable and create nothing, never
+     * hand back canned subtasks as if the AI had generated them. The HTTP
+     * path is covered in AiTaskBreakdownServiceTest.
      */
-    public function test_ai_breakdown_creates_subtasks_via_the_mock_fallback_and_is_logged_to_the_owning_task(): void
+    public function test_ai_breakdown_without_an_api_key_is_unavailable_and_creates_no_subtasks(): void
     {
+        config(['services.anthropic.api_key' => '']);
         $owner = User::factory()->withPersonalTeam()->create();
         $taskList = TaskList::create([
             'team_id' => $owner->currentTeam->id,
@@ -71,9 +73,9 @@ class TaskCrudAndAiBreakdownTest extends TestCase
             ->test(TaskDetail::class)
             ->call('openTask', $task->id)
             ->call('aiBreakdown')
-            ->assertSet('aiError', null);
+            ->assertSee('AI breakdown unavailable');
 
-        $this->assertEquals(5, $task->subtasks()->count());
+        $this->assertEquals(0, $task->subtasks()->count());
     }
 
     public function test_a_user_cannot_run_ai_breakdown_on_another_teams_task(): void

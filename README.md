@@ -24,23 +24,39 @@ Dot.Tasks is the personal and team task management platform in the InfoDot ecosy
 
 ## Core Features
 
-- AI task decomposition — break any goal into actionable subtasks, with time estimates per subtask (falls back to a fixed mock breakdown when `ANTHROPIC_API_KEY` is unset)
-- Drag-and-drop kanban board with search/filter by title or description
-- Task assignment, scoped server-side to the task's team
-- In-app notification bell (task assigned, new comment, task due soon) backed by Laravel's `database` notification channel
-- Labels, priorities, and due dates
-- Dashboard KPIs: total lists/tasks, in progress, completed, due today, overdue, completed this week
+- AI task decomposition — break any goal into subtasks with time estimates (needs `ANTHROPIC_API_KEY`; without one it says so and creates nothing)
+- Drag-and-drop kanban board with subtasks, priorities, due dates and recurring tasks (daily, weekly, monthly, every N days)
+- Filters on a board by assignee, priority, label, due state (overdue, today, none) and text, all kept in the URL so a filtered board can be bookmarked; a **My tasks** view of everything assigned to you across boards, most urgent first
+- Team labels (admins manage them from a fixed colour palette, editors put them on tasks)
+- Task assignment, scoped server-side to the task's team; assignee and labels can be set when the task is created
+- Archive (reversible, with an Archived list) and soft delete for tasks, archive for boards; subtasks are handled explicitly and need a confirmation
+- Comments with `@Full Name` mentions of team members; mentioned people, the task's assignee and its creator are notified once each (never the author, never anyone outside the team)
+- "Blocked by" dependencies between tasks on one board: no loops, and a blocked task cannot be moved to Done until its blockers are done
+- Escalation queue for tasks more than 7 days overdue (the list owner approves or rejects)
+- In-app notification bell (assigned, new comment, mentioned, due soon) on Laravel's `database` notification channel
+- Dashboard KPIs for the team, from one query
+- Roles: owner and admin do everything, editor works on tasks, viewer reads (see Roles below)
 - Class-based dark/light theme toggle
 - Ecosystem SSO from InfoDot hub
 
-> Recurring tasks/schedules, calendar view, and a built-in Pomodoro timer are **not implemented** — see `wiki.md` §8 for the full gap list against the original aspirational feature set.
+> Not implemented: a calendar view, a built-in Pomodoro timer, search beyond title and description (no full-text engine), and any integration with Dot.Projects. See `wiki.md` §8 for the known gaps.
+
+## Roles
+
+Roles are Jetstream team roles. An InfoDot `viewer` signs in here as `viewer`; owner and admin map to `admin`.
+
+| | viewer | editor | admin / owner |
+|---|---|---|---|
+| Read boards and tasks | yes | yes | yes |
+| Create boards and tasks; move, assign, label, comment, archive and restore tasks | | yes | yes |
+| Delete tasks, archive boards, create/rename/recolour/delete labels | | | yes |
 
 ## Domain Models
 
-- **TaskList** — a board; owns many tasks
-- **Task** — unit of work with status, priority, optional assignee and due date; subtasks are just tasks with a `parent_id`
-- **Label** — colour-coded category tag, many-to-many with tasks
-- **TaskComment** — discussion on a task
+- **TaskList** — a board; owns many tasks; can be archived
+- **Task** — unit of work with status, priority, optional assignee and due date; subtasks are just tasks with a `parent_id`; can be archived or soft deleted; can be blocked by other tasks of the same board
+- **Label** — team-scoped, colour-coded tag from a fixed palette, many-to-many with tasks
+- **TaskComment** — discussion on a task, with `@Name` mentions
 - **AiBreakdownLog** — prompt/response audit trail for each AI decomposition call
 
 ## Tech Stack
@@ -55,8 +71,9 @@ Dot.Tasks is the personal and team task management platform in the InfoDot ecosy
 | Auth | Laravel Sanctum (InfoDot SSO) |
 | AI | Anthropic Claude (`claude-sonnet-4-6`) |
 | Storage | AWS S3 / Local (Flysystem) |
-| Search | Laravel Scout · Meilisearch |
-| Queue | Redis · Laravel Horizon |
+| Search | SQL `LIKE` on task title and description (no search engine) |
+| Queue | Redis · `php artisan queue:work` (no Horizon) |
+| Scheduler | `php artisan schedule:run` from cron, every minute |
 
 ## Quick Start
 
@@ -107,12 +124,18 @@ php artisan serve
    php artisan migrate --force
    ```
 
-6. **Start the queue worker** (use `deploy/queue-worker.service` for systemd or `deploy/queue-worker.supervisord.conf` for Supervisor). Requires `QUEUE_CONNECTION=redis`, matching `.env.production.example`.
+6. **Start the queue worker** (use `deploy/queue-worker.service` for systemd or `deploy/queue-worker.supervisord.conf` for Supervisor). Requires `QUEUE_CONNECTION=redis`, matching `.env.production.example`. What needs it: the `TaskBoardUpdated` broadcast that keeps other people's open boards live. Without a worker those updates queue up and never go out. Notifications are written synchronously and do not wait for it.
    ```bash
    php artisan queue:work redis --tries=3 --timeout=90
    ```
 
-7. **Start the Reverb WebSocket server** (use `deploy/reverb.service` for systemd or `deploy/reverb.supervisord.conf` for Supervisor) -- never run this as a bare foreground command in production, it needs the same process supervision as the queue worker.
+7. **Run the scheduler.** Two jobs run from `routes/console.php`: `tasks:check-due-soon` (07:00, notifies assignees of tasks due within two days) and `tasks:detect-escalation-candidates` (07:30, proposes escalating tasks more than 7 days overdue). Laravel only runs them if something calls the scheduler every minute. Without it **no due-soon reminders are sent and nothing is proposed for escalation**, and no error says so. Use `deploy/scheduler.cron` (cron) or `deploy/scheduler.service` + `deploy/scheduler.timer` (systemd), which run:
+   ```bash
+   * * * * * cd /var/www/html && php artisan schedule:run >> /dev/null 2>&1
+   ```
+   Check it with `php artisan schedule:list` (shows the next run of each job) and, after the first 07:00, by looking for `task_due_soon` rows in `notifications`.
+
+8. **Start the Reverb WebSocket server** (use `deploy/reverb.service` for systemd or `deploy/reverb.supervisord.conf` for Supervisor) -- never run this as a bare foreground command in production, it needs the same process supervision as the queue worker.
    ```bash
    php artisan reverb:start
    ```
@@ -213,6 +236,25 @@ Requires `mod_proxy`, `mod_proxy_wstunnel`, and `mod_ssl` enabled (`a2enmod prox
     ProxyPassReverse /app ws://127.0.0.1:8080/app
 </VirtualHost>
 ```
+
+### Email through Dot.Notify
+
+Dot.Tasks tells [Dot.Notify](https://github.com/sakhilebhayi/Dot.Notify) about four events it already raises in-app, so the company can email them. Notify decides whether anything is sent; Dot.Tasks only reports what happened (`App\Services\Notify\NotifyClient`, `POST /api/ingest/events`).
+
+| Event | Sent to | When | Data sent |
+|---|---|---|---|
+| `task.assigned` | the new assignee | someone else assigns them a task (never self-assignment) | `task_title`, `board_name`, `assigned_by`, `due_date`, `url` |
+| `task.due_soon` | the assignee | `tasks:check-due-soon` raises the in-app reminder | `task_title`, `board_name`, `due_date`, `url` |
+| `task.escalated` | the task's assignee | a board owner approves an escalation (there is no in-app notification for this one); not sent to the approver | `task_title`, `board_name`, `owner_name`, `url` |
+| `task.mentioned` | the mentioned member | the same people who get the in-app mention notification | `task_title`, `board_name`, `mentioned_by`, `url` |
+
+`url` is the absolute `https` address of the board in this app. Comment text and task descriptions are never sent, and an email address travels only in `recipient.email`.
+
+- **Nothing is sent until `NOTIFY_INGEST_URL` and `NOTIFY_INGEST_SECRET` are both set**, and even then Notify sends nothing until the company has enabled the event (an active rule for it) in Dot.Notify. `NOTIFY_INGEST_SECRET` must equal `NOTIFY_INGEST_SECRET_<PLATFORM KEY>` in Notify's `.env`; `NOTIFY_PLATFORM_KEY` defaults to `tasks`.
+- **A queue worker is required** (`php artisan queue:work`, see the checklist above). Events are queued after the database transaction commits, never sent during the user's request; with `QUEUE_CONNECTION=sync` they would run inline, so use a real queue in production.
+- A team is only addressed once it is linked to InfoDot (`teams.infodot_team_uuid`), and a person only if they have an email address; otherwise the event is skipped.
+- Notify can never break or slow a user action: 5 second timeout, 3 tries with backoff (60 s, then 5 min), every failure is caught and logged without addresses or secrets, and after 5 failures in a row calls pause for 60 seconds (a cache-based circuit breaker; the in-app notification is written by its own code and is unaffected).
+- Requests are signed with HMAC-SHA256 over `"{timestamp}.{raw body}"` (`X-InfoDot-Timestamp`, `X-InfoDot-Signature`). The idempotency key is `{event}:{subject id}:{sha1 of the recipient email}:{bucket}` (bucket: the task's last-updated time for an assignment, the due date for a reminder, the proposal id for an escalation, the task id for a mention), so retries and double dispatches collapse in Notify.
 
 ### Real-Time Health Check
 

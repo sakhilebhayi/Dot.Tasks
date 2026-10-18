@@ -118,6 +118,10 @@
                 <span class="material-symbols-rounded nav-icon">dashboard</span>
                 Dashboard
             </a>
+            <a href="{{ route('tasks.mine') }}" class="nav-item {{ request()->routeIs('tasks.mine') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">person_check</span>
+                My tasks
+            </a>
             <a href="{{ route('tasks.today') }}" class="nav-item {{ request()->routeIs('tasks.today') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">today</span>
                 Today
@@ -125,6 +129,10 @@
             <a href="{{ route('tasks.upcoming') }}" class="nav-item {{ request()->routeIs('tasks.upcoming') ? 'active' : '' }}">
                 <span class="material-symbols-rounded nav-icon">event_upcoming</span>
                 Upcoming
+            </a>
+            <a href="{{ route('labels.index') }}" class="nav-item {{ request()->routeIs('labels.index') ? 'active' : '' }}">
+                <span class="material-symbols-rounded nav-icon">sell</span>
+                Labels
             </a>
             <div class="sidebar-divider" style="margin:10px 0;"></div>
             <a href="{{ route('profile.show') }}" class="nav-item {{ request()->routeIs('profile.show') ? 'active' : '' }}">

@@ -4,7 +4,7 @@ namespace App\Livewire\Tasks;
 
 use App\Events\TaskBoardUpdated;
 use App\Models\Task;
-use App\Services\TaskRecurrenceService;
+use App\Services\TaskStatusService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -41,7 +41,7 @@ class SmartViews extends Component
         return $this->teamTaskQuery()
             ->whereDate('due_date', '<=', Carbon::today())
             ->orderBy('due_date')
-            ->orderBy('priority')
+            ->orderByPriorityRank()
             ->get();
     }
 
@@ -64,11 +64,12 @@ class SmartViews extends Component
     /** Mark a task done directly from this view, same as dragging it to "Done" on the board. */
     public function completeTask(int $taskId): void
     {
-        $task = Task::findOrFail($taskId);
-        $this->authorize('update', $task);
+        $this->resetErrorBag('status');
 
-        $task->update(['status' => 'done']);
-        app(TaskRecurrenceService::class)->spawnNextOccurrence($task);
+        $task = Task::find($taskId) ?? abort(404);
+        $this->authorize('move', $task);
+
+        app(TaskStatusService::class)->move($task, 'done');
 
         broadcast(new TaskBoardUpdated($task->taskList))->toOthers();
         unset($this->todayTasks, $this->upcomingTasksByDate);
@@ -76,12 +77,10 @@ class SmartViews extends Component
 
     private function teamTaskQuery()
     {
-        $teamId = auth()->user()->currentTeam->id;
-
-        return Task::whereHas('taskList', fn ($q) => $q->where('team_id', $teamId))
+        return Task::forTeam(auth()->user()->currentTeam)
             ->whereNotNull('due_date')
             ->where('status', '!=', 'done')
-            ->with(['taskList', 'assignee', 'labels']);
+            ->with(['taskList.team', 'assignee', 'labels']);
     }
 
     public function render(): View

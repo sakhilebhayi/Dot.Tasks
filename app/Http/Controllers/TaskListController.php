@@ -19,6 +19,7 @@ class TaskListController extends Controller
         // the ecosystem-wide "Attempt to read property 'id' on null" fix.
         $team = $request->user()->currentTeam;
         abort_if(! $team, 403, 'You must belong to a team to create a task list.');
+        $this->authorize('create', TaskList::class);
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',

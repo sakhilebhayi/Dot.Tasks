@@ -4,67 +4,124 @@ namespace App\Services;
 
 use App\Models\AiBreakdownLog;
 use App\Models\Task;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class AiTaskBreakdownService
 {
-    private string $apiKey;
+    public const SOURCE_AI = 'ai';
 
-    private string $model;
+    public const SOURCE_UNAVAILABLE = 'unavailable';
 
-    public function __construct()
-    {
-        $this->apiKey = config('services.anthropic.api_key', '');
-        $this->model = config('services.anthropic.model', 'claude-sonnet-4-6');
-    }
+    private const ENDPOINT = 'https://api.anthropic.com/v1/messages';
+
+    private const MAX_SUBTASKS = 7;
 
     public function isConfigured(): bool
     {
-        return ! empty($this->apiKey);
+        return filled(config('services.anthropic.api_key'));
     }
 
     /**
      * Break a task down into subtasks.
-     * Returns ['subtasks' => [['title', 'priority', 'estimated_minutes']]]
-     * or null on failure.
      *
-     * @return array<string, mixed>|null
+     * Always returns an array with a `source`:
+     *  - 'ai':          ['source' => 'ai', 'subtasks' => [['title', 'priority', 'estimated_minutes'], ...]]
+     *  - 'unavailable': ['source' => 'unavailable', 'reason' => 'not_configured'|'unreachable'|'api_error'|'unparseable', 'subtasks' => []]
+     *
+     * An unavailable result never carries canned subtasks, so callers cannot
+     * present placeholder output as AI-generated. Every call that actually
+     * reached for the API (success or failure) is written to AiBreakdownLog.
+     *
+     * @return array{source: string, subtasks: list<array{title: string, priority: string, estimated_minutes: int|null}>, reason?: string}
      */
-    public function breakdown(Task $task, int $userId): ?array
+    public function breakdown(Task $task, int $userId): array
     {
+        if (! $this->isConfigured()) {
+            return $this->unavailable('not_configured');
+        }
+
         $prompt = $this->buildPrompt($task);
 
-        if (! $this->isConfigured()) {
-            return $this->mockBreakdown($task);
-        }
+        try {
+            $response = Http::withHeaders([
+                'x-api-key' => (string) config('services.anthropic.api_key'),
+                'anthropic-version' => (string) config('services.anthropic.version', '2023-06-01'),
+            ])
+                ->acceptJson()
+                ->timeout((int) config('services.anthropic.timeout', 30))
+                ->post(self::ENDPOINT, [
+                    'model' => config('services.anthropic.model'),
+                    'max_tokens' => 800,
+                    'messages' => [['role' => 'user', 'content' => $prompt]],
+                ]);
+        } catch (ConnectionException $e) {
+            Log::error('AiTaskBreakdown API unreachable', ['task_id' => $task->id, 'error' => $e->getMessage()]);
+            $this->recordFailure($task, $userId, $prompt, 'unreachable');
 
-        $response = Http::withToken($this->apiKey)
-            ->timeout(30)
-            ->post('https://api.anthropic.com/v1/messages', [
-                'model' => $this->model,
-                'max_tokens' => 800,
-                'messages' => [['role' => 'user', 'content' => $prompt]],
-            ]);
+            return $this->unavailable('unreachable');
+        }
 
         if (! $response->successful()) {
-            Log::error('AiTaskBreakdown API error', ['status' => $response->status()]);
+            Log::error('AiTaskBreakdown API error', [
+                'task_id' => $task->id,
+                'status' => $response->status(),
+                'error_type' => $response->json('error.type'),
+            ]);
+            $this->recordFailure($task, $userId, $prompt, 'api_error', 'HTTP '.$response->status().' '.$response->json('error.type'));
 
-            return null;
+            return $this->unavailable('api_error');
         }
 
-        $text = $response->json('content.0.text', '');
-        $result = $this->parseBreakdown($text);
+        $text = $this->responseText($response->json('content', []));
+        $subtasks = $this->parseBreakdown($text);
 
         AiBreakdownLog::create([
             'task_id' => $task->id,
             'user_id' => $userId,
             'prompt' => $prompt,
-            'response' => $text,
+            'response' => $subtasks === null ? '[unparseable] '.$text : $text,
             'tokens_used' => $response->json('usage.output_tokens'),
         ]);
 
-        return $result;
+        if ($subtasks === null) {
+            Log::warning('AiTaskBreakdown response could not be parsed', ['task_id' => $task->id]);
+
+            return $this->unavailable('unparseable');
+        }
+
+        return ['source' => self::SOURCE_AI, 'subtasks' => $subtasks];
+    }
+
+    /** @return array{source: string, reason: string, subtasks: array{}} */
+    private function unavailable(string $reason): array
+    {
+        return ['source' => self::SOURCE_UNAVAILABLE, 'reason' => $reason, 'subtasks' => []];
+    }
+
+    private function recordFailure(Task $task, int $userId, string $prompt, string $reason, string $detail = ''): void
+    {
+        AiBreakdownLog::create([
+            'task_id' => $task->id,
+            'user_id' => $userId,
+            'prompt' => $prompt,
+            'response' => trim("[unavailable:{$reason}] {$detail}"),
+            'tokens_used' => null,
+        ]);
+    }
+
+    /** @param  array<int, mixed>  $content */
+    private function responseText(array $content): string
+    {
+        foreach ($content as $block) {
+            if (is_array($block) && ($block['type'] ?? null) === 'text') {
+                return (string) ($block['text'] ?? '');
+            }
+        }
+
+        return '';
     }
 
     private function buildPrompt(Task $task): string
@@ -89,7 +146,12 @@ Return only the JSON object.
 PROMPT;
     }
 
-    /** @return array<string, mixed>|null */
+    /**
+     * Model output is untrusted: keep only well-formed subtasks and coerce
+     * priority/estimate into the values the tasks table accepts.
+     *
+     * @return list<array{title: string, priority: string, estimated_minutes: int|null}>|null
+     */
     private function parseBreakdown(string $text): ?array
     {
         $json = trim($text);
@@ -99,24 +161,30 @@ PROMPT;
         }
 
         $data = json_decode(trim($json ?? ''), true);
-        if (! is_array($data) || ! isset($data['subtasks'])) {
+        if (! is_array($data) || ! isset($data['subtasks']) || ! is_array($data['subtasks'])) {
             return null;
         }
 
-        return $data;
-    }
+        $subtasks = [];
+        foreach ($data['subtasks'] as $sub) {
+            $title = is_array($sub) && is_string($sub['title'] ?? null) ? trim($sub['title']) : '';
+            if ($title === '') {
+                continue;
+            }
 
-    /** @return array<string, mixed> */
-    private function mockBreakdown(Task $task): array
-    {
-        return [
-            'subtasks' => [
-                ['title' => 'Research and gather requirements for: '.$task->title, 'priority' => 'high',   'estimated_minutes' => 30],
-                ['title' => 'Design the solution approach',                            'priority' => 'medium', 'estimated_minutes' => 45],
-                ['title' => 'Implement the core logic',                                'priority' => 'high',   'estimated_minutes' => 90],
-                ['title' => 'Write tests',                                             'priority' => 'medium', 'estimated_minutes' => 30],
-                ['title' => 'Review and document',                                     'priority' => 'low',    'estimated_minutes' => 20],
-            ],
-        ];
+            $minutes = $sub['estimated_minutes'] ?? null;
+
+            $subtasks[] = [
+                'title' => Str::limit($title, 255, ''),
+                'priority' => in_array($sub['priority'] ?? null, Task::PRIORITIES, true) ? $sub['priority'] : 'medium',
+                'estimated_minutes' => is_int($minutes) && $minutes >= 1 ? $minutes : null,
+            ];
+
+            if (count($subtasks) === self::MAX_SUBTASKS) {
+                break;
+            }
+        }
+
+        return $subtasks === [] ? null : $subtasks;
     }
 }

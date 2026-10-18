@@ -4,6 +4,7 @@ namespace App\Livewire\Tasks;
 
 use App\Events\TaskEscalated;
 use App\Models\TaskEscalationProposal;
+use App\Services\Notify\NotifyClient;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -18,8 +19,18 @@ class EscalationQueue extends Component
     #[Computed]
     public function pendingProposals(): Collection
     {
+        $team = auth()->user()->currentTeam;
+
+        if (! $team) {
+            return collect();
+        }
+
+        // Scoped to the current team (tenant boundary) AND to lists the user
+        // owns (only the list owner may act on a proposal, see
+        // TaskPolicy::escalate()).
         return TaskEscalationProposal::where('status', 'pending')
-            ->whereHas('task.taskList', fn ($query) => $query->where('owner_id', auth()->id()))
+            ->whereHas('task', fn ($task) => $task->forTeam($team)
+                ->whereHas('taskList', fn ($list) => $list->where('owner_id', auth()->id())))
             ->with('task.taskList')
             ->latest()
             ->get();
@@ -29,7 +40,8 @@ class EscalationQueue extends Component
     {
         $proposal = TaskEscalationProposal::find($proposalId);
 
-        if (! $proposal) {
+        // Also gone if its task has since been archived, deleted or moved onto an archived board.
+        if (! $proposal || ! $proposal->task) {
             return;
         }
 
@@ -48,6 +60,13 @@ class EscalationQueue extends Component
             'reviewed_at' => now(),
         ]);
 
+        // There is no in-app notification for an escalation. The email goes to the person whose task it is,
+        // unless they are the one approving it.
+        $assignee = $proposal->task->assignee;
+        if ($assignee && $assignee->id !== auth()->id()) {
+            app(NotifyClient::class)->taskEscalated($proposal->task, $proposal, $assignee);
+        }
+
         unset($this->pendingProposals);
     }
 
@@ -55,7 +74,8 @@ class EscalationQueue extends Component
     {
         $proposal = TaskEscalationProposal::find($proposalId);
 
-        if (! $proposal) {
+        // Also gone if its task has since been archived, deleted or moved onto an archived board.
+        if (! $proposal || ! $proposal->task) {
             return;
         }
 
@@ -75,7 +95,8 @@ class EscalationQueue extends Component
     {
         $proposal = TaskEscalationProposal::find($proposalId);
 
-        if (! $proposal) {
+        // Also gone if its task has since been archived, deleted or moved onto an archived board.
+        if (! $proposal || ! $proposal->task) {
             return;
         }
 

@@ -10,6 +10,10 @@
         </a>
     </div>
 
+    @error('status')
+        <p role="alert" class="mb-3 px-3 py-2 text-sm text-red-700 bg-red-50 dark:bg-red-900/20 dark:text-red-300 rounded-md">{{ $message }}</p>
+    @enderror
+
     @if($view === 'today')
         @if($this->todayTasks->isEmpty())
             <div class="text-center py-16 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-dashed border-gray-300 dark:border-gray-700">
@@ -20,9 +24,11 @@
             <div class="space-y-2">
                 @foreach($this->todayTasks as $task)
                     <div class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700">
-                        <button wire:click="completeTask({{ $task->id }})"
-                                class="shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-indigo-500"
-                                title="Mark done"></button>
+                        @can('move', $task)
+                            <button wire:click="completeTask({{ $task->id }})"
+                                    class="shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-indigo-500"
+                                    title="Mark done" aria-label="Mark {{ $task->title }} done"></button>
+                        @endcan
                         <div class="flex-1 min-w-0">
                             <p class="text-sm text-gray-900 dark:text-white font-medium truncate">{{ $task->title }}</p>
                             <p class="text-xs text-gray-400 dark:text-gray-500">{{ $task->taskList->name }}</p>
@@ -59,9 +65,11 @@
                         <div class="space-y-2">
                             @foreach($tasks as $task)
                                 <div class="flex items-center gap-3 bg-white dark:bg-gray-800 rounded-lg p-3 shadow-sm border border-gray-200 dark:border-gray-700">
-                                    <button wire:click="completeTask({{ $task->id }})"
-                                            class="shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-indigo-500"
-                                            title="Mark done"></button>
+                                    @can('move', $task)
+                                        <button wire:click="completeTask({{ $task->id }})"
+                                                class="shrink-0 w-5 h-5 rounded-full border-2 border-gray-300 dark:border-gray-600 hover:border-indigo-500"
+                                                title="Mark done" aria-label="Mark {{ $task->title }} done"></button>
+                                    @endcan
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm text-gray-900 dark:text-white font-medium truncate">{{ $task->title }}</p>
                                         <p class="text-xs text-gray-400 dark:text-gray-500">{{ $task->taskList->name }}</p>
