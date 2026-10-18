@@ -113,9 +113,9 @@
             @endif
         </div>
     @else
-    <div class="flex gap-4 overflow-x-auto pb-4">
+    <div class="kanban-scroll flex gap-4 pb-4" tabindex="0" role="region" aria-label="Task board columns">
         @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $status => $label)
-            <div class="shrink-0 w-72 bg-gray-100 dark:bg-gray-900 rounded-xl p-3"
+            <div class="kanban-col shrink-0 w-72 bg-gray-100 dark:bg-gray-900 rounded-xl p-3"
                  @if($canWork)
                      x-data
                      x-on:dragover.prevent
@@ -182,6 +182,22 @@
                                     </span>
                                 @endif
                             </div>
+                            @can('move', $task)
+                                {{-- The touch-friendly way to move a card: dragging is mouse-only. Always visible, never hover-only. --}}
+                                <div class="mt-2" onclick="event.stopPropagation()">
+                                    <label for="move-{{ $task->id }}" class="sr-only">Move &quot;{{ $task->title }}&quot; to</label>
+                                    <select id="move-{{ $task->id }}" wire:key="move-{{ $task->id }}-{{ $moveAttempts }}"
+                                            wire:change="moveTask({{ $task->id }}, $event.target.value)"
+                                            class="kanban-move dark:bg-gray-800 dark:text-white border-gray-300 dark:border-gray-600">
+                                        <option value="" selected disabled>Move to...</option>
+                                        @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $moveStatus => $moveLabel)
+                                            @if($moveStatus !== $task->status)
+                                                <option value="{{ $moveStatus }}">{{ $moveLabel }}</option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endcan
                         </div>
                     @empty
                         <p class="text-xs text-gray-400 dark:text-gray-600 text-center py-4">No tasks here.</p>

@@ -1,10 +1,10 @@
 <x-app-layout>
-    <div style="padding:2rem 2.5rem;">
+    <div class="page-pad">
 
         <!-- Page header -->
-        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:2rem;">
+        <div class="page-head" style="justify-content:flex-start;">
             <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:0.4rem;text-decoration:none;color:#8d90a2;font-size:0.8rem;font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='#b6c4ff'" onmouseout="this.style.color='#8d90a2'">
-                <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span>
+                <span class="material-symbols-rounded" style="font-size:16px;">arrow_back</span>
                 Dashboard
             </a>
             <span style="color:rgba(67,70,86,0.6);">/</span>
@@ -52,17 +52,17 @@
                     <div style="margin-bottom:2rem;" x-data="{ selected: '{{ old('color', '#6366f1') }}' }">
                         <label style="display:block;font-family:'Manrope',sans-serif;font-size:0.75rem;font-weight:700;color:#b7c8e1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.75rem;">Colour</label>
                         <input type="hidden" name="color" :value="selected" />
-                        <div style="display:flex;align-items:center;gap:0.75rem;">
+                        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:0.75rem;">
                             @foreach(['#6366f1', '#2962ff', '#059669', '#dc2626', '#d97706', '#7c3aed'] as $swatch)
                             <button
                                 type="button"
                                 @click="selected = '{{ $swatch }}'"
                                 style="width:32px;height:32px;border-radius:9999px;background:{{ $swatch }};border:none;cursor:pointer;transition:transform 0.15s,box-shadow 0.15s;position:relative;"
-                                :style="selected === '{{ $swatch }}' ? 'transform:scale(1.2);box-shadow:0 0 0 3px rgba(255,255,255,0.2),0 0 0 5px {{ $swatch }}' : ''"
+                                :style="selected === '{{ $swatch }}' ? { transform: 'scale(1.2)', boxShadow: '0 0 0 3px rgba(255,255,255,0.2), 0 0 0 5px {{ $swatch }}' } : {}"
                                 title="{{ $swatch }}"
                             >
                                 <span
-                                    class="material-symbols-outlined"
+                                    class="material-symbols-rounded"
                                     x-show="selected === '{{ $swatch }}'"
                                     style="font-size:14px;color:#fff;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;"
                                 >check</span>
@@ -78,7 +78,7 @@
                         onmouseover="this.style.opacity='0.9'"
                         onmouseout="this.style.opacity='1'"
                     >
-                        <span class="material-symbols-outlined" style="font-size:18px;">add_circle</span>
+                        <span class="material-symbols-rounded" style="font-size:18px;">add_circle</span>
                         Create List
                     </button>
                 </form>

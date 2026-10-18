@@ -1,8 +1,8 @@
 <x-app-layout>
-    <div style="padding:2rem 2.5rem;">
+    <div class="page-pad">
 
         <!-- Page header -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;">
+        <div class="page-head">
             <div>
                 <h1 style="font-family:'Syne',sans-serif;font-size:1.5rem;font-weight:800;color:#f4f4f5;margin:0 0 0.25rem;">Dashboard</h1>
                 <p style="font-size:0.8rem;color:#71717a;margin:0;">Manage your task lists and track progress</p>
@@ -16,9 +16,9 @@
         </div>
 
         <!-- KPI row -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1.25rem;">
+        <div class="kpi-grid" style="margin-bottom:1.25rem;">
             <!-- Total Lists -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Total Lists</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(41,98,255,0.15);display:flex;align-items:center;justify-content:center;">
@@ -29,7 +29,7 @@
             </div>
 
             <!-- Total Tasks -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Total Tasks</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(124,58,237,0.15);display:flex;align-items:center;justify-content:center;">
@@ -40,7 +40,7 @@
             </div>
 
             <!-- In Progress -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">In Progress</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(217,119,6,0.15);display:flex;align-items:center;justify-content:center;">
@@ -51,7 +51,7 @@
             </div>
 
             <!-- Completed -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Completed</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(5,150,105,0.15);display:flex;align-items:center;justify-content:center;">
@@ -63,9 +63,9 @@
         </div>
 
         <!-- Secondary KPI row: due-date awareness -->
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:2.5rem;">
+        <div class="kpi-grid" style="margin-bottom:2.5rem;">
             <!-- Due Today -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Due Today</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;">
@@ -76,7 +76,7 @@
             </div>
 
             <!-- Overdue -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Overdue</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;">
@@ -87,7 +87,7 @@
             </div>
 
             <!-- Completed This Week -->
-            <div style="background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;">
+            <div class="kpi-tile">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.75rem;">
                     <span style="font-size:0.7rem;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:0.12em;">Completed This Week</span>
                     <div style="width:32px;height:32px;border-radius:8px;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;">
@@ -122,9 +122,9 @@
             </div>
         @else
             <!-- Lists grid -->
-            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;">
+            <div class="kpi-grid list-grid">
                 @foreach($lists as $list)
-                <a href="{{ route('task-lists.show', $list) }}" style="display:block;background:rgba(20,20,22,0.9);border:1px solid rgba(255,255,255,0.07);border-radius:1rem;padding:1.5rem;text-decoration:none;transition:border-color 0.2s,box-shadow 0.2s;" onmouseover="this.style.borderColor='rgba(41,98,255,0.4)';this.style.boxShadow='0 0 0 1px rgba(41,98,255,0.2)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.07)';this.style.boxShadow='none'">
+                <a href="{{ route('task-lists.show', $list) }}" class="list-card">
                     <!-- Color bar at top -->
                     <div style="height:3px;border-radius:9999px;background:{{ $list->color ?? '#2962ff' }};margin-bottom:1.25rem;"></div>
 

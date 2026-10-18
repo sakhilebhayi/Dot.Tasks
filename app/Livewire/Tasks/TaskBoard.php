@@ -34,6 +34,9 @@ class TaskBoard extends Component
     #[Url(except: '')]
     public string $show = '';
 
+    /** Bumped on every move attempt so a refused one resets each card's "Move to..." select. */
+    public int $moveAttempts = 0;
+
     public const COLUMNS = [
         'todo' => 'To Do',
         'in_progress' => 'In Progress',
@@ -156,6 +159,7 @@ class TaskBoard extends Component
     public function moveTask(int $taskId, string $newStatus): void
     {
         $this->authorize('update', $this->taskList);
+        $this->moveAttempts++;
         $this->resetErrorBag('status');
 
         // A tampered client can send any string here; reject anything that is

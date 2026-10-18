@@ -1,11 +1,11 @@
 <x-app-layout>
-    <div style="padding:2rem 2.5rem;">
+    <div class="page-pad">
 
         <!-- Page header -->
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:2rem;">
+        <div class="page-head">
             <div style="display:flex;align-items:center;gap:1rem;">
                 <a href="{{ route('dashboard') }}" style="display:flex;align-items:center;gap:0.4rem;text-decoration:none;color:#8d90a2;font-size:0.8rem;font-weight:600;transition:color 0.2s;" onmouseover="this.style.color='#b6c4ff'" onmouseout="this.style.color='#8d90a2'">
-                    <span class="material-symbols-outlined" style="font-size:16px;">arrow_back</span>
+                    <span class="material-symbols-rounded" style="font-size:16px;">arrow_back</span>
                     Lists
                 </a>
                 <span style="color:rgba(67,70,86,0.6);">/</span>
