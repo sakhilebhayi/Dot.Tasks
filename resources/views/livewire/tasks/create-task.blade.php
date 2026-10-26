@@ -7,18 +7,18 @@
 
                 <form wire:submit="save" class="space-y-4">
                     <div>
-                        <input wire:model="title" type="text" placeholder="Task title" autofocus
+                        <input aria-label="Task title" wire:model="title" type="text" placeholder="Task title" autofocus
                                class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm focus:ring-indigo-500">
                         @error('title')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                     </div>
 
-                    <textarea wire:model="description" rows="2" placeholder="Description (optional)"
+                    <textarea aria-label="Description" wire:model="description" rows="2" placeholder="Description (optional)"
                               class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm text-sm"></textarea>
 
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Priority</label>
-                            <select wire:model="priority"
+                            <label for="livewire-tasks-create-task-priority" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Priority</label>
+                            <select id="livewire-tasks-create-task-priority" wire:model="priority"
                                     class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                                 <option value="low">Low</option>
                                 <option value="medium">Medium</option>
@@ -27,8 +27,8 @@
                             </select>
                         </div>
                         <div>
-                            <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Due Date</label>
-                            <input wire:model="dueDate" type="date"
+                            <label for="livewire-tasks-create-task-duedate" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Due Date</label>
+                            <input id="livewire-tasks-create-task-duedate" wire:model="dueDate" type="date"
                                    class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                         </div>
                     </div>
@@ -61,14 +61,14 @@
                     @endif
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Estimate (minutes)</label>
-                        <input wire:model="estimatedMinutes" type="number" min="1" placeholder="e.g. 30"
+                        <label for="livewire-tasks-create-task-estimatedminutes" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Estimate (minutes)</label>
+                        <input id="livewire-tasks-create-task-estimatedminutes" wire:model="estimatedMinutes" type="number" min="1" placeholder="e.g. 30"
                                class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Repeat</label>
-                        <select wire:model.live="recurrenceType"
+                        <label for="livewire-tasks-create-task-recurrencetype" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Repeat</label>
+                        <select id="livewire-tasks-create-task-recurrencetype" wire:model.live="recurrenceType"
                                 class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                             <option value="">Doesn't repeat</option>
                             <option value="daily">Daily</option>
@@ -81,14 +81,14 @@
                     @if($recurrenceType)
                         <div class="grid grid-cols-2 gap-3">
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Every</label>
-                                <input wire:model="recurrenceInterval" type="number" min="1" max="365"
+                                <label for="livewire-tasks-create-task-recurrenceinterval" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Every</label>
+                                <input id="livewire-tasks-create-task-recurrenceinterval" wire:model="recurrenceInterval" type="number" min="1" max="365"
                                        class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                                 @error('recurrenceInterval')<p class="mt-1 text-xs text-red-600">{{ $message }}</p>@enderror
                             </div>
                             <div>
-                                <label class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Based on</label>
-                                <select wire:model="recurrenceAnchor"
+                                <label for="livewire-tasks-create-task-recurrenceanchor" class="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Based on</label>
+                                <select id="livewire-tasks-create-task-recurrenceanchor" wire:model="recurrenceAnchor"
                                         class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
                                     <option value="due_date">Due date</option>
                                     <option value="completion">Completion date</option>

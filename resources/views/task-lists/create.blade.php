@@ -19,8 +19,8 @@
 
                     <!-- Name -->
                     <div style="margin-bottom:1.5rem;">
-                        <label style="display:block;font-family:'Manrope',sans-serif;font-size:0.75rem;font-weight:700;color:#b7c8e1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">List Name</label>
-                        <input
+                        <label for="task-lists-create-name" style="display:block;font-family:'Manrope',sans-serif;font-size:0.75rem;font-weight:700;color:#b7c8e1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">List Name</label>
+                        <input id="task-lists-create-name"
                             name="name"
                             type="text"
                             placeholder="e.g. Sprint 1, Marketing Tasks..."
@@ -37,8 +37,8 @@
 
                     <!-- Description -->
                     <div style="margin-bottom:1.5rem;">
-                        <label style="display:block;font-family:'Manrope',sans-serif;font-size:0.75rem;font-weight:700;color:#b7c8e1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Description <span style="color:#8d90a2;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
-                        <textarea
+                        <label for="task-lists-create-description" style="display:block;font-family:'Manrope',sans-serif;font-size:0.75rem;font-weight:700;color:#b7c8e1;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Description <span style="color:#8d90a2;font-weight:400;text-transform:none;letter-spacing:0;">(optional)</span></label>
+                        <textarea id="task-lists-create-description"
                             name="description"
                             rows="3"
                             placeholder="What is this list for?"
