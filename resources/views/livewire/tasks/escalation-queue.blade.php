@@ -22,7 +22,7 @@
 
             @if($rejectingProposalId === $proposal->id)
                 <div class="flex items-center gap-2 mt-3">
-                    <input type="text" wire:model="rejectReason" placeholder="Reason for keeping as-is"
+                    <input aria-label="Reason for keeping as-is" type="text" wire:model="rejectReason" placeholder="Reason for keeping as-is"
                         class="flex-1 border-gray-300 dark:border-gray-600 dark:bg-gray-900 dark:text-white rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500" />
                     <button wire:click="confirmReject({{ $proposal->id }})" class="text-xs px-3 py-1.5 rounded bg-red-600 hover:bg-red-700 text-white font-medium">
                         Confirm Reject
