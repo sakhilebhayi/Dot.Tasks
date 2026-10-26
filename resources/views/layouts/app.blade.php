@@ -170,6 +170,7 @@
         }
         @media (pointer:coarse) { .nav-item { min-height:44px; } }
         @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; scroll-behavior:auto !important; }
             .sidebar, .sidebar.is-open, .shell-backdrop, .shell-backdrop.is-open { transition:none !important; }
             .live-dot { animation:none; }
         }
