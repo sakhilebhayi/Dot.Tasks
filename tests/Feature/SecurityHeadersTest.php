@@ -104,6 +104,30 @@ class SecurityHeadersTest extends TestCase
         ]))->assertNoContent();
     }
 
+    public function test_odd_report_fields_never_make_the_endpoint_error_and_stay_bounded(): void
+    {
+        Log::spy();
+
+        // Non-string field values (browsers never send them, anyone can) are ignored, not cast.
+        $this->call('POST', '/csp-report', [], [], [], ['CONTENT_TYPE' => 'application/csp-report'], json_encode(['csp-report' => [
+            'effective-directive' => ['img-src'],
+            'blocked-uri' => ['https://evil.example/x'],
+        ]]))->assertNoContent();
+        $this->call('POST', '/csp-report', [], [], [], ['CONTENT_TYPE' => 'application/csp-report'], json_encode(['csp-report' => 'text']))->assertNoContent();
+        $this->call('POST', '/csp-report', [], [], [], ['CONTENT_TYPE' => 'application/reports+json'], json_encode([['body' => 'text'], 'text', null]))->assertNoContent();
+
+        // A huge host is capped so the once-a-day cache key cannot outgrow a database cache table's key column.
+        $this->call('POST', '/csp-report', [], [], [], ['CONTENT_TYPE' => 'application/csp-report'], json_encode(['csp-report' => [
+            'effective-directive' => 'connect-src',
+            'blocked-uri' => 'https://'.str_repeat('a', 3000).'.example/x',
+        ]]))->assertNoContent();
+
+        Log::shouldHaveReceived('info')->once();   // only the well-formed report was logged
+        Log::shouldHaveReceived('info')
+            ->withArgs(fn ($m, $ctx = []) => $m === 'csp.violation' && $ctx['directive'] === 'connect-src' && strlen($ctx['blocked_host']) <= 100)
+            ->once();
+    }
+
     public function test_the_report_endpoint_is_throttled_and_post_only(): void
     {
         $this->get('/csp-report')->assertStatus(405);
