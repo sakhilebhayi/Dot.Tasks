@@ -6,6 +6,7 @@ use App\Events\TaskBoardUpdated;
 use App\Models\Label;
 use App\Models\Task;
 use App\Models\TaskChecklistItem;
+use App\Models\TaskList;
 use App\Models\User;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
@@ -312,6 +313,34 @@ class TaskDetail extends Component
 
         app(TaskStatusService::class)->move($sub, $sub->status === 'done' ? 'todo' : 'done');
 
+        $this->refreshTask();
+    }
+
+    /** @return Collection<int, TaskList> the other places this task can go */
+    #[Computed]
+    public function otherBoards()
+    {
+        $task = $this->task;
+        if (! $task || $task->parent_id) {
+            return collect();
+        }
+
+        return $task->taskList->team->taskLists()->whereKeyNot($task->task_list_id)->orderByDesc('is_inbox')->orderBy('name')->get()
+            ->filter(fn (TaskList $board) => auth()->user()->can('create', [Task::class, $board]))->values();
+    }
+
+    public function moveToBoard(int $boardId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('move', $this->task);
+
+        $board = $this->otherBoards->firstWhere('id', $boardId) ?? abort(403);
+        app(TaskPlacement::class)->moveToBoard($this->task, $board);
+
+        unset($this->otherBoards);
         $this->refreshTask();
     }
 

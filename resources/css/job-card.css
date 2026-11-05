@@ -310,6 +310,42 @@ button { cursor: pointer; }
 .tl-pick { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: copy; }
 .tl-pick:hover { background: color-mix(in srgb, var(--raised) 40%, transparent); }
 
+/* My Day */
+.week-rack { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: 20px; }
+.week-drop { min-width: 0; border-radius: var(--radius); }
+.week-drop:has(.sortable-ghost), [data-board]:has(.sortable-ghost) { outline: 2px solid var(--text); outline-offset: 1px; }
+.week-drop .sortable-ghost, [data-board] .sortable-ghost { display: none !important; }
+.week-slot { display: flex; flex-direction: column; gap: 8px; width: 100%; height: 92px; padding: 8px 10px; border: 0; border-radius: var(--radius); background: var(--raised); color: var(--muted); text-align: left; transition: background-color 150ms var(--ease); }
+.week-slot:hover { background: var(--active); }
+.week-slot[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--text); }
+.week-slot.today { background: var(--go-wash); color: var(--go); }
+.week-name { font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.week-name b { font-weight: 600; color: var(--text); }
+.week-slot.today .week-name b { color: inherit; }
+.edges { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.edges i { display: block; flex: none; height: 3px; border-radius: 1px; background: var(--muted); transition: translate 180ms var(--ease); }
+.week-slot.today .edges i { background: var(--go); }
+.week-slot.past .edges i { background: var(--stop); }
+.week-slot:hover .edges i { translate: 0 -1px; }
+.day-wrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+.day-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.day-head h2 { font-size: 16px; font-weight: 600; }
+.day-head .count { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.plan { display: flex; flex-direction: column; gap: 6px; min-height: 96px; padding: 6px; border-radius: var(--radius); background: var(--raised); }
+.plan-empty { margin-top: -66px; padding: 20px; color: var(--muted); text-align: center; pointer-events: none; }
+.day-sources { display: flex; flex-direction: column; gap: 16px; }
+.source { display: flex; flex-direction: column; gap: 4px; min-height: 8px; }
+.source-empty { color: var(--muted); font-size: 12px; }
+.day-card { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.day-card[data-task] { cursor: grab; }
+.day-card.is-done .day-title b { color: var(--muted); text-decoration: line-through; }
+.day-title { flex: 1; min-width: 0; padding: 0; border: 0; background: none; color: var(--text); text-align: left; }
+.day-title b { display: block; overflow: hidden; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.day-title span { display: block; overflow: hidden; color: var(--muted); font-size: 12px; white-space: nowrap; text-overflow: ellipsis; }
+.day-card .icon-btn { flex: none; width: 28px; height: 28px; }
+.slot-sums { display: flex; flex-wrap: wrap; gap: 2px 10px; padding: 0 12px 8px; color: var(--muted); font-size: 12px; }
+.slot-sums .wait { color: var(--wait); }
+
 .understood { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--raised); }
 .step { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .step-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -377,6 +413,8 @@ button { cursor: pointer; }
     .topbar { left: 0; padding: 0 8px; gap: 4px; }
     .find { flex: 1; }
     .find kbd, .topbar-hide { display: none; }
+    .day-wrap { grid-template-columns: minmax(0, 1fr); }
+    .week-slot { height: 76px; padding: 6px; }
     .cal-wrap { grid-template-columns: minmax(0, 1fr); }
     .cal-head { display: none; }
     .cal-grid { grid-template-columns: minmax(0, 1fr) !important; }

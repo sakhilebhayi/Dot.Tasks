@@ -4,6 +4,7 @@ namespace App\Livewire\Concerns;
 
 use App\Events\TaskBoardUpdated;
 use App\Models\Task;
+use App\Models\TaskList;
 use App\Services\TaskEditor;
 use App\Services\TaskPlacement;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,35 @@ trait PlacesCards
         }
 
         broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
+
+        return ['ok' => true];
+    }
+
+    /**
+     * Dropped on another board in the sidebar. Allowed where this person could make a task there, and only on this team.
+     *
+     * @return array{ok: bool, message?: string}
+     */
+    public function moveToBoard(int $taskId, int $boardId): array
+    {
+        $task = $this->boardQuery()->find($taskId);
+        $board = TaskList::where('team_id', $this->taskList->team_id)->find($boardId);
+
+        if (! $task || ! $board) {
+            return $this->refuse('That card or board is no longer here.');
+        }
+
+        $this->authorize('move', $task);
+
+        if (! auth()->user()->can('create', [Task::class, $board])) {
+            return $this->refuse('You cannot add tasks to that board.');
+        }
+
+        app(TaskPlacement::class)->moveToBoard($task, $board);
+
+        broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
+        broadcast(new TaskBoardUpdated($board))->toOthers();
+        $this->forgetTasks();
 
         return ['ok' => true];
     }

@@ -1,6 +1,6 @@
 <div>
     <div class="tabs" style="margin-bottom:12px">
-        <a href="{{ route('tasks.today') }}" class="tab {{ $view === 'today' ? 'active' : '' }}">Today</a>
+        <a href="{{ route('tasks.due') }}" class="tab {{ $view === 'today' ? 'active' : '' }}">Due now</a>
         <a href="{{ route('tasks.upcoming') }}" class="tab {{ $view === 'upcoming' ? 'active' : '' }}">Upcoming</a>
     </div>
 

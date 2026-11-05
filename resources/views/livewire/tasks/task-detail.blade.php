@@ -75,6 +75,18 @@
                         <p id="task-assignee">{{ $task->assignee?->name ?? 'Unassigned' }}</p>
                     @endcan
 
+                    @can('move', $task)
+                        @if($this->otherBoards->isNotEmpty())
+                            <label for="task-board" style="color:var(--muted);font-size:12px">Board</label>
+                            <select class="select" id="task-board" wire:key="board-{{ $task->id }}-{{ $task->task_list_id }}" wire:change="moveToBoard($event.target.value)">
+                                <option value="" selected disabled>{{ $task->taskList->is_inbox ? 'Inbox' : $task->taskList->name }}</option>
+                                @foreach($this->otherBoards as $board)
+                                    <option value="{{ $board->id }}">{{ $board->is_inbox ? 'Inbox (only you)' : $board->name }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                    @endcan
+
                     <span>With</span>
                     <div style="display:flex;flex-wrap:wrap;gap:4px">
                         @can('assign', $task)

@@ -59,7 +59,7 @@ function save(evt, send) {
     });
 }
 
-function sortable(element, { handle, canDrop, drop, keepOrder = false, sharing = 'cards' }) {
+function sortable(element, { handle, canDrop, drop, keepOrder = false, sharing = 'cards', pressable = 'a, button, input, select, textarea' }) {
     let refused = null;
     const clear = () => {
         refused?.classList.remove('refuse');
@@ -71,7 +71,7 @@ function sortable(element, { handle, canDrop, drop, keepOrder = false, sharing =
         sort: !keepOrder,
         draggable: '[data-task]',
         handle,
-        filter: handle ? undefined : 'a, button, input, select, textarea',
+        filter: handle ? undefined : pressable,
         preventOnFilter: false,
         forceFallback: true,
         fallbackTolerance: 4,
@@ -139,8 +139,11 @@ function boardColumn() {
                 handle: this.$el.dataset.handle,
                 keepOrder: this.$el.dataset.status === undefined,
                 canDrop: blockedFromDone,
-                drop: (evt) => save(evt, () => this.send(evt.item, evt.to, evt.item.dataset.status, nextId(evt.item))),
+                drop: (evt) => (evt.to.dataset.board
+                    ? toBoard(evt, this.$wire)
+                    : save(evt, () => this.send(evt.item, evt.to, evt.item.dataset.status, nextId(evt.item)))),
             });
+            boardDrops();
         },
         destroy() {
             this.sorter?.destroy();
@@ -331,7 +334,120 @@ function timeline(dayWidth) {
     };
 }
 
+// A drop on a board in the sidebar moves the card there.
+function boardDrops() {
+    document.querySelectorAll('[data-board]').forEach((link) => {
+        if (link.dataset.dropReady) return;
+        link.dataset.dropReady = '1';
+        Sortable.create(link, { group: { name: 'cards', pull: false, put: true }, draggable: '.nothing' });
+    });
+}
+
+const toBoard = (evt, $wire) => {
+    const { item, to } = evt;
+    const home = () => putBack(evt);
+    return saving(() => $wire.moveToBoard(Number(item.dataset.task), Number(to.dataset.board)), home).then((answer) => {
+        if (answer?.ok === false) {
+            home();
+            return say(answer.message ?? LOST);
+        }
+        item.remove();
+        say(`${item.dataset.title} moved to ${to.textContent.trim()}.`);
+    });
+};
+
+// My Day: the ordered plan, the lists it is filled from, and the days of the week rack.
+function dayPlan() {
+    return {
+        init() {
+            const planned = this.$el.dataset.plan !== undefined;
+            this.sorter = sortable(this.$el, {
+                keepOrder: !planned,
+                pressable: '.tick, .icon-btn',
+                sharing: { name: 'day', pull: true, put: planned ? true : (to, from) => from.el.dataset.plan !== undefined },
+                drop: (evt) => {
+                    const id = Number(evt.item.dataset.task);
+                    if (evt.to.dataset.plan !== undefined) return save(evt, () => this.$wire.planIt(id, nextId(evt.item)));
+                    if (evt.to.dataset.date !== undefined) return save(evt, () => this.$wire.reschedule(id, evt.to.dataset.date, evt.item.dataset.date || null));
+                    return save(evt, () => this.$wire.unplan(id));
+                },
+            });
+        },
+        destroy() {
+            this.sorter?.destroy();
+        },
+        keys(event) {
+            const card = event.target.closest('[data-task]');
+            const step = { ArrowUp: -1, ArrowDown: 1 }[event.key];
+            if (!card || !event.altKey || !step) return;
+            event.preventDefault();
+
+            const siblings = items(this.$root);
+            const index = siblings.indexOf(card);
+            if (!siblings[index + step]) return;
+
+            const id = card.dataset.task;
+            const before = step < 0 ? Number(siblings[index - 1].dataset.task) : (siblings[index + 2] ? Number(siblings[index + 2].dataset.task) : null);
+            saving(() => this.$wire.planIt(Number(id), before), () => {}).then((answer) => {
+                if (answer?.ok === false) return;
+                say(`${card.dataset.title} moved.`);
+                this.$nextTick(() => document.querySelector(`[data-plan] [data-task="${id}"] .grip`)?.focus());
+            });
+        },
+    };
+}
+
+function rackDay() {
+    return {
+        init() {
+            this.sorter = Sortable.create(this.$el, {
+                group: { name: 'day', pull: false, put: true },
+                draggable: '.nothing',
+            });
+        },
+        destroy() {
+            this.sorter?.destroy();
+        },
+    };
+}
+
+// One person on the Team page.
+function personList() {
+    return {
+        init() {
+            this.sorter = sortable(this.$el, {
+                keepOrder: true,
+                sharing: 'people',
+                drop: (evt) => save(evt, () => this.$wire.reassign(Number(evt.item.dataset.task), evt.to.dataset.person, evt.item.dataset.person)),
+            });
+        },
+        destroy() {
+            this.sorter?.destroy();
+        },
+        keys(event) {
+            const card = event.target.closest('[data-task]');
+            const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+            if (!card || !event.altKey || !step) return;
+            event.preventDefault();
+
+            const lists = [...this.$el.closest('[data-rack]').querySelectorAll('[data-list]')];
+            const target = lists[lists.indexOf(this.$el) + step];
+            if (!target) return;
+
+            const id = card.dataset.task;
+            saving(() => this.$wire.reassign(Number(id), target.dataset.person, card.dataset.person), () => {}).then((answer) => {
+                if (answer?.ok === false) return answer.message && say(answer.message);
+                say(`${card.dataset.title} handed to ${target.dataset.name}.`);
+                this.$nextTick(() => document.querySelector(`[data-task="${id}"]`)?.focus());
+            });
+        },
+    };
+}
+
 document.addEventListener('alpine:init', () => {
+    window.Alpine.data('dayPlan', dayPlan);
+    window.Alpine.data('rackDay', rackDay);
+    window.Alpine.data('personList', personList);
     window.Alpine.data('dayList', dayList);
     window.Alpine.data('timeline', timeline);
     window.Alpine.data('boardColumn', boardColumn);

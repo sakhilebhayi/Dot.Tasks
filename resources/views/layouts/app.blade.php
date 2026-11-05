@@ -41,6 +41,7 @@
                 ['tasks.inbox', 'inbox', 'Inbox'],
                 ['tasks.mine', 'check', 'My tasks'],
                 ['tasks.upcoming', 'calendar', 'Upcoming'],
+                ['tasks.team', 'team', 'Team'],
                 ['dashboard', 'home', 'Overview'],
                 ['labels.index', 'label', 'Labels'],
                 ['removed.index', 'trash', 'Removed'],
@@ -59,7 +60,7 @@
                     @endcan
                 </div>
                 @forelse ($boards as $board)
-                    <a href="{{ route('task-lists.show', $board) }}" class="nav-item {{ request()->route('taskList')?->is($board) ? 'active' : '' }}">
+                    <a href="{{ route('task-lists.show', $board) }}" data-board="{{ $board->id }}" class="nav-item {{ request()->route('taskList')?->is($board) ? 'active' : '' }}">
                         <span class="nav-dot" style="background: {{ $board->color }}"></span>
                         <span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ $board->name }}</span>
                     </a>
@@ -137,6 +138,7 @@
         <livewire:tasks.quick-add :board="request()->route('taskList')?->id" />
         <livewire:tasks.find-tasks />
         <p class="sr" id="drag-help">Press Enter to open. Hold Alt and use the arrow keys to move it.</p>
+        <p class="sr" id="person-help">Press Enter to open. Hold Alt and use the left and right arrows to hand it to someone else.</p>
         <p class="sr" id="date-help">Press Enter to open. Hold Alt and use the arrow keys to change its date by a day or a week.</p>
         <p class="sr" id="bar-help">Press Enter to open. Hold Alt and use the left and right arrows to move it. Add Shift to change its length.</p>
         <div class="sr" id="announce" role="status" aria-live="polite"></div>
