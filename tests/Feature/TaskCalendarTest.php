@@ -378,12 +378,40 @@ class TaskCalendarTest extends TestCase
         $f = $this->teamFixture();
         $f->task->update(['start_date' => '2026-11-08', 'due_date' => '2026-11-14']);
         $first = $f->list->tasks()->create(['title' => 'First', 'status' => 'todo', 'due_date' => '2026-11-10']);
-        $f->task->blockedBy()->attach($first);
+        $f->task->blockedBy()->attach($first, ['type' => 'fs']);
 
         $this->assertTrue($this->timeline($f)->instance()->lines[0]['late']);
 
         $first->update(['status' => 'done']);
         $this->assertFalse($this->timeline($f)->instance()->lines[0]['late']);
+    }
+
+    public function test_each_kind_of_link_is_drawn_from_the_ends_it_joins(): void
+    {
+        $f = $this->teamFixture();
+        $f->task->update(['start_date' => '2026-11-12', 'due_date' => '2026-11-14']);
+        $first = $f->list->tasks()->create(['title' => 'First', 'status' => 'todo', 'start_date' => '2026-11-02', 'due_date' => '2026-11-10']);
+        $f->task->blockedBy()->attach($first, ['type' => 'ss']);
+
+        $line = $this->timeline($f)->instance()->lines[0];
+
+        $this->assertStringStartsWith('M'.(7 * 26).' 18', $line['path']);
+        $this->assertStringEndsWith('H'.(17 * 26), $line['path']);
+        $this->assertFalse($line['late'], 'this task starts after the other, which is all the link asks');
+
+        DB::table('task_dependencies')->update(['type' => 'ff']);
+        $line = $this->timeline($f)->instance()->lines[0];
+        $this->assertStringEndsWith('H'.(20 * 26), $line['path']);
+    }
+
+    public function test_starting_the_day_the_other_task_is_due_is_flagged_too(): void
+    {
+        $f = $this->teamFixture();
+        $f->task->update(['start_date' => '2026-11-10', 'due_date' => '2026-11-14']);
+        $first = $f->list->tasks()->create(['title' => 'First', 'status' => 'todo', 'due_date' => '2026-11-10']);
+        $f->task->blockedBy()->attach($first, ['type' => 'fs']);
+
+        $this->assertTrue($this->timeline($f)->instance()->lines[0]['late']);
     }
 
     public function test_a_blocker_out_of_view_draws_no_line(): void

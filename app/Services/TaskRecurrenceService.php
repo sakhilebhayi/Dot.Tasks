@@ -37,27 +37,33 @@ class TaskRecurrenceService
             return null;
         }
 
-        $anchorDate = $completedTask->recurrence_anchor === 'completion'
-            ? Carbon::today()
-            : ($completedTask->due_date ?? Carbon::today());
+        $count = $completedTask->recurrence_count ?? 1;
+        if ($completedTask->recurrence_limit !== null && $count >= $completedTask->recurrence_limit) {
+            return null;
+        }
 
-        $nextDueDate = $this->nextDate(
-            $anchorDate,
-            $completedTask->recurrence_type,
-            $completedTask->recurrence_interval ?? 1
-        );
+        $series = Task::withTrashed()->withArchived()->find($completedTask->recurrence_parent_id ?? $completedTask->id) ?? $completedTask;
+        $today = Carbon::today();
+        $nextDueDate = $this->nextDate($completedTask->recurrence_anchor === 'completion' ? $today : ($completedTask->due_date ?? $today), $completedTask, $series);
 
-        $seriesParentId = $completedTask->recurrence_parent_id ?? $completedTask->id;
+        // A series that fell behind can pick up from today rather than hand over a pile of overdue occurrences.
+        for ($turns = 0; $completedTask->recurrence_missed === 'skip' && $nextDueDate->lt($today) && $turns < 2000; $turns++) {
+            $nextDueDate = $this->nextDate($nextDueDate, $completedTask, $series);
+        }
+
+        if ($completedTask->recurrence_until !== null && $nextDueDate->gt($completedTask->recurrence_until)) {
+            return null;
+        }
 
         try {
             // Its own savepoint: Postgres abandons a whole transaction after a refused insert unless it can step back.
-            $occurrence = DB::transaction(fn () => $this->makeOccurrence($completedTask, $nextDueDate, $seriesParentId));
+            $occurrence = DB::transaction(fn () => $this->makeOccurrence($completedTask, $nextDueDate, $series));
         } catch (UniqueConstraintViolationException) {
             // Someone else finished it at the same moment, and theirs made the occurrence.
             return null;
         }
 
-        $occurrence->labels()->sync($completedTask->labels->pluck('id'));
+        $occurrence->labels()->sync($series->labels()->pluck('labels.id'));
 
         return $occurrence;
     }
@@ -68,14 +74,15 @@ class TaskRecurrenceService
         return Task::withTrashed()->withArchived()->where('recurrence_source_id', $task->id)->exists();
     }
 
-    protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, int $seriesParentId): Task
+    /** The rule comes from the occurrence just finished. The details come from the series, so an edit to one occurrence stays with it. */
+    protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, Task $series): Task
     {
         return Task::create([
             'task_list_id' => $completedTask->task_list_id,
-            'assignee_id' => $completedTask->assignee_id,
+            'assignee_id' => $series->assignee_id,
             'creator_id' => $completedTask->creator_id,
-            'title' => $completedTask->title,
-            'description' => $completedTask->description,
+            'title' => $series->title,
+            'description' => $series->description,
             'status' => 'todo',
             // Falls back rather than trusting the in-memory attribute blindly:
             // a Task created via ::create() without an explicit 'priority'
@@ -83,27 +90,60 @@ class TaskRecurrenceService
             // in-memory model isn't refreshed to reflect that -- passing a
             // null straight through here would violate the NOT NULL
             // constraint on this new row instead of quietly inheriting it.
-            'priority' => $completedTask->priority ?? 'medium',
+            'priority' => $series->priority ?? 'medium',
             'due_date' => $nextDueDate,
-            'estimated_minutes' => $completedTask->estimated_minutes,
+            'estimated_minutes' => $series->estimated_minutes,
             'sort_order' => $completedTask->sort_order ?? 0,
             'recurrence_type' => $completedTask->recurrence_type,
             'recurrence_interval' => $completedTask->recurrence_interval ?? 1,
             'recurrence_anchor' => $completedTask->recurrence_anchor ?? 'due_date',
-            'recurrence_parent_id' => $seriesParentId,
+            'recurrence_days' => $completedTask->recurrence_days,
+            'recurrence_until' => $completedTask->recurrence_until,
+            'recurrence_limit' => $completedTask->recurrence_limit,
+            'recurrence_count' => ($completedTask->recurrence_count ?? 1) + 1,
+            'recurrence_missed' => $completedTask->recurrence_missed ?? 'keep',
+            'recurrence_parent_id' => $series->id,
             'recurrence_source_id' => $completedTask->id,
         ]);
     }
 
-    private function nextDate(Carbon $from, string $type, int $interval): Carbon
+    private function nextDate(Carbon $from, Task $rule, Task $series): Carbon
     {
-        $date = $from->copy();
+        $date = $from->copy()->startOfDay();
+        $interval = $rule->recurrence_interval ?? 1;
 
-        return match ($type) {
+        return match ($rule->recurrence_type) {
             'daily', 'custom_days' => $date->addDays($interval),
-            'weekly' => $date->addWeeks($interval),
-            'monthly' => $date->addMonths($interval),
+            'weekly' => $this->nextWeekday($date, $interval, $rule->recurrence_days ?? []),
+            'monthly' => $this->nextMonthDay($date, $interval, $series->due_date?->day ?? $date->day),
             default => $date->addDay(),
         };
+    }
+
+    /** The next chosen weekday in this week, or the first one in the next week that counts. @param list<int> $days */
+    private function nextWeekday(Carbon $date, int $interval, array $days): Carbon
+    {
+        if ($days === []) {
+            return $date->addWeeks($interval);
+        }
+
+        sort($days);
+        $monday = $date->copy()->startOfWeek(Carbon::MONDAY);
+
+        foreach ($days as $day) {
+            if ($day > $date->dayOfWeekIso) {
+                return $monday->addDays($day - 1);
+            }
+        }
+
+        return $monday->addWeeks($interval)->addDays($days[0] - 1);
+    }
+
+    /** The same day of the month each time. A short month takes its last day, and the 31st comes back the month after. */
+    private function nextMonthDay(Carbon $date, int $interval, int $day): Carbon
+    {
+        $month = $date->copy()->startOfMonth()->addMonths($interval);
+
+        return $month->day(min($day, $month->daysInMonth));
     }
 }

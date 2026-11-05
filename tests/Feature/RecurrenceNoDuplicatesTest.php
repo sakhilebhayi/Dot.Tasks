@@ -145,11 +145,11 @@ class RecurrenceNoDuplicatesTest extends TestCase
             {
                 public int $tries = 0;
 
-                protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, int $seriesParentId): Task
+                protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, Task $series): Task
                 {
                     $this->tries++;
 
-                    return parent::makeOccurrence($completedTask, $nextDueDate, $seriesParentId);
+                    return parent::makeOccurrence($completedTask, $nextDueDate, $series);
                 }
             };
             $this->app->instance(TaskRecurrenceService::class, $service);

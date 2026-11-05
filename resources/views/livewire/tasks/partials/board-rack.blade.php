@@ -7,7 +7,7 @@
                 @foreach($lane['columns'][$column->id] as $task)
                     <div @class(['card', 'is-done' => $task->status === 'done']) wire:key="card-{{ $task->id }}" tabindex="0" role="button"
                          data-task="{{ $task->id }}" data-status="{{ $task->status_id }}" data-title="{{ $task->title }}" @if($canWork) aria-describedby="drag-help" @endif
-                         @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done')) data-blocked @endif
+                         @if($task->isBlocked()) data-blocked @endif
                          wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })"
                          x-on:keydown.enter="$dispatch('open-task', { taskId: {{ $task->id }} })">
                         @if(in_array($task->priority, ['urgent', 'high', 'low'], true))
@@ -21,7 +21,7 @@
                                 @endforeach
                             </div>
                         @endif
-                        @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done'))
+                        @if($task->isBlocked())
                             <p class="blocked-line" title="Cannot be marked done until its blockers are">Blocked</p>
                         @endif
                         <div class="card-meta">

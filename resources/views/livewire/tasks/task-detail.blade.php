@@ -179,12 +179,16 @@
                     @endforelse
                 @endcan
 
+                @if($task->isRecurring() || auth()->user()->can('update', $task))
+                    <livewire:tasks.task-repeat :task="$task" wire:key="repeat-{{ $task->id }}-{{ $task->recurrence_type }}" />
+                @endif
+
                 <h3 class="section-title" style="font-size:14px">Blocked by</h3>
                 @error('blocker')<p role="alert" class="error">{{ $message }}</p>@enderror
                 @forelse($task->blockedBy as $blocker)
                     <div wire:key="blocker-{{ $blocker->id }}" style="display:flex;align-items:center;gap:8px;min-height:30px">
                         <span class="tick" style="width:14px;height:14px" aria-checked="{{ $blocker->status === 'done' ? 'true' : 'false' }}" title="{{ $blocker->status === 'done' ? 'Done' : 'Not done yet' }}"></span>
-                        <span style="flex:1">{{ $blocker->title }}</span>
+                        <span style="flex:1">{{ $blocker->title }} <span style="color:var(--muted);font-size:12px">{{ \App\Services\TaskDependencyService::TYPES[$blocker->pivot->type] }}</span></span>
                         @if($blocker->isArchived())<span class="chip">archived</span>@endif
                         @can('update', $task)
                             <button type="button" class="btn small quiet" wire:click="removeBlocker({{ $blocker->id }})" aria-label="Remove blocker {{ $blocker->title }}">Remove</button>
@@ -195,6 +199,12 @@
                 @endforelse
                 @can('update', $task)
                     @if($this->blockerCandidates->isNotEmpty())
+                        <label class="sr" for="blocker-type">How the tasks depend on each other</label>
+                        <select class="select bare" style="margin-top:6px;width:100%" id="blocker-type" wire:model="blockerType">
+                            @foreach(\App\Services\TaskDependencyService::TYPES as $value => $name)
+                                <option value="{{ $value }}">It {{ $name }}</option>
+                            @endforeach
+                        </select>
                         <label class="sr" for="add-blocker">Add a blocker</label>
                         <select class="select" style="margin-top:6px" id="add-blocker" wire:key="add-blocker-{{ $task->blockedBy->count() }}" wire:change="addBlocker($event.target.value)">
                             <option value="">Add a blocker...</option>

@@ -108,7 +108,9 @@ class MyDay extends Component
     {
         return $this->open($this->mine()->where(fn ($q) => $q->where('tasks.status', 'review')
             ->orWhere(fn ($urgent) => $urgent->where('tasks.priority', 'urgent')->whereNull('tasks.due_date'))
-            ->orWhereHas('blockedBy', fn ($b) => $b->where('tasks.status', '!=', 'done'))));
+            // Unqualified: in a link from tasks to tasks, the other task is an alias, and `tasks.status` would be this one.
+            ->orWhereHas('blockedBy', fn ($b) => $b->where(fn ($link) => $link->whereIn('task_dependencies.type', ['ff', 'fs'])->where('status', '!=', 'done'))
+                ->orWhere(fn ($link) => $link->whereIn('task_dependencies.type', ['ss', 'sf'])->where('status', 'todo')))));
     }
 
     /** @return Collection<int, Task> */
