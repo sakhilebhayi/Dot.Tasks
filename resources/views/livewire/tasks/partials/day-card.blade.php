@@ -7,7 +7,7 @@
     @endcan
     <button type="button" class="day-title" wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })">
         <b>{{ $task->title }}</b>
-        <span>{{ $task->taskList->is_inbox ? 'Inbox' : $task->taskList->name }}@if($task->blockedBy->contains(fn ($b) => $b->status !== 'done')) &middot; Blocked @endif</span>
+        <span>{{ $task->taskList->is_inbox ? 'Inbox' : $task->taskList->name }}@if($task->isBlocked()) &middot; Blocked @endif</span>
     </button>
     <x-task-due :task="$task" />
     @if($planned)

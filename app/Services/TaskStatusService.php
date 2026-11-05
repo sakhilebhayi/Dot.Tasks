@@ -42,6 +42,16 @@ class TaskStatusService
             }
         }
 
+        if ($task->status === 'todo' && in_array($status, ['in_progress', 'review'], true)) {
+            $open = $this->dependencies->blockersOfStart($task);
+
+            if ($open->isNotEmpty()) {
+                throw ValidationException::withMessages([
+                    'status' => 'This cannot start yet: '.$open->map(fn (Task $blocker) => '"'.$blocker->title.'" '.TaskDependencyService::TYPES[$blocker->pivot->type])->join(', ').'.',
+                ]);
+            }
+        }
+
         // Together, so a task cannot end up done without its next occurrence.
         DB::transaction(function () use ($task, $status, $column) {
             $was = $task->status;

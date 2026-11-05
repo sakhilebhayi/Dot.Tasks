@@ -16,11 +16,23 @@ use Illuminate\Validation\ValidationException;
  */
 class TaskDependencyService
 {
+    /** What each kind of link asks of the other task, said from this task's side. */
+    public const TYPES = [
+        'ff' => 'has to finish before this finishes',
+        'fs' => 'has to finish before this starts',
+        'ss' => 'has to start before this starts',
+        'sf' => 'has to start before this finishes',
+    ];
+
     /**
      * @throws ValidationException (key 'blocker')
      */
-    public function add(Task $task, int $blockerId): Task
+    public function add(Task $task, int $blockerId, string $type = 'ff'): Task
     {
+        if (! array_key_exists($type, self::TYPES)) {
+            $this->refuse('Pick how the tasks depend on each other.');
+        }
+
         // Looked up inside the task's own board, so an id from another board,
         // another team, or that does not exist all get the same answer.
         $blocker = Task::withArchived()
@@ -43,7 +55,7 @@ class TaskDependencyService
             $this->refuse("\"{$blocker->title}\" is already blocked by this task, directly or through other tasks, so this would make a loop that nothing could finish.");
         }
 
-        DB::table('task_dependencies')->insert(['task_id' => $task->id, 'blocked_by_id' => $blocker->id]);
+        DB::table('task_dependencies')->insert(['task_id' => $task->id, 'blocked_by_id' => $blocker->id, 'type' => $type]);
 
         return $blocker;
     }
@@ -57,14 +69,29 @@ class TaskDependencyService
     }
 
     /**
-     * The blockers still standing in the way: not done, not deleted. An
-     * archived blocker still counts, until it is finished or the link removed.
+     * The blockers still standing in the way of finishing: not deleted, and not yet where their link asks. An archived
+     * blocker still counts, until it gets there or the link is removed.
      *
      * @return Collection<int, Task>
      */
     public function openBlockers(Task $task): Collection
     {
-        return $task->blockedBy()->where('tasks.status', '!=', 'done')->get();
+        return $task->blockedBy()->get()->filter(fn (Task $blocker) => in_array($blocker->pivot->type, ['ff', 'fs'], true)
+            ? $blocker->status !== 'done'
+            : $blocker->status === 'todo')->values();
+    }
+
+    /**
+     * What stands in the way of starting. Only links about the start count here, and work that has already started has
+     * nothing to wait for.
+     *
+     * @return Collection<int, Task>
+     */
+    public function blockersOfStart(Task $task): Collection
+    {
+        return $task->blockedBy()->wherePivotIn('type', ['fs', 'ss'])->get()->filter(fn (Task $blocker) => $blocker->pivot->type === 'fs'
+            ? $blocker->status !== 'done'
+            : $blocker->status === 'todo')->values();
     }
 
     /** Does following "blocked by" links from $fromId ever reach $targetId? */

@@ -27,7 +27,7 @@ class Task extends Model
         'task_list_id', 'assignee_id', 'parent_id',
         'title', 'description', 'status', 'priority', 'due_date',
         'estimated_minutes', 'sort_order', 'escalated_at',
-        'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_parent_id', 'recurrence_source_id',
+        'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_days', 'recurrence_until', 'recurrence_limit', 'recurrence_count', 'recurrence_missed', 'recurrence_parent_id', 'recurrence_source_id',
         'creator_id', 'status_id', 'start_date', 'actual_minutes', 'completion_criteria', 'completion_note', 'completed_at', 'completed_by',
     ];
 
@@ -37,6 +37,10 @@ class Task extends Model
         'completed_at' => 'datetime',
         'escalated_at' => 'datetime',
         'recurrence_interval' => 'integer',
+        'recurrence_days' => 'array',
+        'recurrence_until' => 'date',
+        'recurrence_limit' => 'integer',
+        'recurrence_count' => 'integer',
     ];
 
     /** Whatever changed a task, it sits in a column of its own board that matches its status. */
@@ -151,6 +155,7 @@ class Task extends Model
     public function blockedBy(): BelongsToMany
     {
         return $this->belongsToMany(Task::class, 'task_dependencies', 'task_id', 'blocked_by_id')
+            ->withPivot('type')
             ->withoutGlobalScope(NotArchivedScope::class);
     }
 
@@ -199,6 +204,14 @@ class Task extends Model
     public function aiBreakdownLogs(): HasMany
     {
         return $this->hasMany(AiBreakdownLog::class);
+    }
+
+    /** Is something still standing between this task and finishing? A link says what it waits for: the other task's start or its finish. */
+    public function isBlocked(): bool
+    {
+        return $this->blockedBy->contains(fn (Task $blocker) => in_array($blocker->pivot->type, ['ff', 'fs'], true)
+            ? $blocker->status !== 'done'
+            : $blocker->status === 'todo');
     }
 
     public function isRecurring(): bool

@@ -33,7 +33,7 @@
                                 <span class="notch {{ $task->priority }}" title="{{ ucfirst($task->priority) }} priority"></span>
                             @endif
                             <p class="card-title">{{ $task->title }}</p>
-                            @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done'))
+                            @if($task->isBlocked())
                                 <p class="blocked-line">Blocked</p>
                             @endif
                             <div class="card-meta">

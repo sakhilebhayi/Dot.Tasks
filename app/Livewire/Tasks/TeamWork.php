@@ -66,7 +66,7 @@ class TeamWork extends Component
             ->get();
 
         $isLate = fn (Task $task) => $task->due_date !== null && $task->due_date->lt($today);
-        $isBlocked = fn (Task $task) => $task->blockedBy->contains(fn ($b) => $b->status !== 'done');
+        $isBlocked = fn (Task $task) => $task->isBlocked();
         $wanted = fn (Task $task) => match ($this->show) {
             'overdue' => $isLate($task),
             'blocked' => $isBlocked($task),

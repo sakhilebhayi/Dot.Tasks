@@ -72,7 +72,7 @@
                         @foreach($group['tasks'] as $task)
                             <div @class(['trow', 'is-done' => $task->status === 'done']) role="row" wire:key="row-{{ $task->id }}-{{ $edits }}"
                                  data-task="{{ $task->id }}" data-status="{{ $task->status_id }}" data-title="{{ $task->title }}" tabindex="-1" x-data="{ open: false }"
-                                 @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done')) data-blocked @endif>
+                                 @if($task->isBlocked()) data-blocked @endif>
                                 @if($canWork)
                                     <span role="cell" class="cell"><input type="checkbox" aria-label="Select {{ $task->title }}" value="{{ $task->id }}" wire:model.live="selected"></span>
                                 @endif
@@ -88,7 +88,7 @@
                                     @else
                                         <span>{{ $task->title }}</span>
                                     @endcan
-                                    @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done'))
+                                    @if($task->isBlocked())
                                         <span class="blocked-line" style="margin:0">Blocked</span>
                                     @endif
                                     @if($task->subtasks->isNotEmpty())

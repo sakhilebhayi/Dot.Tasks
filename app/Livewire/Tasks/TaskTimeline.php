@@ -136,13 +136,19 @@ class TaskTimeline extends Component
                     continue;
                 }
 
-                $x1 = $rows[$j]['left'] + $rows[$j]['width'];
+                // First letter: the other task's start or finish. Second: this task's.
+                [$theirs, $ours] = str_split($blocker->pivot->type);
+                $x1 = $rows[$j]['left'] + ($theirs === 'f' ? $rows[$j]['width'] : 0);
                 $y1 = $j * self::ROW_HEIGHT + (int) (self::ROW_HEIGHT / 2);
-                $x2 = $row['left'];
+                $x2 = $row['left'] + ($ours === 'f' ? $row['width'] : 0);
                 $y2 = $i * self::ROW_HEIGHT + (int) (self::ROW_HEIGHT / 2);
                 $mid = min($x1 + 8, $x2 - 8);
 
-                $lines[] = ['path' => "M{$x1} {$y1} H{$mid} V{$y2} H{$x2}", 'late' => $blocker->status !== 'done' && $row['start'] <= $rows[$j]['due']];
+                $need = $theirs === 'f' ? $rows[$j]['due'] : $rows[$j]['start'];
+                $have = $ours === 'f' ? $row['due'] : $row['start'];
+                $cleared = $theirs === 'f' ? $blocker->status === 'done' : $blocker->status !== 'todo';
+
+                $lines[] = ['path' => "M{$x1} {$y1} H{$mid} V{$y2} H{$x2}", 'late' => ! $cleared && $have <= $need];
             }
         }
 

@@ -35,6 +35,8 @@ class TaskDetail extends Component
     #[Validate('required|string|max:5000')]
     public string $commentBody = '';
 
+    public string $blockerType = 'ff';
+
     public string $newSubtask = '';
 
     public string $newChecklistItem = '';
@@ -210,7 +212,7 @@ class TaskDetail extends Component
 
         $this->authorize('update', $this->task);
 
-        app(TaskDependencyService::class)->add($this->task, $blockerId);
+        app(TaskDependencyService::class)->add($this->task, $blockerId, $this->blockerType);
 
         $this->refreshTask();
     }
