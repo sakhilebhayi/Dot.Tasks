@@ -17,6 +17,7 @@ use App\Services\TaskDependencyService;
 use App\Services\TaskEditor;
 use App\Services\TaskHistory;
 use App\Services\TaskLabelService;
+use App\Services\TaskPlacement;
 use App\Services\TaskStatusService;
 use App\Services\TaskSteps;
 use Illuminate\Support\Facades\Validator;
@@ -313,6 +314,17 @@ class TaskDetail extends Component
         $this->authorize('move', $sub);
 
         app(TaskStatusService::class)->move($sub, $sub->status === 'done' ? 'todo' : 'done');
+
+        $this->refreshTask();
+    }
+
+    /** Reorder the subtasks, by hand or by keyboard. */
+    public function placeSubtask(int $subtaskId, ?int $beforeId = null): void
+    {
+        $sub = $this->task?->subtasks()->find($subtaskId) ?? abort(404);
+        $this->authorize('update', $this->task);
+
+        app(TaskPlacement::class)->placeSubtask($sub, $beforeId);
 
         $this->refreshTask();
     }

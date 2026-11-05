@@ -180,8 +180,18 @@ button { cursor: pointer; }
 .notch.low { background: var(--control); }
 .overdue { color: var(--stop); }
 .blocked-line { display: flex; align-items: center; gap: 4px; margin-top: 6px; color: var(--wait); font-size: 12px; }
-.sortable-ghost { opacity: 0.35; }
-.sortable-drag, .sortable-fallback { box-shadow: var(--lift); transform: rotate(0.6deg); opacity: 1 !important; cursor: grabbing; }
+/* A card in the air leaves its slot open, and the slot shows where it will seat. */
+.sortable-ghost { border: 1px dashed var(--control) !important; background: var(--active) !important; box-shadow: none !important; }
+.sortable-ghost > * { visibility: hidden; }
+.sortable-drag, .sortable-fallback { box-shadow: var(--lift); rotate: 0.6deg; opacity: 1 !important; cursor: grabbing; }
+.refuse { outline: 2px solid var(--stop); outline-offset: -2px; border-radius: var(--radius); cursor: not-allowed; }
+.lane { margin-bottom: 12px; }
+.lane > summary { display: flex; align-items: center; gap: 6px; padding: 6px 2px; font-weight: 600; cursor: pointer; list-style: none; }
+.lane > summary::-webkit-details-marker { display: none; }
+.lane > summary .icon, .lane > summary svg { width: 14px; height: 14px; color: var(--muted); transition: rotate 150ms var(--ease, ease); }
+.lane[open] > summary svg { rotate: 90deg; }
+.lane > summary .count { color: var(--muted); font-weight: 400; }
+.lane .slot { max-height: none; }
 .grip { display: inline-flex; color: var(--control); cursor: grab; touch-action: none; }
 .grip:hover { color: var(--muted); }
 

@@ -210,8 +210,12 @@
                 </div>
                 @if($aiError)<p class="error">{{ $aiError }}</p>@endif
                 @if($task->subtasks->isNotEmpty())
+                    <div @can('update', $task) x-data="stepList('placeSubtask')" @endcan>
                     @foreach($task->subtasks as $sub)
-                        <div class="step" wire:key="sub-{{ $sub->id }}">
+                        <div class="step" wire:key="sub-{{ $sub->id }}" data-task="{{ $sub->id }}">
+                            @can('update', $task)
+                                <button type="button" class="grip" aria-label="Move {{ $sub->title }}, use the up and down arrows" x-on:keydown="keys($event, {{ $sub->id }})"><x-icon name="grip" /></button>
+                            @endcan
                             @can('move', $sub)
                                 <button type="button" class="tick" role="checkbox" aria-checked="{{ $sub->status === 'done' ? 'true' : 'false' }}" aria-label="{{ $sub->title }}" wire:click="toggleSubtask({{ $sub->id }})"></button>
                             @else
@@ -221,6 +225,7 @@
                             @if($sub->estimated_minutes)<span class="num" style="color:var(--muted);font-size:12px">{{ $sub->estimated_minutes }}m</span>@endif
                         </div>
                     @endforeach
+                    </div>
                 @else
                     <p style="color:var(--muted)">No subtasks yet.</p>
                 @endif

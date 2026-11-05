@@ -43,8 +43,8 @@ class TaskIntegrityTest extends TestCase
 
         Livewire::actingAs($owner)
             ->test(TaskBoard::class, ['taskList' => $list])
-            ->call('moveTask', $task->id, 'banana')
-            ->assertHasErrors('newStatus');
+            ->call('place', $task->id, 'banana')
+            ->assertHasErrors('status');
 
         $this->assertSame('todo', $task->fresh()->status);
     }
@@ -58,7 +58,7 @@ class TaskIntegrityTest extends TestCase
         foreach (['in_progress', 'review', 'done', 'todo'] as $status) {
             Livewire::actingAs($owner)
                 ->test(TaskBoard::class, ['taskList' => $list])
-                ->call('moveTask', $task->id, $status)
+                ->call('place', $task->id, $status)
                 ->assertHasNoErrors();
             $this->assertSame($status, $task->fresh()->status);
         }

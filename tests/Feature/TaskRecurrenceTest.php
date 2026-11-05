@@ -63,7 +63,7 @@ class TaskRecurrenceTest extends TestCase
 
         Livewire::actingAs($owner)
             ->test(TaskBoard::class, ['taskList' => $taskList])
-            ->call('moveTask', $task->id, 'done');
+            ->call('place', $task->id, 'done');
 
         $this->assertSame('done', $task->fresh()->status);
 
@@ -102,7 +102,7 @@ class TaskRecurrenceTest extends TestCase
 
         Livewire::actingAs($owner)
             ->test(TaskBoard::class, ['taskList' => $taskList])
-            ->call('moveTask', $task->id, 'done');
+            ->call('place', $task->id, 'done');
 
         $this->assertSame(1, $taskList->tasks()->count());
     }
@@ -119,7 +119,7 @@ class TaskRecurrenceTest extends TestCase
 
         Livewire::actingAs($owner)
             ->test(TaskBoard::class, ['taskList' => $taskList])
-            ->call('moveTask', $task->id, 'in_progress');
+            ->call('place', $task->id, 'in_progress');
 
         $this->assertSame(1, $taskList->tasks()->count());
     }

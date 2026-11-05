@@ -212,7 +212,7 @@ class TaskArchiveTest extends TestCase
         $f->task->archive();
 
         Livewire::actingAs($f->editor)->test(TaskDetail::class)->call('openTask', $f->task->id)->assertNotFound();
-        $this->board($f)->call('moveTask', $f->task->id, 'done')->assertNotFound();
+        $this->board($f)->call('place', $f->task->id, 'done')->assertReturned(['ok' => false, 'message' => 'That card is no longer on this board.']);
         $this->assertSame('todo', Task::withArchived()->find($f->task->id)->status);
     }
 

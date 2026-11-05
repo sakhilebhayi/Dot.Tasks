@@ -163,7 +163,7 @@ class TaskDependencyTest extends TestCase
 
         Livewire::actingAs($f->editor)
             ->test(TaskBoard::class, ['taskList' => $f->list])
-            ->call('moveTask', $f->task->id, 'done')
+            ->call('place', $f->task->id, 'done')
             ->assertHasErrors(['status'])
             ->assertSee('The unfinished blocker')
             ->assertSee('Finish those before marking this done');
@@ -178,7 +178,7 @@ class TaskDependencyTest extends TestCase
 
         Livewire::actingAs($f->editor)
             ->test(TaskBoard::class, ['taskList' => $f->list])
-            ->call('moveTask', $f->task->id, 'review')
+            ->call('place', $f->task->id, 'review')
             ->assertHasNoErrors();
 
         $this->assertSame('review', $f->task->fresh()->status);
@@ -224,7 +224,7 @@ class TaskDependencyTest extends TestCase
         $f->task->update(['recurrence_type' => 'daily', 'recurrence_interval' => 1, 'due_date' => now()->toDateString()]);
         $this->blockedBy($f->task, $this->sibling($f, 'The unfinished blocker'));
 
-        Livewire::actingAs($f->editor)->test(TaskBoard::class, ['taskList' => $f->list])->call('moveTask', $f->task->id, 'done');
+        Livewire::actingAs($f->editor)->test(TaskBoard::class, ['taskList' => $f->list])->call('place', $f->task->id, 'done');
 
         $this->assertSame(0, Task::where('recurrence_parent_id', $f->task->id)->count());
     }

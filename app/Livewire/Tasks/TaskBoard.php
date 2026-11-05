@@ -9,12 +9,15 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
 use App\Services\TaskArchiveService;
+use App\Services\TaskEditor;
 use App\Services\TaskHistory;
-use App\Services\TaskStatusService;
+use App\Services\TaskPlacement;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -35,8 +38,9 @@ class TaskBoard extends Component
     #[Url(except: '')]
     public string $show = '';
 
-    /** Bumped on every move attempt so a refused one resets each card's "Move to..." select. */
-    public int $moveAttempts = 0;
+    /** '' for one rack, or 'assignee' or 'priority' for a lane each. */
+    #[Url(except: '')]
+    public string $lanes = '';
 
     public const COLUMNS = [
         'todo' => 'To Do',
@@ -122,6 +126,7 @@ class TaskBoard extends Component
             ->when(is_int($assignee), fn ($q) => $q->where('tasks.assignee_id', $assignee))
             ->with(['assignee', 'labels', 'subtasks', 'blockedBy'])
             ->orderBy('tasks.sort_order')
+            ->orderBy('tasks.id')
             ->get()
             ->groupBy('status');
 
@@ -131,6 +136,47 @@ class TaskBoard extends Component
         }
 
         return $columns;
+    }
+
+    /**
+     * The rows of the board: one with no name, or one per person or priority.
+     *
+     * @return list<array{key: string, name: string, columns: array<string, Collection<int, Task>>, count: int}>
+     */
+    #[Computed]
+    public function swimlanes(): array
+    {
+        $all = collect($this->tasksByStatus)->flatten(1);
+
+        $lanes = match ($this->lanes) {
+            'assignee' => $this->members->map(fn (User $person) => ['key' => (string) $person->id, 'name' => $person->name])
+                ->push(['key' => 'none', 'name' => 'Unassigned'])
+                ->filter(fn (array $lane) => $this->canSeeLane($lane['key'], $all))->values()->all(),
+            'priority' => array_map(fn (string $p) => ['key' => $p, 'name' => ucfirst($p)], array_reverse(Task::PRIORITIES)),
+            default => [['key' => '', 'name' => '']],
+        };
+
+        return array_map(function (array $lane) {
+            $columns = collect($this->tasksByStatus)->map(fn (Collection $tasks) => $tasks
+                ->filter(fn (Task $task) => $this->inLane($task, $lane['key']))->values())->all();
+
+            return $lane + ['columns' => $columns, 'count' => collect($columns)->sum(fn (Collection $tasks) => $tasks->count())];
+        }, $lanes);
+    }
+
+    /** Everybody with work on this board, and whoever a person might want to hand work to if the board is small. */
+    private function canSeeLane(string $key, Collection $tasks): bool
+    {
+        return $this->members->count() <= 8 || $tasks->contains(fn (Task $task) => $this->inLane($task, $key));
+    }
+
+    private function inLane(Task $task, string $key): bool
+    {
+        return match ($this->lanes) {
+            'assignee' => (string) ($task->assignee_id ?? 'none') === $key,
+            'priority' => $task->priority === $key,
+            default => true,
+        };
     }
 
     /** @return \Illuminate\Database\Eloquent\Collection<int, Task> */
@@ -181,26 +227,76 @@ class TaskBoard extends Component
         $this->forgetBoard();
     }
 
-    public function moveTask(int $taskId, string $newStatus): void
+    /**
+     * Where a card landed, by hand or by keyboard. A refusal leaves the card where it was and says why: the browser has
+     * already shown the move, so this has to answer rather than fail. $from is the column the person saw it in.
+     *
+     * @return array{ok: bool, message?: string}
+     */
+    public function place(int $taskId, string $status, ?int $beforeId = null, ?string $from = null, ?string $lane = null): array
     {
-        $this->authorize('update', $this->taskList);
-        $this->moveAttempts++;
         $this->resetErrorBag('status');
 
-        // A tampered client can send any string here; reject anything that is
-        // not a real status instead of letting the enum column 500.
-        Validator::make(['newStatus' => $newStatus], [
-            'newStatus' => ['required', Rule::in(Task::STATUSES)],
-        ])->validate();
+        Validator::make(['status' => $status], ['status' => ['required', Rule::in(Task::STATUSES)]])->validate();
 
-        $task = Task::find($taskId) ?? abort(404);
-        abort_unless($task->task_list_id === $this->taskList->id, 403);
+        $task = $this->boardQuery()->find($taskId);
+        $this->forgetBoard();
+
+        if (! $task) {
+            return $this->refuse('That card is no longer on this board.');
+        }
+
         $this->authorize('move', $task);
 
-        app(TaskStatusService::class)->move($task, $newStatus);
+        if ($from !== null && $task->status !== $from) {
+            return $this->refuse('Someone else moved that card, so here is where it is now.');
+        }
+
+        try {
+            DB::transaction(function () use ($task, $status, $beforeId, $lane) {
+                $this->applyLane($task, $lane);
+                app(TaskPlacement::class)->place($task, $status, $beforeId);
+            });
+        } catch (ValidationException $refused) {
+            return $this->refuse($refused->validator->errors()->first());
+        }
 
         broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
-        $this->forgetBoard();
+
+        return ['ok' => true];
+    }
+
+    /** @return array{ok: bool, message: string} */
+    private function refuse(string $message): array
+    {
+        $this->addError('status', $message);
+
+        return ['ok' => false, 'message' => $message];
+    }
+
+    /** A card dropped in another lane takes on what that lane stands for. */
+    private function applyLane(Task $task, ?string $lane): void
+    {
+        if ($lane === null || $this->lanes === '') {
+            return;
+        }
+
+        if ($this->lanes === 'priority') {
+            app(TaskEditor::class)->set($task, 'priority', $lane);
+
+            return;
+        }
+
+        $this->authorize('assign', $task);
+        $person = $lane === 'none' ? null : $this->members->firstWhere('id', (int) $lane);
+        if ($lane !== 'none' && ! $person) {
+            throw ValidationException::withMessages(['status' => 'That person is not on this team.']);
+        }
+
+        if ($task->assignee_id !== $person?->id) {
+            $task->update(['assignee_id' => $person?->id]);
+            app(TaskHistory::class)->record($task, 'people', $person ? 'Assigned it to '.$person->name : 'Left it unassigned');
+        }
     }
 
     /** Bring an archived task (and the subtasks archived with it) back to the board. */
@@ -251,7 +347,7 @@ class TaskBoard extends Component
 
     private function forgetBoard(): void
     {
-        unset($this->tasksByStatus, $this->archivedTasks, $this->filtersActive);
+        unset($this->tasksByStatus, $this->swimlanes, $this->archivedTasks, $this->filtersActive);
     }
 
     public function render(): View

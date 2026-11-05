@@ -76,6 +76,11 @@
                 @endforeach
             </select>
         @endif
+        <select class="select bare" wire:model.live="lanes" aria-label="Group into lanes">
+            <option value="">No lanes</option>
+            <option value="assignee">Lanes by person</option>
+            <option value="priority">Lanes by priority</option>
+        </select>
         @if($this->filtersActive)
             <button type="button" wire:click="clearFilters" class="link">Clear filters</button>
         @endif
@@ -99,80 +104,16 @@
             @endif
         </div>
     @else
-    <div class="rack kanban-scroll" tabindex="0" role="region" aria-label="Task board columns">
-        @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $status => $label)
-            <div class="slot kanban-col"
-                 @if($canWork)
-                     x-data
-                     x-on:dragover.prevent
-                     x-on:drop.prevent="$wire.moveTask($event.dataTransfer.getData('taskId'), '{{ $status }}')"
-                 @endif>
-                <h3 class="slot-head">{{ $label }} <span class="count">{{ $this->tasksByStatus[$status]->count() }}</span></h3>
-                <div class="slot-body">
-                    @forelse($this->tasksByStatus[$status] as $task)
-                        <div @class(['card', 'is-done' => $task->status === 'done']) wire:key="card-{{ $task->id }}"
-                             @if($canWork)
-                                 draggable="true"
-                                 x-on:dragstart="$event.dataTransfer.setData('taskId', '{{ $task->id }}')"
-                             @endif
-                             wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })">
-                            @if(in_array($task->priority, ['urgent', 'high', 'low'], true))
-                                <span class="notch {{ $task->priority }}" title="{{ ucfirst($task->priority) }} priority"></span>
-                            @endif
-                            <p class="card-title">{{ $task->title }}@if($task->isRecurring()) <span class="sr">Repeats</span><x-icon name="repeat" style="width:12px;height:12px;vertical-align:-1px;color:var(--muted)" />@endif</p>
-                            @if($task->labels->isNotEmpty())
-                                <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px">
-                                    @foreach($task->labels as $chip)
-                                        <x-label-chip :label="$chip" />
-                                    @endforeach
-                                </div>
-                            @endif
-                            @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done'))
-                                <p class="blocked-line" title="Cannot be marked done until its blockers are">Blocked</p>
-                            @endif
-                            <div class="card-meta">
-                                <span class="sr">{{ ucfirst($task->priority) }}</span>
-                                <x-task-due :task="$task" />
-                                @if($task->subtasks->isNotEmpty())
-                                    <span class="num">{{ $task->subtasks->where('status', 'done')->count() }}/{{ $task->subtasks->count() }} subtasks</span>
-                                @endif
-                                @if($task->assignee)
-                                    <span class="person" title="{{ $task->assignee->name }}">{{ strtoupper(substr($task->assignee->name, 0, 1)) }}</span>
-                                @endif
-                            </div>
-                            @can('move', $task)
-                                {{-- The touch-friendly way to move a card. Always visible, never hover-only. --}}
-                                <div style="margin-top:6px" x-on:click.stop>
-                                    <label for="move-{{ $task->id }}" class="sr">Move &quot;{{ $task->title }}&quot; to</label>
-                                    <select id="move-{{ $task->id }}" wire:key="move-{{ $task->id }}-{{ $moveAttempts }}"
-                                            wire:change="moveTask({{ $task->id }}, $event.target.value)"
-                                            class="select kanban-move" style="min-height:28px;padding:2px 6px;font-size:12px">
-                                        <option value="" selected disabled>Move to...</option>
-                                        @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $moveStatus => $moveLabel)
-                                            @if($moveStatus !== $task->status)
-                                                <option value="{{ $moveStatus }}">{{ $moveLabel }}</option>
-                                            @endif
-                                        @endforeach
-                                    </select>
-                                </div>
-                            @endcan
-                        </div>
-                    @empty
-                        <p style="padding:12px 4px;color:var(--muted);font-size:12px;text-align:center">No tasks here.</p>
-                    @endforelse
-                </div>
-                @if($canWork && $status !== 'done')
-                    <div class="slot-foot" x-data="{ adding: false, title: '' }">
-                        <button type="button" class="add-line" x-show="! adding" x-on:click="adding = true; $nextTick(() => $refs.line.focus())"><x-icon name="plus" /> Add task</button>
-                        <form x-show="adding" x-cloak x-on:submit.prevent="if (title.trim()) { $wire.addHere('{{ $status }}', title); title = '' }">
-                            <input class="input" x-ref="line" x-model="title" maxlength="255" autocomplete="off" aria-label="New task in {{ $label }}" placeholder="Type, then Enter"
-                                   x-on:keydown.escape="adding = false; title = ''" x-on:blur="if (! title.trim()) adding = false">
-                        </form>
-                    </div>
-                @endif
-            </div>
-        @endforeach
-    </div>
+    @foreach($this->swimlanes as $lane)
+        @if($this->lanes === '')
+            @include('livewire.tasks.partials.board-rack', ['lane' => $lane, 'canWork' => $canWork])
+        @else
+            <details class="lane" open wire:key="lane-{{ $lane['key'] }}">
+                <summary><x-icon name="chevron" /> {{ $lane['name'] }} <span class="count">{{ $lane['count'] }}</span></summary>
+                @include('livewire.tasks.partials.board-rack', ['lane' => $lane, 'canWork' => $canWork])
+            </details>
+        @endif
+    @endforeach
     @endif
     @endif
 
