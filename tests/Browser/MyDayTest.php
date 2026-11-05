@@ -132,7 +132,7 @@ class MyDayTest extends DuskTestCase
 
             $point = fn (string $selector) => $browser->driver->executeScript('const r = document.querySelector(arguments[0]).getBoundingClientRect(); return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) }', [$selector]);
             $from = $point("[data-task=\"{$task->id}\"]");
-            $to = $point('.slot-body[data-status="review"]');
+            $to = $point('.slot-body[data-category="review"]');
 
             $tools = new ChromeDevToolsDriver($browser->driver);
             $touch = fn (string $type, array $points) => $tools->execute('Input.dispatchTouchEvent', ['type' => $type, 'touchPoints' => $points]);

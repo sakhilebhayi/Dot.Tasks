@@ -28,7 +28,7 @@ class Task extends Model
         'title', 'description', 'status', 'priority', 'due_date',
         'estimated_minutes', 'sort_order', 'escalated_at',
         'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_parent_id', 'recurrence_source_id',
-        'creator_id', 'start_date', 'actual_minutes', 'completion_criteria', 'completion_note', 'completed_at', 'completed_by',
+        'creator_id', 'status_id', 'start_date', 'actual_minutes', 'completion_criteria', 'completion_note', 'completed_at', 'completed_by',
     ];
 
     protected $casts = [
@@ -38,6 +38,23 @@ class Task extends Model
         'escalated_at' => 'datetime',
         'recurrence_interval' => 'integer',
     ];
+
+    /** Whatever changed a task, it sits in a column of its own board that matches its status. */
+    protected static function booted(): void
+    {
+        static::saving(function (Task $task) {
+            if ($task->status_id && ! $task->isDirty(['task_list_id', 'status', 'status_id'])) {
+                return;
+            }
+
+            $status = $task->status ?? 'todo';
+            $fits = $task->status_id && TaskStatus::whereKey($task->status_id)->where('task_list_id', $task->task_list_id)->where('category', $status)->exists();
+
+            if (! $fits) {
+                $task->status_id = TaskList::withArchived()->find($task->task_list_id)?->columnFor($status)?->id;
+            }
+        });
+    }
 
     /**
      * Restrict to tasks belonging to a team. Tasks have no team_id of their

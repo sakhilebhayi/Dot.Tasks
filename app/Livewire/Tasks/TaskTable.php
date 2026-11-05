@@ -6,6 +6,7 @@ use App\Events\TaskBoardUpdated;
 use App\Livewire\Concerns\PlacesCards;
 use App\Livewire\Concerns\ShowsBoardTasks;
 use App\Models\Task;
+use App\Models\TaskStatus;
 use App\Services\TaskArchiveService;
 use App\Services\TaskEditor;
 use App\Services\TaskStatusService;
@@ -33,8 +34,6 @@ class TaskTable extends Component
 
     private const SHOWN = ['status', 'assignee', 'priority', 'due'];
 
-    private const STATUSES = ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'];
-
     #[Url(except: 'status')]
     public string $group = 'status';
 
@@ -46,7 +45,7 @@ class TaskTable extends Component
 
     /** Comma-separated: which columns this person wants. */
     #[Url(as: 'cols', except: '')]
-    public string $columns = '';
+    public string $cols = '';
 
     /** @var list<int|string> */
     public array $selected = [];
@@ -58,12 +57,12 @@ class TaskTable extends Component
 
     protected function forgetTasks(): void
     {
-        unset($this->tasks, $this->groups, $this->filtersActive);
+        unset($this->columns, $this->tasks, $this->groups, $this->filtersActive);
     }
 
     protected function ownSettings(): array
     {
-        return ['view' => 'list', 'group' => $this->group === 'status' ? '' : $this->group, 'sort' => $this->sort === 'manual' ? '' : $this->sort, 'dir' => $this->dir === 'asc' ? '' : $this->dir, 'cols' => $this->columns];
+        return ['view' => 'list', 'group' => $this->group === 'status' ? '' : $this->group, 'sort' => $this->sort === 'manual' ? '' : $this->sort, 'dir' => $this->dir === 'asc' ? '' : $this->dir, 'cols' => $this->cols];
     }
 
     protected function laneKind(): string
@@ -87,7 +86,7 @@ class TaskTable extends Component
     #[Computed]
     public function shown(): array
     {
-        $picked = $this->columns === '' ? self::SHOWN : explode(',', $this->columns);
+        $picked = $this->cols === '' ? self::SHOWN : explode(',', $this->cols);
 
         return array_values(array_intersect(array_keys(self::COLUMNS), $picked));
     }
@@ -99,7 +98,7 @@ class TaskTable extends Component
         }
 
         $shown = in_array($column, $this->shown, true) ? array_diff($this->shown, [$column]) : [...$this->shown, $column];
-        $this->columns = implode(',', $shown) ?: 'none';
+        $this->cols = implode(',', $shown) ?: 'none';
         unset($this->shown);
     }
 
@@ -151,7 +150,7 @@ class TaskTable extends Component
         $tasks = $this->tasks;
 
         $groups = match ($this->groupBy) {
-            'status' => collect(self::STATUSES)->map(fn (string $name, string $key) => ['key' => $key, 'name' => $name, 'tasks' => $tasks->where('status', $key)->values()])->values()->all(),
+            'status' => $this->columns->map(fn (TaskStatus $column) => ['key' => (string) $column->id, 'name' => $column->name, 'category' => $column->category, 'tasks' => $tasks->where('status_id', $column->id)->values()])->all(),
             'priority' => collect(array_reverse(Task::PRIORITIES))->map(fn (string $key) => ['key' => $key, 'name' => ucfirst($key), 'tasks' => $tasks->where('priority', $key)->values()])->all(),
             'assignee' => $this->members->map(fn ($person) => ['key' => (string) $person->id, 'name' => $person->name, 'tasks' => $tasks->where('assignee_id', $person->id)->values()])
                 ->push(['key' => 'none', 'name' => 'Unassigned', 'tasks' => $tasks->whereNull('assignee_id')->values()])->all(),
@@ -218,9 +217,8 @@ class TaskTable extends Component
     private function changeStatus(Task $task, string $status): void
     {
         $this->authorize('move', $task);
-        abort_unless(in_array($status, Task::STATUSES, true), 422);
 
-        app(TaskStatusService::class)->move($task, $status);
+        app(TaskStatusService::class)->move($task, $this->column($status) ?? abort(422));
     }
 
     private function changeAssignee(Task $task, ?string $id): void

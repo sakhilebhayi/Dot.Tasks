@@ -3,12 +3,12 @@
         @case('status')
             @can('move', $task)
                 <select class="select bare" aria-label="Status of {{ $task->title }}" wire:change="saveCell({{ $task->id }}, 'status', $event.target.value)">
-                    @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $value => $name)
-                        <option value="{{ $value }}" @selected($task->status === $value)>{{ $name }}</option>
+                    @foreach($this->columns as $option)
+                        <option value="{{ $option->id }}" @selected($task->status_id === $option->id)>{{ $option->name }}</option>
                     @endforeach
                 </select>
             @else
-                {{ \App\Livewire\Tasks\TaskBoard::COLUMNS[$task->status] }}
+                {{ $this->columns->firstWhere('id', $task->status_id)?->name }}
             @endcan
             @break
         @case('assignee')

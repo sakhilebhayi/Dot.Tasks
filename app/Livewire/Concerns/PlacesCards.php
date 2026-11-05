@@ -8,8 +8,6 @@ use App\Models\TaskList;
 use App\Services\TaskEditor;
 use App\Services\TaskPlacement;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 /** Where a card lands in any view that groups cards by status, person or priority. */
@@ -28,7 +26,10 @@ trait PlacesCards
     {
         $this->resetErrorBag('status');
 
-        Validator::make(['status' => $status], ['status' => ['required', Rule::in(Task::STATUSES)]])->validate();
+        $column = $this->column($status);
+        if (! $column) {
+            throw ValidationException::withMessages(['status' => 'That column is not on this board.']);
+        }
 
         $task = $this->boardQuery()->find($taskId);
         $this->forgetTasks();
@@ -39,14 +40,14 @@ trait PlacesCards
 
         $this->authorize('move', $task);
 
-        if ($from !== null && $task->status !== $from) {
+        if ($from !== null && (string) (ctype_digit($from) ? $task->status_id : $task->status) !== $from) {
             return $this->refuse('Someone else moved that card, so here is where it is now.');
         }
 
         try {
-            DB::transaction(function () use ($task, $status, $beforeId, $lane) {
+            DB::transaction(function () use ($task, $column, $beforeId, $lane) {
                 $this->applyLane($task, $lane);
-                app(TaskPlacement::class)->place($task, $status, $beforeId);
+                app(TaskPlacement::class)->place($task, $column, $beforeId);
             });
         } catch (ValidationException $refused) {
             return $this->refuse($refused->validator->errors()->first());

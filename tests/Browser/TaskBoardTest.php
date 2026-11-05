@@ -4,6 +4,7 @@ namespace Tests\Browser;
 
 use App\Models\Task;
 use App\Models\TaskList;
+use App\Models\TaskStatus;
 use App\Models\User;
 use Facebook\WebDriver\Remote\RemoteWebElement;
 use Facebook\WebDriver\WebDriverBy;
@@ -206,7 +207,7 @@ class TaskBoardTest extends DuskTestCase
             $this->open($browser, $user, $list);
             $browser->select('[aria-label="Group into lanes"]', 'assignee')->settle()->waitForText('Naledi Khumalo');
 
-            $lane = $browser->driver->findElement(WebDriverBy::xpath("//details[contains(., 'Naledi Khumalo')]//div[@data-status='todo']"));
+            $lane = $browser->driver->findElement(WebDriverBy::xpath("//details[contains(., 'Naledi Khumalo')]//div[@data-category='todo']"));
             $browser->driver->executeScript('arguments[0].scrollIntoView({ block: "center" })', [$lane]);
             $this->dragTo($browser, 'Rotate the shifts', $lane);
 
@@ -235,6 +236,25 @@ class TaskBoardTest extends DuskTestCase
 
             $this->assertSame(['Brief', 'Book'], $task->subtasks()->pluck('title')->all());
             $this->assertSame(1, (int) $browser->driver->executeScript("return document.activeElement.classList.contains('grip') ? 1 : 0"));
+        });
+    }
+
+    public function test_a_board_gets_a_new_column_and_a_card_moves_into_it(): void
+    {
+        [$user, $list] = $this->board();
+        $task = $this->task($list, 'Chase the supplier');
+
+        $this->browse(function (Browser $browser) use ($user, $list, $task) {
+            $this->open($browser, $user, $list);
+            $browser->press('Columns')->waitFor('[aria-label="New column"]')
+                ->type('[aria-label="New column"]', 'Waiting')->press('Add')->waitForText('Waiting')
+                ->press('Done')->settle();
+
+            $browser->waitFor('[data-name="Waiting"]');
+            $this->dragTo($browser, 'Chase the supplier', $browser->driver->findElement(WebDriverBy::cssSelector('[data-name="Waiting"]')));
+
+            $this->assertSame('Waiting', TaskStatus::find($task->fresh()->status_id)->name);
+            $this->assertNoConsoleErrors($browser);
         });
     }
 

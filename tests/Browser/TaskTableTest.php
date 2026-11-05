@@ -77,7 +77,7 @@ class TaskTableTest extends DuskTestCase
 
             $this->assertSame('review', $task->fresh()->status);
             $browser->refresh()->waitFor('.trow');
-            $this->assertSame(1, (int) $browser->driver->executeScript('return document.querySelectorAll(\'.tgroup[data-status="review"] [data-task]\').length'));
+            $this->assertSame(1, (int) $browser->driver->executeScript('return document.querySelectorAll(\'.tgroup[data-category="review"] [data-task]\').length'));
             $this->assertNoConsoleErrors($browser);
         });
     }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Task;
+use App\Models\TaskStatus;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -12,8 +13,6 @@ use Illuminate\Validation\ValidationException;
  */
 class TaskStatusService
 {
-    private const NAMES = ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'];
-
     public function __construct(
         private readonly TaskRecurrenceService $recurrence,
         private readonly TaskDependencyService $dependencies,
@@ -24,10 +23,15 @@ class TaskStatusService
      * A blocked task cannot be done while any blocker is not: refused here,
      * on the server, whatever the browser sent. Moving it anywhere else is fine.
      *
+     * @param  string|TaskStatus  $to  a category, or the column on this task's board
+     *
      * @throws ValidationException (key 'status') naming the blockers still open
      */
-    public function move(Task $task, string $status): void
+    public function move(Task $task, string|TaskStatus $to): void
     {
+        $column = $to instanceof TaskStatus ? $to : null;
+        $status = $column?->category ?? $to;
+
         if ($status === 'done' && $task->status !== 'done') {
             $open = $this->dependencies->openBlockers($task);
 
@@ -39,19 +43,20 @@ class TaskStatusService
         }
 
         // Together, so a task cannot end up done without its next occurrence.
-        DB::transaction(function () use ($task, $status) {
+        DB::transaction(function () use ($task, $status, $column) {
             $was = $task->status;
-            $task->update(['status' => $status] + match (true) {
+            $wasIn = $task->status_id;
+            $task->update(['status' => $status] + ($column ? ['status_id' => $column->id] : []) + match (true) {
                 $status === 'done' && $was !== 'done' => ['completed_at' => now(), 'completed_by' => auth()->id()],
                 $status !== 'done' && $was === 'done' => ['completed_at' => null, 'completed_by' => null, 'completion_note' => null],
                 default => [],
             });
 
-            if ($was !== $status) {
+            if ($was !== $status || $wasIn !== $task->status_id) {
                 $this->history->record($task, 'status', match (true) {
-                    $status === 'done' => 'Finished it',
-                    $was === 'done' => 'Reopened it',
-                    default => 'Moved it to '.(self::NAMES[$status] ?? $status),
+                    $was !== 'done' && $status === 'done' => 'Finished it',
+                    $was === 'done' && $status !== 'done' => 'Reopened it',
+                    default => 'Moved it to '.($column?->name ?? TaskStatus::find($task->status_id)?->name ?? $status),
                 });
             }
 

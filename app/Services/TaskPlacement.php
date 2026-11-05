@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Task;
 use App\Models\TaskList;
+use App\Models\TaskStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
@@ -19,14 +20,14 @@ class TaskPlacement
     ) {}
 
     /** Into a column, before another card, or at the foot of it. A refused status change moves nothing. */
-    public function place(Task $task, string $status, ?int $beforeId = null): void
+    public function place(Task $task, TaskStatus $column, ?int $beforeId = null): void
     {
-        DB::transaction(function () use ($task, $status, $beforeId) {
-            if ($task->status !== $status) {
-                $this->status->move($task, $status);
+        DB::transaction(function () use ($task, $column, $beforeId) {
+            if ($task->status_id !== $column->id) {
+                $this->status->move($task, $column);
             }
 
-            $this->seat($task, $beforeId, Task::where('task_list_id', $task->task_list_id)->whereNull('parent_id')->where('status', $status));
+            $this->seat($task, $beforeId, Task::where('task_list_id', $task->task_list_id)->whereNull('parent_id')->where('status_id', $column->id));
         });
     }
 
@@ -35,11 +36,12 @@ class TaskPlacement
     {
         DB::transaction(function () use ($task, $board) {
             $sort = (int) Task::where('task_list_id', $board->id)->whereNull('parent_id')->where('status', $task->status)->max('sort_order') + 1;
+            $board->unsetRelation('columns');
             $task->update(['task_list_id' => $board->id, 'sort_order' => $sort]);
 
             for ($parents = [$task->id]; $parents !== [];) {
                 $children = Task::withArchived()->whereIn('parent_id', $parents)->pluck('id')->all();
-                Task::withArchived()->whereIn('id', $children)->update(['task_list_id' => $board->id]);
+                Task::withArchived()->whereIn('id', $children)->get()->each->update(['task_list_id' => $board->id]);
                 $parents = $children;
             }
 

@@ -67,7 +67,7 @@ class TaskPlacementTest extends TestCase
         $this->assertSame(['X', 'A', 'Y'], $this->column($f, 'review'));
         $this->assertSame('review', $a->fresh()->status);
 
-        $seen = Livewire::actingAs($f->admin)->test(TaskBoard::class, ['taskList' => $f->list])->instance()->tasksByStatus['review'];
+        $seen = Livewire::actingAs($f->admin)->test(TaskBoard::class, ['taskList' => $f->list])->instance()->swimlanes[0]['columns'][$a->fresh()->status_id];
         $this->assertSame(['X', 'A', 'Y'], $seen->pluck('title')->all());
     }
 
@@ -162,7 +162,7 @@ class TaskPlacementTest extends TestCase
         [$a] = $this->cards($f, ['A']);
         $sub = $f->list->tasks()->create(['title' => 'Sub', 'status' => 'todo', 'parent_id' => $a->id, 'sort_order' => 9]);
 
-        app(TaskPlacement::class)->place($a, 'todo', $f->task->id);
+        app(TaskPlacement::class)->place($a, $a->taskList->columnFor('todo'), $f->task->id);
 
         $this->assertSame(9, $sub->fresh()->sort_order);
     }
