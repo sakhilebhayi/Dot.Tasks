@@ -38,6 +38,7 @@
         <nav class="nav" aria-label="Primary">
             @foreach ([
                 ['tasks.today', 'day', 'My Day'],
+                ['tasks.inbox', 'inbox', 'Inbox'],
                 ['tasks.mine', 'check', 'My tasks'],
                 ['tasks.upcoming', 'calendar', 'Upcoming'],
                 ['dashboard', 'home', 'Overview'],
@@ -50,7 +51,7 @@
             @endforeach
 
             @auth
-                @php $boards = Auth::user()->currentTeam?->taskLists()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'color']) ?? collect(); @endphp
+                @php $boards = Auth::user()->currentTeam?->boards()->orderBy('sort_order')->orderBy('name')->get(['id', 'name', 'color']) ?? collect(); @endphp
                 <div class="nav-group">
                     <span>Boards</span>
                     @can('create', App\Models\TaskList::class)
@@ -118,8 +119,10 @@
             <x-icon name="menu" />
             <span>Menu</span>
         </button>
-        <div class="grow"></div>
         @auth
+            <button type="button" class="find" data-open-search><x-icon name="search" /> <span>Find a task</span> <kbd>/</kbd></button>
+            <div class="grow"></div>
+            <button type="button" class="btn primary" data-open-quick-add><x-icon name="plus" /> <span class="topbar-hide">New task</span></button>
             <livewire:notification-bell />
         @endauth
         <button type="button" id="theme-toggle" class="icon-btn" aria-label="Switch between light and dark"><x-icon name="moon" /></button>
@@ -131,6 +134,8 @@
 
     @auth
         <livewire:tasks.task-detail />
+        <livewire:tasks.quick-add :board="request()->route('taskList')?->id" />
+        <livewire:tasks.find-tasks />
     @endauth
 
     @stack('modals')

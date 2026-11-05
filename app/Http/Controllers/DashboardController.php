@@ -23,7 +23,7 @@ class DashboardController extends Controller
         }
 
         $lists = $team
-            ->taskLists()
+            ->boards()
             ->withCount('tasks')
             ->orderBy('sort_order')
             ->get();

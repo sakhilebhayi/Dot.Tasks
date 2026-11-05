@@ -28,11 +28,13 @@ class Task extends Model
         'title', 'description', 'status', 'priority', 'due_date',
         'estimated_minutes', 'sort_order', 'escalated_at',
         'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_parent_id', 'recurrence_source_id',
-        'creator_id',
+        'creator_id', 'start_date', 'actual_minutes', 'completion_criteria', 'completion_note', 'completed_at', 'completed_by',
     ];
 
     protected $casts = [
         'due_date' => 'date',
+        'start_date' => 'date',
+        'completed_at' => 'datetime',
         'escalated_at' => 'datetime',
         'recurrence_interval' => 'integer',
     ];
@@ -41,6 +43,7 @@ class Task extends Model
      * Restrict to tasks belonging to a team. Tasks have no team_id of their
      * own -- the tenant is derived from the parent task list -- and there is
      * no global scope, so every query that spans lists must go through this.
+     * Someone else's Inbox is private, so it never shows here.
      *
      * @param  Builder<Task>  $query
      */
@@ -48,7 +51,8 @@ class Task extends Model
     {
         $teamId = $team instanceof Team ? $team->id : $team;
 
-        $query->whereHas('taskList', fn (Builder $list) => $list->where('team_id', $teamId));
+        $query->whereHas('taskList', fn (Builder $list) => $list->where('team_id', $teamId)
+            ->where(fn (Builder $mine) => $mine->where('is_inbox', false)->orWhere('owner_id', auth()->id())));
     }
 
     /**
@@ -153,6 +157,21 @@ class Task extends Model
     public function labels(): BelongsToMany
     {
         return $this->belongsToMany(Label::class, 'task_label');
+    }
+
+    public function collaborators(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'task_collaborators');
+    }
+
+    public function checklistItems(): HasMany
+    {
+        return $this->hasMany(TaskChecklistItem::class)->orderBy('sort_order');
+    }
+
+    public function activities(): HasMany
+    {
+        return $this->hasMany(TaskActivity::class)->orderByDesc('id');
     }
 
     public function comments(): HasMany

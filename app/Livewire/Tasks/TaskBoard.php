@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
 use App\Services\TaskArchiveService;
+use App\Services\TaskHistory;
 use App\Services\TaskStatusService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
@@ -153,6 +154,30 @@ class TaskBoard extends Component
     {
         $this->resetTaskFilters();
         $this->reset('assignee');
+        $this->forgetBoard();
+    }
+
+    /** Add a card at the foot of a column by typing its title. */
+    public function addHere(string $status, string $title): void
+    {
+        $this->authorize('create', [Task::class, $this->taskList]);
+
+        Validator::make(['status' => $status, 'title' => trim($title)], [
+            'status' => ['required', Rule::in(['todo', 'in_progress', 'review'])],
+            'title' => ['required', 'string', 'max:255'],
+        ])->validate();
+
+        $task = Task::create([
+            'task_list_id' => $this->taskList->id,
+            'creator_id' => auth()->id(),
+            'title' => trim($title),
+            'status' => $status,
+            'priority' => 'medium',
+            'sort_order' => (int) $this->taskList->tasks()->where('status', $status)->max('sort_order') + 1,
+        ]);
+        app(TaskHistory::class)->record($task, 'created', 'Created it');
+
+        broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
         $this->forgetBoard();
     }
 

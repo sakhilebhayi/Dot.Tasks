@@ -11,7 +11,9 @@ class TaskList extends Model
 {
     use Archivable;
 
-    protected $fillable = ['team_id', 'owner_id', 'name', 'description', 'color', 'sort_order'];
+    protected $fillable = ['team_id', 'owner_id', 'name', 'description', 'color', 'sort_order', 'is_inbox'];
+
+    protected $casts = ['is_inbox' => 'boolean'];
 
     public function team(): BelongsTo
     {

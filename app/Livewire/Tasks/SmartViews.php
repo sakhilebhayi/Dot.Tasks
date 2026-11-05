@@ -8,6 +8,7 @@ use App\Services\TaskStatusService;
 use Illuminate\Support\Carbon;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\On;
 use Livewire\Component;
 
 /**
@@ -72,6 +73,13 @@ class SmartViews extends Component
         app(TaskStatusService::class)->move($task, 'done');
 
         broadcast(new TaskBoardUpdated($task->taskList))->toOthers();
+        unset($this->todayTasks, $this->upcomingTasksByDate);
+    }
+
+    #[On('task-created')]
+    #[On('task-updated')]
+    public function refresh(): void
+    {
         unset($this->todayTasks, $this->upcomingTasksByDate);
     }
 

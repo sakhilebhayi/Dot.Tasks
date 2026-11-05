@@ -5,6 +5,7 @@ namespace App\Livewire\Tasks;
 use App\Events\TaskBoardUpdated;
 use App\Models\Label;
 use App\Models\Task;
+use App\Models\TaskChecklistItem;
 use App\Models\User;
 use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
@@ -13,8 +14,11 @@ use App\Services\Notify\NotifyClient;
 use App\Services\TaskArchiveService;
 use App\Services\TaskCommentService;
 use App\Services\TaskDependencyService;
+use App\Services\TaskEditor;
+use App\Services\TaskHistory;
 use App\Services\TaskLabelService;
 use App\Services\TaskStatusService;
+use App\Services\TaskSteps;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
@@ -26,12 +30,18 @@ use Livewire\Component;
 class TaskDetail extends Component
 {
     /** Everything the drawer shows, loaded together. */
-    private const RELATIONS = ['assignee', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
+    private const RELATIONS = ['assignee', 'collaborators', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
 
     #[Validate('required|string|max:5000')]
     public string $commentBody = '';
+
+    public string $newSubtask = '';
+
+    public string $newChecklistItem = '';
+
+    public string $completionNote = '';
 
     public bool $breaking = false;
 
@@ -252,6 +262,148 @@ class TaskDetail extends Component
         $this->dispatch('task-updated');
     }
 
+    /** One field of the task, saved as it is left. */
+    public function saveField(string $field, mixed $value): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        app(TaskEditor::class)->set($this->task, $field, $value);
+
+        $this->refreshTask();
+    }
+
+    public function toggleCollaborator(int $userId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('assign', $this->task);
+
+        $ids = $this->task->collaborators->pluck('id');
+        $next = $ids->contains($userId) ? $ids->reject(fn (int $id) => $id === $userId) : $ids->push($userId);
+        app(TaskEditor::class)->setCollaborators($this->task, $next->all());
+
+        $this->refreshTask();
+    }
+
+    public function addSubtask(): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        $this->validate(['newSubtask' => 'required|string|max:255']);
+        app(TaskSteps::class)->addSubtask($this->task, $this->newSubtask);
+        $this->newSubtask = '';
+
+        $this->refreshTask();
+    }
+
+    /** Tick a subtask off, or back on. Blockers are checked the same way as anywhere else. */
+    public function toggleSubtask(int $subtaskId): void
+    {
+        $sub = $this->task?->subtasks()->find($subtaskId) ?? abort(404);
+        $this->authorize('move', $sub);
+
+        app(TaskStatusService::class)->move($sub, $sub->status === 'done' ? 'todo' : 'done');
+
+        $this->refreshTask();
+    }
+
+    public function addChecklistItem(): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        $this->validate(['newChecklistItem' => 'required|string|max:255']);
+        app(TaskSteps::class)->addChecklistItem($this->task, $this->newChecklistItem);
+        $this->newChecklistItem = '';
+
+        $this->refreshTask();
+    }
+
+    public function toggleChecklistItem(int $itemId): void
+    {
+        $item = $this->ownChecklistItem($itemId);
+        $this->authorize('update', $this->task);
+
+        app(TaskSteps::class)->toggleChecklistItem($item);
+
+        $this->refreshTask();
+    }
+
+    public function removeChecklistItem(int $itemId): void
+    {
+        $item = $this->ownChecklistItem($itemId);
+        $this->authorize('update', $this->task);
+
+        $item->delete();
+
+        $this->refreshTask();
+    }
+
+    /** A checklist line that needs more than a tick becomes a subtask. */
+    public function promoteChecklistItem(int $itemId): void
+    {
+        $item = $this->ownChecklistItem($itemId);
+        $this->authorize('update', $this->task);
+
+        app(TaskSteps::class)->promote($item);
+
+        $this->refreshTask();
+    }
+
+    private function ownChecklistItem(int $itemId): TaskChecklistItem
+    {
+        return $this->task?->checklistItems()->find($itemId) ?? abort(404);
+    }
+
+    /** A new task beside this one, and the panel moves to it. */
+    public function duplicate(): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('create', [Task::class, $this->task->taskList]);
+
+        $copy = app(TaskSteps::class)->duplicate($this->task);
+
+        $this->openTask($copy->id);
+        $this->dispatch('task-updated');
+    }
+
+    /** Finish the task, with a note if there is something to say. */
+    public function finish(): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('move', $this->task);
+        $this->validate(['completionNote' => 'nullable|string|max:2000']);
+        $this->resetErrorBag('status');
+
+        app(TaskStatusService::class)->move($this->task, 'done');
+        if (trim($this->completionNote) !== '') {
+            $this->task->update(['completion_note' => trim($this->completionNote)]);
+        }
+        $this->completionNote = '';
+
+        broadcast(new TaskBoardUpdated($this->task->taskList))->toOthers();
+        $this->refreshTask();
+    }
+
     public function assignTask(?int $userId): void
     {
         if (! $this->task) {
@@ -270,6 +422,7 @@ class TaskDetail extends Component
         }
 
         $this->task->update(['assignee_id' => $assignee?->id]);
+        app(TaskHistory::class)->record($this->task, 'people', $assignee ? 'Assigned it to '.$assignee->name : 'Left it unassigned');
 
         if ($assignee && $assignee->id !== auth()->id()) {
             $assignee->notify(new TaskAssignedNotification($this->task));

@@ -89,6 +89,7 @@ class MyTasks extends Component
         unset($this->tasks);
     }
 
+    #[On('task-created')]
     #[On('task-updated')]
     public function refresh(): void
     {

@@ -59,7 +59,6 @@ body.app {
     background: var(--ground);
     color: var(--text);
     font: 400 14px/20px var(--font);
-    font-feature-settings: 'tnum' 1;
     -webkit-font-smoothing: antialiased;
 }
 body.app a { color: inherit; text-decoration: none; }
@@ -210,6 +209,20 @@ button { cursor: pointer; }
 .group-head { display: flex; align-items: center; gap: 8px; padding: 14px 2px 6px; font-weight: 600; }
 .group-head .count { color: var(--muted); font-weight: 400; }
 
+.understood { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--raised); }
+.step { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.step-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.step .btn { opacity: 0; }
+.step:hover .btn, .step:focus-within .btn { opacity: 1; }
+.step-add { display: flex; gap: 8px; margin-top: 6px; }
+.step-add .input { min-height: 30px; padding: 4px 8px; }
+.ghost-input { width: 100%; padding: 2px 4px; margin: 0 -4px; border: 1px solid transparent; border-radius: 4px; background: none; }
+.ghost-input:hover { border-color: var(--control); }
+.ghost-input:focus { border-color: var(--text); outline: none; background: var(--surface); }
+.sheet-title.ghost-input { font-weight: 600; }
+.history { display: flex; gap: 8px; padding: 4px 0; color: var(--muted); font-size: 12px; }
+.history b { color: var(--text); font-weight: 500; }
+
 /* Empty and figures */
 .empty { padding: 28px 16px; border: 1px dashed var(--control); border-radius: var(--radius); color: var(--muted); text-align: center; }
 .figures { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
@@ -222,13 +235,14 @@ button { cursor: pointer; }
 
 /* The task panel, and dialogs */
 .veil { position: fixed; inset: 0; z-index: 50; background: rgb(23 24 21 / 0.28); }
+.veil.over-sheet { z-index: 65; }
 .sheet { position: fixed; inset: 0 0 0 auto; z-index: 60; display: flex; flex-direction: column; width: min(520px, 100vw); background: var(--surface); box-shadow: var(--float); }
 .sheet-head { display: flex; align-items: flex-start; gap: 10px; padding: 16px 20px 10px; }
 .sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 20px 24px; }
 .sheet-title { flex: 1; min-width: 0; font-size: 18px; line-height: 24px; font-weight: 600; }
 .props { display: grid; grid-template-columns: 96px 1fr; gap: 6px 12px; align-items: center; margin: 8px 0 16px; }
 .props > span { color: var(--muted); font-size: 12px; }
-.dialog { position: fixed; left: 50%; top: 12vh; z-index: 60; width: min(560px, calc(100vw - 32px)); max-height: 76vh; overflow-y: auto; padding: 20px; transform: translateX(-50%); border-radius: 8px; background: var(--surface); box-shadow: var(--float); }
+.dialog { position: fixed; left: 50%; top: 12vh; z-index: 70; width: min(560px, calc(100vw - 32px)); max-height: 76vh; overflow-y: auto; padding: 20px; transform: translateX(-50%); border-radius: 8px; background: var(--surface); box-shadow: var(--float); }
 .dialog h2 { margin-bottom: 12px; font-size: 16px; line-height: 24px; font-weight: 600; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 .menu { position: absolute; z-index: 50; min-width: 200px; padding: 4px; border-radius: var(--radius); background: var(--surface); box-shadow: var(--float); }
@@ -245,8 +259,10 @@ button { cursor: pointer; }
 .comment-who b { color: var(--text); font-weight: 500; }
 .comment p { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
-.flash { position: fixed; left: 50%; bottom: 20px; z-index: 70; display: flex; align-items: center; gap: 12px; padding: 8px 12px; transform: translateX(-50%); border-radius: var(--radius); background: var(--primary); color: var(--on-primary); box-shadow: var(--float); }
+.flash { position: fixed; left: 50%; bottom: 20px; z-index: 75; display: flex; align-items: center; gap: 12px; padding: 8px 12px; transform: translateX(-50%); border-radius: var(--radius); background: var(--primary); color: var(--on-primary); box-shadow: var(--float); }
 .flash button { padding: 0; border: 0; background: none; color: inherit; text-decoration: underline; }
+
+@media (hover: none) { .step .btn { opacity: 1; } }
 
 @media (max-width: 859.98px) {
     :root { --pad: 16px; --topbar-h: 52px; }

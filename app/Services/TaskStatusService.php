@@ -12,9 +12,12 @@ use Illuminate\Validation\ValidationException;
  */
 class TaskStatusService
 {
+    private const NAMES = ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'];
+
     public function __construct(
         private readonly TaskRecurrenceService $recurrence,
         private readonly TaskDependencyService $dependencies,
+        private readonly TaskHistory $history,
     ) {}
 
     /**
@@ -37,7 +40,20 @@ class TaskStatusService
 
         // Together, so a task cannot end up done without its next occurrence.
         DB::transaction(function () use ($task, $status) {
-            $task->update(['status' => $status]);
+            $was = $task->status;
+            $task->update(['status' => $status] + match (true) {
+                $status === 'done' && $was !== 'done' => ['completed_at' => now(), 'completed_by' => auth()->id()],
+                $status !== 'done' && $was === 'done' => ['completed_at' => null, 'completed_by' => null, 'completion_note' => null],
+                default => [],
+            });
+
+            if ($was !== $status) {
+                $this->history->record($task, 'status', match (true) {
+                    $status === 'done' => 'Finished it',
+                    $was === 'done' => 'Reopened it',
+                    default => 'Moved it to '.(self::NAMES[$status] ?? $status),
+                });
+            }
 
             if ($status === 'done') {
                 $this->recurrence->spawnNextOccurrence($task);

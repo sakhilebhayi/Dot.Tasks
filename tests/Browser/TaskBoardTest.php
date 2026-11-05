@@ -115,7 +115,7 @@ class TaskBoardTest extends DuskTestCase
             $this->card($browser, 'Renew the fleet insurance')->click();
             $browser->settle()->waitForText('Comments');
 
-            $browser->type('textarea', 'Broker has the quote')->press('Comment')->settle();
+            $browser->type('textarea[wire\\:model="commentBody"]', 'Broker has the quote')->press('Comment')->settle();
 
             $browser->assertSee('Broker has the quote');
             $this->assertSame('Broker has the quote', $task->comments()->value('body'));

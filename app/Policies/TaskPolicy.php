@@ -27,20 +27,22 @@ class TaskPolicy
     public function view(User $user, Task $task): bool
     {
         // taskList is null for a task on an archived board.
-        $team = $task->taskList?->team;
+        $board = $task->taskList;
 
-        return $team !== null && $user->belongsToTeam($team);
+        return $board !== null && $user->can('view', $board);
     }
 
     /** Add a task to a board: authorized against the board it lands on. */
     public function create(User $user, TaskList $taskList): bool
     {
-        return $this->holds($user, $taskList->team, 'create');
+        return $taskList->is_inbox ? $user->id === $taskList->owner_id : $this->holds($user, $taskList->team, 'create');
     }
 
     public function update(User $user, Task $task): bool
     {
-        return $this->holds($user, $task->taskList?->team, 'update');
+        $board = $task->taskList;
+
+        return $board !== null && $user->can('update', $board);
     }
 
     /** Change a task's status, from the board, the drawer or a smart view. */
@@ -91,7 +93,9 @@ class TaskPolicy
     /** Deleting is for admins and the owner. */
     public function delete(User $user, Task $task): bool
     {
-        return $this->holds($user, $task->taskList?->team, 'delete');
+        $board = $task->taskList;
+
+        return $board !== null && ($board->is_inbox ? $user->id === $board->owner_id : $this->holds($user, $board->team, 'delete'));
     }
 
     /**

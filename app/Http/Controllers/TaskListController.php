@@ -4,12 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\Label;
 use App\Models\TaskList;
+use App\Services\InboxLists;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class TaskListController extends Controller
 {
+    /** A person's private Inbox: made the first time it is opened. */
+    public function inbox(Request $request, InboxLists $inboxes): RedirectResponse
+    {
+        $team = $request->user()->currentTeam;
+        abort_if(! $team, 403, 'You must belong to a team to have an Inbox.');
+
+        return redirect()->route('task-lists.show', $inboxes->for($request->user(), $team));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         // A user removed from their last team (or who never completed team
