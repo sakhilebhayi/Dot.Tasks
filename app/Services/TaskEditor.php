@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Task;
 use App\Models\User;
+use App\Notifications\TaskAssignedNotification;
+use App\Services\Notify\NotifyClient;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -52,6 +54,22 @@ class TaskEditor
 
         $task->update([$field => $value]);
         $this->history->record($task, 'edit', $this->sentence($field, $value));
+    }
+
+    /** Hand the task to someone on its team, or to nobody. They hear about it, unless they did it themselves. */
+    public function assign(Task $task, ?User $assignee, User $by): void
+    {
+        if ($task->assignee_id === $assignee?->id) {
+            return;
+        }
+
+        $task->update(['assignee_id' => $assignee?->id]);
+        $this->history->record($task, 'people', $assignee ? 'Assigned it to '.$assignee->name : 'Left it unassigned');
+
+        if ($assignee && $assignee->id !== $by->id) {
+            $assignee->notify(new TaskAssignedNotification($task));
+            app(NotifyClient::class)->taskAssigned($task, $assignee, $by);
+        }
     }
 
     /** @param  list<int>  $userIds */

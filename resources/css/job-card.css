@@ -192,7 +192,7 @@ button { cursor: pointer; }
 .lane[open] > summary svg { rotate: 90deg; }
 .lane > summary .count { color: var(--muted); font-weight: 400; }
 .lane .slot { max-height: none; }
-.grip { display: inline-flex; color: var(--control); cursor: grab; touch-action: none; }
+.grip { display: inline-flex; padding: 0; border: 0; background: none; color: var(--control); cursor: grab; touch-action: none; }
 .grip:hover { color: var(--muted); }
 
 /* The rack */
@@ -218,6 +218,41 @@ button { cursor: pointer; }
 .row-end { display: flex; align-items: center; gap: 8px; flex: none; color: var(--muted); font-size: 12px; }
 .group-head { display: flex; align-items: center; gap: 8px; padding: 14px 2px 6px; font-weight: 600; }
 .group-head .count { color: var(--muted); font-weight: 400; }
+
+/* The list */
+.view-tabs { align-items: center; margin-bottom: 12px; }
+.tab[aria-current='page'] { background: var(--active); color: var(--text); font-weight: 500; }
+.saved-views { margin-top: -6px; }
+.saved-views .chip a { color: inherit; }
+.chip-x { display: inline-flex; margin-left: 2px; padding: 0; border: 0; background: none; color: var(--muted); }
+.chip-x svg { width: 12px; height: 12px; }
+.inline-field { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
+.pick { position: relative; }
+.pick > summary { list-style: none; cursor: pointer; }
+.pick > summary::-webkit-details-marker { display: none; }
+.pick .menu { top: calc(100% + 4px); left: 0; }
+.pick-line { display: flex; align-items: center; gap: 8px; padding: 6px 8px; white-space: nowrap; }
+.quiet-alert { background: var(--raised); color: var(--text); border-color: var(--border); }
+.grid-scroll { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.trow { display: grid; grid-template-columns: var(--cols); align-items: center; min-width: min-content; min-height: var(--row-height); border-top: 1px solid var(--rule); background: var(--surface); }
+.trow.thead { min-height: 32px; border-top: 0; color: var(--muted); font-size: 12px; font-weight: 500; }
+.trow:not(.thead):hover { background: color-mix(in srgb, var(--raised) 45%, var(--surface)); }
+.tgroup { min-height: 16px; }
+.grid-scroll .group-head { margin: 0; padding: 12px 12px 4px; border-top: 1px solid var(--rule); font-size: 14px; }
+.grid-scroll [role='rowgroup']:first-of-type .group-head { border-top: 0; }
+.cell { min-width: 0; padding: 2px 6px; }
+.cell-title { display: flex; align-items: center; gap: 6px; }
+.cell .select.bare { width: 100%; min-height: 28px; padding-block: 2px; border-color: transparent; background-color: transparent; }
+.cell .select.bare:hover, .cell .select.bare:focus { border-color: var(--control); }
+.thead-sort { padding: 0; border: 0; background: none; color: inherit; font: inherit; }
+.thead-sort:hover { color: var(--text); }
+.expand { display: inline-flex; padding: 0; border: 0; background: none; color: var(--muted); transition: rotate 150ms var(--ease); }
+.expand[aria-expanded='true'] { rotate: 90deg; }
+.expand svg { width: 14px; height: 14px; }
+.subrows { grid-column: 1 / -1; padding: 0 12px 6px 52px; }
+.subrow { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 28px; padding: 0; border: 0; background: none; color: var(--text); text-align: left; }
+.trow .icon-btn { width: 28px; height: 28px; }
+.bulk { position: fixed; left: 50%; bottom: 16px; z-index: 45; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; max-width: calc(100vw - 24px); padding: 8px 12px; translate: -50% 0; border-radius: var(--radius); background: var(--surface); box-shadow: var(--lift); }
 
 .understood { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--raised); }
 .step { display: flex; align-items: center; gap: 8px; min-height: 32px; }
@@ -286,6 +321,8 @@ button { cursor: pointer; }
     .topbar { left: 0; padding: 0 8px; gap: 4px; }
     .find { flex: 1; }
     .find kbd, .topbar-hide { display: none; }
+    .cell-opt { display: none; }
+    .trow { grid-template-columns: 28px 20px minmax(0, 1fr) 132px 32px; min-width: 0; }
     .content-wrap { margin-left: 0; }
     .slot { flex-basis: calc(100vw - 48px); max-height: none; }
     .row { min-height: 52px; }

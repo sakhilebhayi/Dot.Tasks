@@ -5,9 +5,8 @@ namespace App\Livewire\Tasks;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\User;
-use App\Notifications\TaskAssignedNotification;
 use App\Services\InboxLists;
-use App\Services\Notify\NotifyClient;
+use App\Services\TaskEditor;
 use App\Services\TaskHistory;
 use App\Services\TaskSentenceReader;
 use Illuminate\Support\Collection;
@@ -99,7 +98,6 @@ class QuickAdd extends Component
         $task = Task::create([
             'task_list_id' => $list->id,
             'creator_id' => $this->user()->id,
-            'assignee_id' => $read['assignee_id'],
             'title' => mb_substr($read['title'], 0, 255),
             'status' => 'todo',
             'priority' => $read['priority'] ?? 'medium',
@@ -108,10 +106,8 @@ class QuickAdd extends Component
         ]);
         app(TaskHistory::class)->record($task, 'created', 'Created it');
 
-        $assignee = $read['assignee_id'] ? User::find($read['assignee_id']) : null;
-        if ($assignee && $assignee->id !== $this->user()->id) {
-            $assignee->notify(new TaskAssignedNotification($task));
-            app(NotifyClient::class)->taskAssigned($task, $assignee, $this->user());
+        if ($read['assignee_id']) {
+            app(TaskEditor::class)->assign($task, User::find($read['assignee_id']), $this->user());
         }
 
         $this->open = false;

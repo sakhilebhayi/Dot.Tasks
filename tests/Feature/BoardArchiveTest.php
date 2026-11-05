@@ -4,10 +4,10 @@ namespace Tests\Feature;
 
 use App\Console\Commands\CheckTasksDueSoon;
 use App\Console\Commands\DetectEscalationCandidates;
+use App\Livewire\Tasks\ArchiveBoard;
 use App\Livewire\Tasks\ArchivedBoards;
 use App\Livewire\Tasks\EscalationQueue;
 use App\Livewire\Tasks\SmartViews;
-use App\Livewire\Tasks\TaskBoard;
 use App\Models\TaskEscalationProposal;
 use App\Models\TaskList;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -25,8 +25,8 @@ class BoardArchiveTest extends TestCase
         $f = $this->teamFixture();
 
         Livewire::actingAs($f->admin)
-            ->test(TaskBoard::class, ['taskList' => $f->list])
-            ->call('archiveBoard')
+            ->test(ArchiveBoard::class, ['taskList' => $f->list])
+            ->call('archive')
             ->assertRedirect(route('dashboard'));
 
         $this->assertNotNull(TaskList::withArchived()->find($f->list->id)->archived_at);
@@ -37,7 +37,7 @@ class BoardArchiveTest extends TestCase
     {
         $f = $this->teamFixture();
 
-        Livewire::actingAs($f->owner)->test(TaskBoard::class, ['taskList' => $f->list])->call('archiveBoard');
+        Livewire::actingAs($f->owner)->test(ArchiveBoard::class, ['taskList' => $f->list])->call('archive');
 
         $this->assertNotNull(TaskList::withArchived()->find($f->list->id)->archived_at);
     }
@@ -46,8 +46,8 @@ class BoardArchiveTest extends TestCase
     {
         $f = $this->teamFixture();
 
-        Livewire::actingAs($f->editor)->test(TaskBoard::class, ['taskList' => $f->list])->call('archiveBoard')->assertForbidden();
-        Livewire::actingAs($f->viewer)->test(TaskBoard::class, ['taskList' => $f->list])->call('archiveBoard')->assertForbidden();
+        Livewire::actingAs($f->editor)->test(ArchiveBoard::class, ['taskList' => $f->list])->call('archive')->assertForbidden();
+        Livewire::actingAs($f->viewer)->test(ArchiveBoard::class, ['taskList' => $f->list])->call('archive')->assertForbidden();
 
         $this->assertNull($f->list->fresh()->archived_at);
     }
@@ -56,8 +56,8 @@ class BoardArchiveTest extends TestCase
     {
         $f = $this->teamFixture();
 
-        Livewire::actingAs($f->admin)->test(TaskBoard::class, ['taskList' => $f->list])->assertSee('Archive board');
-        Livewire::actingAs($f->editor)->test(TaskBoard::class, ['taskList' => $f->list])->assertDontSee('Archive board');
+        $this->actingAs($f->admin)->get(route('task-lists.show', $f->list))->assertSee('Archive board');
+        $this->actingAs($f->editor)->get(route('task-lists.show', $f->list))->assertDontSee('Archive board');
     }
 
     public function test_an_archived_board_is_off_the_dashboard_and_its_page_is_gone(): void
