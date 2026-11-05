@@ -44,7 +44,6 @@ class SecurityHeadersTest extends TestCase
     {
         $policy = (string) $this->get('/')->headers->get('Content-Security-Policy-Report-Only');
 
-        $this->assertMatchesRegularExpression("/script-src [^;]*https:\/\/cdn\.tailwindcss\.com/", $policy);
         $this->assertMatchesRegularExpression("/style-src [^;]*https:\/\/fonts\.googleapis\.com/", $policy);
         $this->assertMatchesRegularExpression("/font-src [^;]*https:\/\/fonts\.gstatic\.com/", $policy);
         $this->assertMatchesRegularExpression("/img-src [^;]*data: blob: https:\/\/images\.unsplash\.com/", $policy);

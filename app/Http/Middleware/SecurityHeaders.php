@@ -13,8 +13,8 @@ use Symfony\Component\HttpFoundation\Response;
  * features this platform never uses, and HSTS on HTTPS requests only (no includeSubDomains / preload on purpose: the
  * sibling Dot platforms live on neighbouring subdomains and set their own).
  *
- * The Content-Security-Policy is REPORT-ONLY. The pages use inline scripts and styles, Alpine/Livewire and the Tailwind
- * CDN, so the policy allows 'unsafe-inline' and 'unsafe-eval' for now. Violations are reported to /csp-report, which
+ * The Content-Security-Policy is REPORT-ONLY. The pages use inline scripts and styles and Alpine/Livewire, so the
+ * policy allows 'unsafe-inline' and 'unsafe-eval' for now. Violations are reported to /csp-report, which
  * logs only the directive and the blocked host, so the origin list below can be checked against what the pages
  * really load before anything is enforced. Do not add an origin that no view loads.
  */
@@ -33,8 +33,7 @@ class SecurityHeaders
 
         $policy = implode('; ', [
             "default-src 'self'",
-            // cdn.tailwindcss.com: the Tailwind Play CDN script in layouts/app.blade.php.
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com",
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
             // fonts.googleapis.com: the Google Fonts stylesheets (all layouts, welcome page, error pages).
             "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
             // fonts.gstatic.com: the font files those stylesheets point at.

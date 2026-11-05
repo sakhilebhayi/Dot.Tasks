@@ -59,3 +59,63 @@ jobs:
           MAIL_MAILER: array
           BROADCAST_CONNECTION: log
         run: ./vendor/bin/phpunit --colors=never
+
+  browser:
+    name: Browser tests (Dusk)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+          coverage: none
+          extensions: sqlite3, pdo_sqlite, mbstring, intl, bcmath, curl
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      # .env must exist BEFORE composer install: package:discover boots the app.
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          touch database/dusk.sqlite
+          sed -i "s|^APP_URL=.*|APP_URL=http://127.0.0.1:8000|" .env
+          sed -i "s|^DB_CONNECTION=.*|DB_CONNECTION=sqlite|" .env
+          sed -i "s|^DB_DATABASE=.*|DB_DATABASE=${GITHUB_WORKSPACE}/database/dusk.sqlite|" .env
+          sed -i "s|^BROADCAST_CONNECTION=.*|BROADCAST_CONNECTION=null|" .env
+          sed -i "s|^QUEUE_CONNECTION=.*|QUEUE_CONNECTION=sync|" .env
+          sed -i "s|^CACHE_STORE=.*|CACHE_STORE=file|" .env
+          sed -i "s|^SESSION_DRIVER=.*|SESSION_DRIVER=file|" .env
+
+      - name: Install dependencies and build the assets
+        run: |
+          composer install --no-interaction --prefer-dist --no-progress
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm run build
+          php artisan key:generate
+          php artisan migrate --force
+
+      - name: ChromeDriver for the installed Chrome
+        run: php artisan dusk:chrome-driver --detect
+
+      - name: Serve the app
+        run: PHP_CLI_SERVER_WORKERS=4 php artisan serve --host=127.0.0.1 --port=8000 --no-reload > storage/logs/dusk-serve.log 2>&1 &
+
+      - name: Browser tests
+        run: php artisan dusk
+
+      - name: Keep screenshots, console output and logs of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dusk-failure
+          path: |
+            tests/Browser/screenshots
+            tests/Browser/console
+            storage/logs
+          retention-days: 7
