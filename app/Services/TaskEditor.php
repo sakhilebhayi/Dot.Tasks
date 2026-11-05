@@ -56,6 +56,34 @@ class TaskEditor
         $this->history->record($task, 'edit', $this->sentence($field, $value));
     }
 
+    /** A new due date. A task that has a start keeps its length, so the start moves with it. */
+    public function reschedule(Task $task, ?string $due): void
+    {
+        $start = $task->start_date;
+        if ($start !== null && $task->due_date !== null && $due !== null) {
+            $start = $start->copy()->addDays((int) $task->due_date->diffInDays(Carbon::parse($due), false));
+        }
+
+        $this->setDates($task, $due === null ? null : $start?->toDateString(), $due);
+    }
+
+    /** Both dates at once, as a bar on the timeline sets them. */
+    public function setDates(Task $task, ?string $start, ?string $due): void
+    {
+        Validator::make(['start_date' => $start, 'due_date' => $due], ['start_date' => ['nullable', 'date'], 'due_date' => ['nullable', 'date']])->validate();
+
+        if ($start !== null && $due !== null && Carbon::parse($start)->gt(Carbon::parse($due))) {
+            throw ValidationException::withMessages(['due_date' => 'The start date has to be on or before the due date.']);
+        }
+
+        $task->update(['start_date' => $start, 'due_date' => $due]);
+        $this->history->record($task, 'edit', match (true) {
+            $due === null => 'Took it off the calendar',
+            $start === null || $start === $due => 'Set the due date to '.Carbon::parse($due)->format('M j, Y'),
+            default => 'Scheduled it from '.Carbon::parse($start)->format('M j').' to '.Carbon::parse($due)->format('M j, Y'),
+        });
+    }
+
     /** Hand the task to someone on its team, or to nobody. They hear about it, unless they did it themselves. */
     public function assign(Task $task, ?User $assignee, User $by): void
     {

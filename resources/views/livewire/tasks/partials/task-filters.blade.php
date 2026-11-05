@@ -37,6 +37,14 @@
             <option value="priority">Lanes by priority</option>
         </select>
     @endif
+    @if($extras === 'calendar')
+        <select class="select bare" wire:model.live="state" aria-label="Status">
+            <option value="">Any status</option>
+            @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $value => $name)
+                <option value="{{ $value }}">{{ $name }}</option>
+            @endforeach
+        </select>
+    @endif
     @if($this->filtersActive)
         <button type="button" wire:click="clearFilters" class="link">Clear filters</button>
     @endif

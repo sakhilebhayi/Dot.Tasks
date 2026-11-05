@@ -56,7 +56,7 @@ class TaskListController extends Controller
 
         $view = match (true) {
             $request->query('show') === 'archived' => 'archived',
-            $request->query('view') === 'list' => 'list',
+            in_array($request->query('view'), ['list', 'calendar', 'timeline'], true) => $request->query('view'),
             default => 'board',
         };
 
