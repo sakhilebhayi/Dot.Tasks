@@ -8,6 +8,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReadyController;
 use App\Http\Controllers\RealtimeHealthController;
 use App\Http\Controllers\SchedulerProbeController;
+use App\Http\Controllers\TaskFileController;
 use App\Http\Controllers\TaskListController;
 use App\Http\Middleware\AuthenticateGuardian;
 use App\Models\TaskList;
@@ -80,6 +81,8 @@ Route::middleware([
 
     Route::get('/labels', fn () => view('labels.index'))->name('labels.index');
     Route::get('/templates', fn () => view('tasks.templates'))->name('tasks.templates');
+    Route::get('/tasks/{task}/files/{attachment}', [TaskFileController::class, 'show'])->name('tasks.files');
+    Route::get('/notifications/settings', fn () => view('notifications.settings'))->name('notifications.settings');
 
     // Deleted tasks: list and restore (admins and the owner restore)
     Route::get('/removed', fn () => view('removed.index'))->name('removed.index');

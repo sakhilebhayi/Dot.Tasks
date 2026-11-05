@@ -17,6 +17,7 @@ class TaskStatusService
         private readonly TaskRecurrenceService $recurrence,
         private readonly TaskDependencyService $dependencies,
         private readonly TaskHistory $history,
+        private readonly TaskNotifier $notifier,
     ) {}
 
     /**
@@ -53,9 +54,10 @@ class TaskStatusService
         }
 
         // Together, so a task cannot end up done without its next occurrence.
-        DB::transaction(function () use ($task, $status, $column) {
-            $was = $task->status;
-            $wasIn = $task->status_id;
+        $was = $task->status;
+        $wasIn = $task->status_id;
+
+        $occurrence = DB::transaction(function () use ($task, $status, $column, $was, $wasIn) {
             $task->update(['status' => $status] + ($column ? ['status_id' => $column->id] : []) + match (true) {
                 $status === 'done' && $was !== 'done' => ['completed_at' => now(), 'completed_by' => auth()->id()],
                 $status !== 'done' && $was === 'done' => ['completed_at' => null, 'completed_by' => null, 'completion_note' => null],
@@ -71,8 +73,37 @@ class TaskStatusService
             }
 
             if ($status === 'done') {
-                $this->recurrence->spawnNextOccurrence($task);
+                $next = $this->recurrence->spawnNextOccurrence($task);
             }
+
+            return $next ?? null;
         });
+
+        $this->tellPeople($task, $was, $wasIn, $occurrence);
+    }
+
+    /** After the transaction, so nobody hears about a move that did not happen. */
+    private function tellPeople(Task $task, string $was, ?int $wasIn, ?Task $occurrence): void
+    {
+        if ($occurrence) {
+            $this->notifier->recurred($occurrence);
+        }
+
+        if ($was === $task->status && $wasIn === $task->status_id) {
+            return;
+        }
+
+        if ($task->status !== 'done') {
+            $this->notifier->moved($task, TaskStatus::find($task->status_id)?->name ?? $task->status);
+        } else {
+            $this->notifier->completed($task);
+        }
+
+        // Finishing, or starting, can free up what waits on this task.
+        foreach ($task->blocking()->with('blockedBy:id,status')->get() as $waiting) {
+            if ($waiting->status !== 'done' && ! $waiting->isBlocked()) {
+                $this->notifier->unblocked($waiting);
+            }
+        }
     }
 }

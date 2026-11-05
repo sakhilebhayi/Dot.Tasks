@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Task;
+use App\Support\Today;
 use Carbon\Carbon;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
@@ -43,7 +44,7 @@ class TaskRecurrenceService
         }
 
         $series = Task::withTrashed()->withArchived()->find($completedTask->recurrence_parent_id ?? $completedTask->id) ?? $completedTask;
-        $today = Carbon::today();
+        $today = Today::date();
         $nextDueDate = $this->nextDate($completedTask->recurrence_anchor === 'completion' ? $today : ($completedTask->due_date ?? $today), $completedTask, $series);
 
         // A series that fell behind can pick up from today rather than hand over a pile of overdue occurrences.

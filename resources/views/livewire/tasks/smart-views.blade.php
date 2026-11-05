@@ -23,7 +23,7 @@
                             <span>{{ $task->taskList->name }}</span>
                         </button>
                         <span class="row-end">
-                            <span @class(['num', 'overdue' => $task->due_date->isPast() && ! $task->due_date->isToday()])>{{ $task->due_date->isToday() ? 'Today' : $task->due_date->diffForHumans() }}</span>
+                            <span @class(['num', 'overdue' => $task->isOverdue()])>{{ $task->isDueToday() ? 'Today' : $task->due_date->diffForHumans() }}</span>
                             <span class="chip">{{ ucfirst($task->priority) }}</span>
                         </span>
                     </div>
@@ -35,7 +35,7 @@
             <div class="empty">Nothing due in the next 7 days.</div>
         @else
             @foreach($this->upcomingTasksByDate as $date => $tasks)
-                <h3 class="group-head">{{ \Illuminate\Support\Carbon::parse($date)->isTomorrow() ? 'Tomorrow' : \Illuminate\Support\Carbon::parse($date)->format('l, M j') }}</h3>
+                <h3 class="group-head">{{ \Illuminate\Support\Carbon::parse($date)->isSameDay(\App\Support\Today::date()->addDay()) ? 'Tomorrow' : \Illuminate\Support\Carbon::parse($date)->format('l, M j') }}</h3>
                 <div class="rows">
                     @foreach($tasks as $task)
                         <div class="row" wire:key="upcoming-{{ $task->id }}">

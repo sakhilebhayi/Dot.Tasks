@@ -3,7 +3,7 @@
         <div class="page-head">
             <div>
                 <h1>My Day</h1>
-                <p>{{ now()->format('l, j F') }}</p>
+                <p>{{ \App\Support\Today::date()->format('l, j F') }}</p>
             </div>
         </div>
         <livewire:tasks.my-day />

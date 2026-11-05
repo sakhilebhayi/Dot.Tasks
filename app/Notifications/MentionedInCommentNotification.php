@@ -4,6 +4,7 @@ namespace App\Notifications;
 
 use App\Models\Task;
 use App\Models\TaskComment;
+use App\Services\NotificationPreferences;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -20,7 +21,7 @@ class MentionedInCommentNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return app(NotificationPreferences::class)->wants($notifiable, 'mentioned') ? ['database'] : [];
     }
 
     /**

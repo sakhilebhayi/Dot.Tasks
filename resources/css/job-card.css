@@ -350,6 +350,11 @@ button { cursor: pointer; }
 .repeat > summary { cursor: pointer; }
 .repeat[open] > summary { margin-bottom: 8px; }
 
+.comment.is-reply { margin-left: 20px; padding-left: 10px; border-left: 2px solid var(--rule); }
+.comment.is-note { background: var(--wait-wash); border-radius: var(--radius); padding: 6px 8px; }
+.comment-acts { display: flex; gap: 10px; margin-top: 2px; font-size: 12px; }
+.comment-acts .link { color: var(--muted); }
+
 .understood { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--raised); }
 .step { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .step-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }

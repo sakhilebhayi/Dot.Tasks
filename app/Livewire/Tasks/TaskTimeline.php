@@ -6,6 +6,7 @@ use App\Events\TaskBoardUpdated;
 use App\Livewire\Concerns\ShowsBoardTasks;
 use App\Models\Task;
 use App\Services\TaskEditor;
+use App\Support\Today;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
@@ -44,7 +45,7 @@ class TaskTimeline extends Component
     public function first(): Carbon
     {
         $date = Carbon::hasFormatWithModifiers($this->from, 'Y#m#d') ? Carbon::createFromFormat('!Y-m-d', $this->from) : null;
-        $start = $date && $date->format('Y-m-d') === $this->from ? $date : Carbon::today()->subWeek();
+        $start = $date && $date->format('Y-m-d') === $this->from ? $date : Today::date()->subWeek();
 
         return $start->startOfWeek(Carbon::MONDAY)->startOfDay();
     }
@@ -64,7 +65,7 @@ class TaskTimeline extends Component
     #[Computed]
     public function todayLeft(): ?int
     {
-        $day = (int) $this->first->diffInDays(Carbon::today(), false);
+        $day = (int) $this->first->diffInDays(Today::date(), false);
 
         return $day >= 0 && $day < self::DAYS ? $day * self::DAY_WIDTH + (int) (self::DAY_WIDTH / 2) : null;
     }
@@ -107,7 +108,7 @@ class TaskTimeline extends Component
                 'due' => $due->toDateString(),
                 'left' => $from * self::DAY_WIDTH,
                 'width' => ($to - $from + 1) * self::DAY_WIDTH,
-                'late' => $task->status !== 'done' && $due->lt(Carbon::today()),
+                'late' => $task->status !== 'done' && $due->lt(Today::date()),
             ];
         })->filter()->values();
     }

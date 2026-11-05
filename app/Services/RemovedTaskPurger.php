@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Hard-deletes tasks that have been soft-deleted since before a cutoff.
@@ -37,6 +38,7 @@ class RemovedTaskPurger
     {
         $purged = ['tasks' => 0, 'comments' => 0];
         $kept = ['live_subtasks' => 0, 'series_heads' => 0];
+        $files = [];
 
         DB::beginTransaction();
         try {
@@ -63,6 +65,7 @@ class RemovedTaskPurger
 
                 foreach (array_chunk($subtree, self::CHUNK) as $chunk) {
                     $purged['comments'] += DB::table('task_comments')->whereIn('task_id', $chunk)->count();
+                    $files = [...$files, ...DB::table('task_attachments')->whereIn('task_id', $chunk)->pluck('path')];
                 }
 
                 // Leaves first, so no row is ever deleted out from under a child.
@@ -73,6 +76,11 @@ class RemovedTaskPurger
             }
 
             $dryRun ? DB::rollBack() : DB::commit();
+
+            // After the commit: a row can come back from a rollback, and a file cannot.
+            if (! $dryRun) {
+                Storage::disk('local')->delete($files);
+            }
         } catch (\Throwable $e) {
             DB::rollBack();
 

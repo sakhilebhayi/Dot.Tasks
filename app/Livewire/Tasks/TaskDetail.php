@@ -6,6 +6,7 @@ use App\Events\TaskBoardUpdated;
 use App\Models\Label;
 use App\Models\Task;
 use App\Models\TaskChecklistItem;
+use App\Models\TaskComment;
 use App\Models\TaskField;
 use App\Models\TaskList;
 use App\Models\TaskTemplate;
@@ -13,6 +14,7 @@ use App\Models\User;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
 use App\Services\TaskArchiveService;
+use App\Services\TaskAttachments;
 use App\Services\TaskCommentService;
 use App\Services\TaskDependencyService;
 use App\Services\TaskEditor;
@@ -28,16 +30,27 @@ use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 class TaskDetail extends Component
 {
+    use WithFileUploads;
+
     /** Everything the drawer shows, loaded together. */
-    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'fieldValues', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
+    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'watchers', 'attachments.user', 'fieldValues', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
 
     #[Validate('required|string|max:5000')]
     public string $commentBody = '';
+
+    public ?int $replyingTo = null;
+
+    public bool $commentInternal = false;
+
+    /** @var TemporaryUploadedFile|null */
+    public $upload = null;
 
     public string $blockerType = 'ff';
 
@@ -74,6 +87,8 @@ class TaskDetail extends Component
 
         $this->task = $task;
         $this->templateSaved = false;
+        $this->replyingTo = null;
+        $this->commentInternal = false;
         $this->confirming = null;
         $this->aiError = null;
         $this->breaking = false;
@@ -539,10 +554,107 @@ class TaskDetail extends Component
 
         $this->validateOnly('commentBody');
 
-        app(TaskCommentService::class)->add($this->task, auth()->user(), $this->commentBody);
+        $replyTo = $this->replyingTo ? ($this->task->comments()->find($this->replyingTo) ?? abort(404)) : null;
+        app(TaskCommentService::class)->add($this->task, auth()->user(), $this->commentBody, $replyTo, $this->commentInternal);
 
         $this->commentBody = '';
+        $this->replyingTo = null;
+        $this->commentInternal = false;
         $this->task = $this->task->fresh(self::RELATIONS);
+    }
+
+    public function replyTo(?int $commentId): void
+    {
+        if ($commentId !== null && ! $this->task?->comments()->whereKey($commentId)->exists()) {
+            abort(404);
+        }
+
+        $this->replyingTo = $commentId;
+    }
+
+    /** People take back their own words. Admins and the owner can tidy any. */
+    public function deleteComment(int $commentId): void
+    {
+        $comment = $this->task?->comments()->find($commentId) ?? abort(404);
+        abort_unless($comment->user_id === auth()->id() || auth()->user()->can('delete', $this->task), 403);
+
+        $comment->replies()->delete();
+        $comment->delete();
+
+        $this->task = $this->task->fresh(self::RELATIONS);
+    }
+
+    /** The discussion this person can read: top-level comments with their replies, internal notes left out for viewers. */
+    #[Computed]
+    public function discussion()
+    {
+        $seesNotes = auth()->user()->can('comment', $this->task);
+        $comments = $this->task->comments->filter(fn (TaskComment $comment) => $seesNotes || ! $comment->internal);
+
+        return $comments->whereNull('parent_id')->values()->map(fn (TaskComment $comment) => [
+            'comment' => $comment,
+            'replies' => $comments->where('parent_id', $comment->id)->values(),
+        ]);
+    }
+
+    public function toggleWatching(): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('view', $this->task);
+
+        $this->task->watchers()->toggle(auth()->id());
+
+        $this->refreshTask();
+    }
+
+    /** Give the task to someone with a note, so what they need is in one place. */
+    public function handOver(int $userId, string $note): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('assign', $this->task);
+
+        $note = trim($note);
+        if ($note === '' || mb_strlen($note) > 2000) {
+            throw ValidationException::withMessages(['handover' => 'Say what they need to know.']);
+        }
+
+        $person = $this->assignableUsers->firstWhere('id', $userId) ?? abort(403);
+
+        app(TaskEditor::class)->assign($this->task, $person, auth()->user());
+        app(TaskCommentService::class)->add($this->task, auth()->user(), 'Handover to '.$person->name.': '.$note);
+
+        $this->refreshTask();
+    }
+
+    public function updatedUpload(): void
+    {
+        $this->authorize('update', $this->task);
+
+        $this->validateOnly('upload', ['upload' => ['required', 'file', 'max:'.TaskAttachments::MAX_KB, 'mimes:'.TaskAttachments::TYPES]]);
+
+        app(TaskAttachments::class)->store($this->task, $this->upload, auth()->user());
+
+        $this->reset('upload');
+        $this->refreshTask();
+    }
+
+    public function removeFile(int $attachmentId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        app(TaskAttachments::class)->remove($this->task->attachments()->find($attachmentId) ?? abort(404));
+
+        $this->refreshTask();
     }
 
     public function aiBreakdown(): void

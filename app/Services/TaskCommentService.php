@@ -21,12 +21,14 @@ use App\Services\Notify\NotifyClient;
  */
 class TaskCommentService
 {
-    public function add(Task $task, User $author, string $body): TaskComment
+    public function add(Task $task, User $author, string $body, ?TaskComment $replyTo = null, bool $internal = false): TaskComment
     {
         $comment = TaskComment::create([
             'task_id' => $task->id,
             'user_id' => $author->id,
             'body' => $body,
+            'parent_id' => $replyTo ? ($replyTo->parent_id ?? $replyTo->id) : null,
+            'internal' => $internal || (bool) $replyTo?->internal,
         ]);
 
         $team = $task->taskList->team;
@@ -35,13 +37,19 @@ class TaskCommentService
 
         $involved = User::query()
             ->whereIn('id', array_filter([$task->assignee_id, $task->creator_id]))
+            ->orWhereIn('id', $task->watchers()->pluck('users.id'))
+            ->orWhereIn('id', $task->collaborators()->pluck('users.id'))
             ->get();
 
-        $isMember = fn (User $user) => $user->id !== $author->id && $user->belongsToTeam($team);
+        // An internal note reaches only the people allowed to read it.
+        $isMember = fn (User $user) => $user->id !== $author->id && $user->belongsToTeam($team)
+            && (! $comment->internal || $user->can('comment', $task));
 
         foreach ($mentioned->filter($isMember) as $user) {
             $user->notify(new MentionedInCommentNotification($task, $comment));
-            app(NotifyClient::class)->taskMentioned($task, $comment, $user, $author);
+            if (app(NotificationPreferences::class)->wants($user, 'mentioned', 'email')) {
+                app(NotifyClient::class)->taskMentioned($task, $comment, $user, $author);
+            }
         }
 
         $mentionedIds = $mentioned->pluck('id');

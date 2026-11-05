@@ -7,6 +7,7 @@ use App\Livewire\Concerns\ShowsBoardTasks;
 use App\Models\Task;
 use App\Services\TaskEditor;
 use App\Services\TaskHistory;
+use App\Support\Today;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -56,7 +57,7 @@ class TaskCalendar extends Component
     {
         $date = Carbon::hasFormatWithModifiers($this->date, 'Y#m#d') ? Carbon::createFromFormat('!Y-m-d', $this->date) : null;
 
-        return $date && $date->format('Y-m-d') === $this->date ? $date : Carbon::today();
+        return $date && $date->format('Y-m-d') === $this->date ? $date : Today::date();
     }
 
     /** @return array{0: Carbon, 1: Carbon} */
@@ -105,7 +106,7 @@ class TaskCalendar extends Component
                 'number' => $day->format('j'),
                 'label' => $day->format('D, j M'),
                 'inRange' => $this->rangeName !== 'month' || $day->month === $this->anchor->month,
-                'today' => $day->isToday(),
+                'today' => $day->isSameDay(Today::date()),
                 'tasks' => $tasks->get($day->toDateString(), collect()),
             ];
         }

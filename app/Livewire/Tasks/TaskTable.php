@@ -10,9 +10,9 @@ use App\Models\TaskStatus;
 use App\Services\TaskArchiveService;
 use App\Services\TaskEditor;
 use App\Services\TaskStatusService;
+use App\Support\Today;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -184,7 +184,7 @@ class TaskTable extends Component
     /** @param  Collection<int, Task>  $tasks */
     private function dueGroups(Collection $tasks): array
     {
-        $today = Carbon::today();
+        $today = Today::date();
         $buckets = ['overdue' => 'Overdue', 'today' => 'Today', 'week' => 'Next 7 days', 'later' => 'Later', 'none' => 'No due date', 'done' => 'Done'];
 
         $of = fn (Task $task) => match (true) {

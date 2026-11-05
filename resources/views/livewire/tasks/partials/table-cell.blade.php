@@ -36,7 +36,7 @@
             @break
         @case('due')
             @can('update', $task)
-                <input @class(['ghost-input', 'overdue' => $task->status !== 'done' && $task->due_date?->isPast() && ! $task->due_date?->isToday()]) type="date" aria-label="Due date of {{ $task->title }}" value="{{ $task->due_date?->toDateString() }}" wire:change="saveCell({{ $task->id }}, 'due_date', $event.target.value)">
+                <input @class(['ghost-input', 'overdue' => $task->isOverdue()]) type="date" aria-label="Due date of {{ $task->title }}" value="{{ $task->due_date?->toDateString() }}" wire:change="saveCell({{ $task->id }}, 'due_date', $event.target.value)">
             @else
                 <x-task-due :task="$task" />
             @endcan
