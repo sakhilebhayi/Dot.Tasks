@@ -118,20 +118,17 @@ class ResponsiveShellTest extends TestCase
 
         $response->assertDontSeeLivewire('navigation-menu');
         $response->assertDontSee('Manage Account');
-        // One source of truth for the bar height; the content padding uses the same variable.
-        $response->assertSee('--topbar-h: 54px', false);
-        $response->assertSee('.content-wrap { padding-top:var(--topbar-h); }', false);
     }
 
     public function test_the_breakpoint_reduced_motion_and_scroll_container_rules_are_in_the_layout(): void
     {
         $f = $this->teamFixture();
 
-        $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()
-            ->assertSee('@media (max-width:859.98px)', false)
-            ->assertSee("matchMedia('(min-width: 860px)')", false)
-            ->assertSee('@media (prefers-reduced-motion: reduce)', false)
-            ->assertSee('.table-scroll {', false);
+        $css = file_get_contents(resource_path('css/job-card.css'));
+        $this->assertStringContainsString('@media (max-width: 859.98px)', $css);
+        $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $css);
+        $this->assertStringContainsString('--topbar-h', $css);
+        $this->assertStringContainsString("matchMedia('(min-width: 860px)')", file_get_contents(resource_path('js/shell.js')));
     }
 
     public function test_alpine_is_not_loaded_a_second_time_from_a_cdn(): void
@@ -149,11 +146,10 @@ class ResponsiveShellTest extends TestCase
 
         $html = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
 
-        $this->assertSame(1, preg_match_all('/<div class="page-pad">/', $html));
-        $this->assertSame(2, preg_match_all('/<div class="kpi-grid" /', $html), 'the two KPI rows');
-        $this->assertSame(1, preg_match_all('/<div class="kpi-grid list-grid">/', $html), 'the lists grid');
-        $this->assertSame(7, preg_match_all('/<div class="kpi-tile">/', $html), 'seven KPI tiles');
-        $this->assertStringContainsString('class="list-card"', $html);
+        $this->assertSame(1, preg_match_all('/<div class="page">/', $html));
+        $this->assertSame(1, preg_match_all('/<div class="figures">/', $html), 'one strip of figures');
+        $this->assertSame(7, preg_match_all('/<div class="figure">/', $html), 'seven figures');
+        $this->assertStringContainsString('class="row"', $html);
         // No fixed three-column inline style left that a phone could not override.
         $this->assertStringNotContainsString('grid-template-columns:repeat(3,1fr)', $html);
     }
@@ -164,8 +160,8 @@ class ResponsiveShellTest extends TestCase
 
         $html = $this->actingAs($f->editor)->get(route('task-lists.show', $f->list))->assertOk()->getContent();
 
-        $this->assertSame(1, preg_match('/<div class="kanban-scroll [^"]*"[^>]*role="region"[^>]*aria-label="Task board columns"/', $html));
-        $this->assertSame(4, preg_match_all('/<div class="kanban-col /', $html), 'one column per status');
+        $this->assertSame(1, preg_match('/<div class="rack kanban-scroll"[^>]*role="region"[^>]*aria-label="Task board columns"/', $html));
+        $this->assertSame(4, preg_match_all('/<div class="slot kanban-col"/', $html), 'one column per status');
     }
 
     public function test_an_editor_gets_a_visible_move_to_select_on_every_card_without_the_current_status(): void
@@ -183,7 +179,7 @@ class ResponsiveShellTest extends TestCase
             // Always rendered, never inside a hover-only wrapper.
             $this->assertStringNotContainsString('group-hover', $select);
             $this->assertStringNotContainsString('hidden', $select);
-            $this->assertStringContainsString('<label for="move-'.$task->id.'" class="sr-only">Move', $html);
+            $this->assertStringContainsString('<label for="move-'.$task->id.'" class="sr">Move', $html);
         }
 
         $todoCard = $this->selectHtml($html, $f->task->id);

@@ -1,189 +1,141 @@
 <div>
     @if($task)
-        {{-- Backdrop --}}
-        <div class="fixed inset-0 bg-black/40 z-40" wire:click="close"></div>
+        <div class="veil" wire:click="close"></div>
+        <aside class="sheet" role="dialog" aria-modal="true" aria-label="Task">
+            <div class="sheet-head">
+                <h2 class="sheet-title">{{ $task->title }}</h2>
+                <button class="icon-btn" wire:click="close" aria-label="Close"><x-icon name="close" /></button>
+            </div>
+            <div class="sheet-body">
+                @error('status')<p role="alert" class="alert">{{ $message }}</p>@enderror
+                @if($this->openBlockers->isNotEmpty() && $task->status !== 'done')
+                    <p class="blocked-line" style="margin:0 0 8px">This task cannot be marked done until {{ $this->openBlockers->count() === 1 ? 'its blocker is' : 'its blockers are' }} done.</p>
+                @endif
 
-        {{-- Drawer --}}
-        <div class="fixed inset-y-0 right-0 w-full max-w-xl bg-white dark:bg-gray-900 shadow-xl z-50 overflow-y-auto">
-            <div class="p-6">
-                {{-- Header --}}
-                <div class="flex items-start justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white pr-4">{{ $task->title }}</h2>
-                    <button wire:click="close" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 shrink-0">✕</button>
-                </div>
-
-                {{-- Status + Priority --}}
-                <div class="flex gap-3 mb-5">
+                <div class="props">
+                    <span>Status</span>
                     @can('move', $task)
-                        <select wire:key="status-{{ $statusAttempts }}" wire:change="updateStatus($event.target.value)" aria-label="Status"
-                                class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                        <select class="select" wire:key="status-{{ $statusAttempts }}" wire:change="updateStatus($event.target.value)" aria-label="Status">
                             @foreach(['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'] as $val => $lbl)
                                 <option value="{{ $val }}" @selected($task->status === $val)>{{ $lbl }}</option>
                             @endforeach
                         </select>
                     @else
-                        <span class="text-sm px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                            {{ ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'][$task->status] ?? $task->status }}
-                        </span>
+                        <div>{{ ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'][$task->status] ?? $task->status }}</div>
                     @endcan
-                    <span class="text-sm px-2 py-1 rounded
-                        {{ match($task->priority) {
-                            'urgent' => 'bg-red-100 text-red-700',
-                            'high'   => 'bg-orange-100 text-orange-700',
-                            'medium' => 'bg-yellow-100 text-yellow-700',
-                            'low'    => 'bg-gray-100 text-gray-600',
-                            default  => 'bg-gray-100 text-gray-600',
-                        } }}">
-                        {{ ucfirst($task->priority) }}
-                    </span>
+
+                    <span>Priority</span>
+                    <div>{{ ucfirst($task->priority) }}</div>
+
                     @if($task->due_date)
-                        <span class="text-sm text-gray-500 dark:text-gray-400">Due {{ $task->due_date->format('M j, Y') }}</span>
+                        <span>Due</span>
+                        <div>Due {{ $task->due_date->format('M j, Y') }}</div>
                     @endif
-                </div>
 
-                @error('status')
-                    <p role="alert" class="-mt-2 mb-4 text-xs text-red-600">{{ $message }}</p>
-                @enderror
-                @if($this->openBlockers->isNotEmpty() && $task->status !== 'done')
-                    <p class="-mt-2 mb-4 text-xs text-amber-600 dark:text-amber-400">
-                        This task cannot be marked done until {{ $this->openBlockers->count() === 1 ? 'its blocker is' : 'its blockers are' }} done.
-                    </p>
-                @endif
-
-                {{-- Assignee --}}
-                <div class="mb-5">
-                    <label for="task-assignee" class="block text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Assignee</label>
+                    <label for="task-assignee" style="color:var(--muted);font-size:12px">Assignee</label>
                     @can('assign', $task)
-                        <select id="task-assignee" wire:change="assignTask($event.target.value ? $event.target.value : null)"
-                                class="text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white">
+                        <select class="select" id="task-assignee" wire:change="assignTask($event.target.value ? $event.target.value : null)">
                             <option value="">Unassigned</option>
                             @foreach($this->assignableUsers as $member)
                                 <option value="{{ $member->id }}" @selected($task->assignee_id === $member->id)>{{ $member->name }}</option>
                             @endforeach
                         </select>
                     @else
-                        <p id="task-assignee" class="text-sm text-gray-700 dark:text-gray-300">{{ $task->assignee?->name ?? 'Unassigned' }}</p>
+                        <p id="task-assignee">{{ $task->assignee?->name ?? 'Unassigned' }}</p>
                     @endcan
                 </div>
 
-                {{-- Labels --}}
-                <div class="mb-5">
-                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Labels</h3>
-                    @error('labels')<p class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
-                    @can('label', $task)
-                        @if($this->teamLabels->isEmpty())
-                            <p class="text-xs text-gray-400 dark:text-gray-500">The team has no labels yet.
-                                @can('create', [\App\Models\Label::class, $task->taskList->team])
-                                    <a href="{{ route('labels.index') }}" class="underline">Create one</a>.
-                                @endcan
-                            </p>
-                        @else
-                            <div class="flex flex-wrap gap-1.5">
-                                @foreach($this->teamLabels as $label)
-                                    @php $on = $task->labels->contains('id', $label->id); @endphp
-                                    <button type="button" wire:click="toggleLabel({{ $label->id }})" aria-pressed="{{ $on ? 'true' : 'false' }}"
-                                            class="rounded border-0 bg-transparent p-0 {{ $on ? 'ring-1 ring-gray-400 dark:ring-gray-500' : 'opacity-60 hover:opacity-100' }}">
-                                        <x-label-chip :label="$label" class="{{ $on ? 'bg-gray-100 dark:bg-gray-800' : '' }}" />
-                                    </button>
-                                @endforeach
-                            </div>
-                        @endif
-                    @else
-                        @forelse($task->labels as $label)
-                            <x-label-chip :label="$label" />
-                        @empty
-                            <p class="text-xs text-gray-400 dark:text-gray-500">No labels.</p>
-                        @endforelse
-                    @endcan
-                </div>
-
-                {{-- Dependencies --}}
-                <div class="mb-5">
-                    <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">Blocked by</h3>
-                    @error('blocker')<p role="alert" class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
-                    @forelse($task->blockedBy as $blocker)
-                        <div wire:key="blocker-{{ $blocker->id }}" class="flex items-center gap-2 text-sm py-0.5">
-                            <span class="w-2 h-2 rounded-full {{ $blocker->status === 'done' ? 'bg-green-500' : 'bg-amber-500' }}" title="{{ $blocker->status === 'done' ? 'Done' : 'Not done yet' }}"></span>
-                            <span class="{{ $blocker->status === 'done' ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300' }}">{{ $blocker->title }}</span>
-                            @if($blocker->isArchived())<span class="text-xs text-gray-400">archived</span>@endif
-                            @can('update', $task)
-                                <button type="button" wire:click="removeBlocker({{ $blocker->id }})" class="ml-auto text-xs border-0 bg-transparent text-gray-400 hover:text-red-500" aria-label="Remove blocker {{ $blocker->title }}">Remove</button>
-                            @endcan
-                        </div>
-                    @empty
-                        <p class="text-xs text-gray-400 dark:text-gray-500">Nothing blocks this task.</p>
-                    @endforelse
-                    @can('update', $task)
-                        @if($this->blockerCandidates->isNotEmpty())
-                            <label for="add-blocker" class="sr-only">Add a blocker</label>
-                            <select id="add-blocker" wire:key="add-blocker-{{ $task->blockedBy->count() }}" wire:change="addBlocker($event.target.value)"
-                                    class="mt-1.5 text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white max-w-full">
-                                <option value="">Add a blocker...</option>
-                                @foreach($this->blockerCandidates as $candidate)
-                                    <option value="{{ $candidate->id }}">{{ $candidate->title }}</option>
-                                @endforeach
-                            </select>
-                        @endif
-                    @endcan
-                    @if($task->blocking->isNotEmpty())
-                        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 mt-3 mb-1">Blocking</h3>
-                        @foreach($task->blocking as $waiting)
-                            <p wire:key="blocking-{{ $waiting->id }}" class="text-sm text-gray-700 dark:text-gray-300">{{ $waiting->title }}</p>
-                        @endforeach
-                    @endif
-                </div>
-
-                {{-- Description --}}
                 @if($task->description)
-                    <div class="mb-5 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                        {{ $task->description }}
-                    </div>
+                    <p style="white-space:pre-wrap;margin-bottom:16px">{{ $task->description }}</p>
                 @endif
 
-                {{-- AI Breakdown --}}
-                <div class="mb-5">
-                    <div class="flex items-center justify-between mb-2">
-                        <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                            Subtasks ({{ $task->subtasks->count() }})
-                        </h3>
-                        @can('update', $task)
-                            <button wire:click="aiBreakdown" wire:loading.attr="disabled"
-                                    class="text-xs px-3 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-300 rounded-full hover:bg-indigo-100 disabled:opacity-50">
-                                <span wire:loading.remove wire:target="aiBreakdown">✨ AI Breakdown</span>
-                                <span wire:loading wire:target="aiBreakdown">Breaking down...</span>
-                            </button>
-                        @endcan
-                    </div>
-                    @if($aiError)
-                        <p class="text-xs text-red-600 mb-2">{{ $aiError }}</p>
-                    @endif
-                    @if($task->subtasks->isNotEmpty())
-                        <div class="space-y-1.5">
-                            @foreach($task->subtasks as $sub)
-                                <div class="flex items-center gap-2 text-sm">
-                                    <span class="w-2 h-2 rounded-full {{ $sub->status === 'done' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600' }}"></span>
-                                    <span class="{{ $sub->status === 'done' ? 'line-through text-gray-400' : 'text-gray-700 dark:text-gray-300' }}">
-                                        {{ $sub->title }}
-                                    </span>
-                                    @if($sub->estimated_minutes)
-                                        <span class="ml-auto text-xs text-gray-400">{{ $sub->estimated_minutes }}m</span>
-                                    @endif
-                                </div>
+                <h3 class="section-title" style="font-size:14px;margin-top:12px">Labels</h3>
+                @error('labels')<p class="error">{{ $message }}</p>@enderror
+                @can('label', $task)
+                    @if($this->teamLabels->isEmpty())
+                        <p style="color:var(--muted)">The team has no labels yet.
+                            @can('create', [\App\Models\Label::class, $task->taskList->team])
+                                <a class="link" href="{{ route('labels.index') }}">Create one</a>.
+                            @endcan
+                        </p>
+                    @else
+                        <div style="display:flex;flex-wrap:wrap;gap:4px">
+                            @foreach($this->teamLabels as $label)
+                                @php $on = $task->labels->contains('id', $label->id); @endphp
+                                <button type="button" wire:click="toggleLabel({{ $label->id }})" aria-pressed="{{ $on ? 'true' : 'false' }}" style="border:0;background:none;padding:0;opacity:{{ $on ? 1 : 0.55 }}">
+                                    <x-label-chip :label="$label" />
+                                </button>
                             @endforeach
                         </div>
-                    @else
-                        <p class="text-xs text-gray-400 dark:text-gray-500">No subtasks yet.@can('update', $task) Use AI Breakdown to generate them.@endcan</p>
                     @endif
+                @else
+                    @forelse($task->labels as $label)
+                        <x-label-chip :label="$label" />
+                    @empty
+                        <p style="color:var(--muted)">No labels.</p>
+                    @endforelse
+                @endcan
+
+                <h3 class="section-title" style="font-size:14px">Blocked by</h3>
+                @error('blocker')<p role="alert" class="error">{{ $message }}</p>@enderror
+                @forelse($task->blockedBy as $blocker)
+                    <div wire:key="blocker-{{ $blocker->id }}" style="display:flex;align-items:center;gap:8px;min-height:30px">
+                        <span class="tick" style="width:14px;height:14px" aria-checked="{{ $blocker->status === 'done' ? 'true' : 'false' }}" title="{{ $blocker->status === 'done' ? 'Done' : 'Not done yet' }}"></span>
+                        <span style="flex:1">{{ $blocker->title }}</span>
+                        @if($blocker->isArchived())<span class="chip">archived</span>@endif
+                        @can('update', $task)
+                            <button type="button" class="btn small quiet" wire:click="removeBlocker({{ $blocker->id }})" aria-label="Remove blocker {{ $blocker->title }}">Remove</button>
+                        @endcan
+                    </div>
+                @empty
+                    <p style="color:var(--muted)">Nothing blocks this task.</p>
+                @endforelse
+                @can('update', $task)
+                    @if($this->blockerCandidates->isNotEmpty())
+                        <label class="sr" for="add-blocker">Add a blocker</label>
+                        <select class="select" style="margin-top:6px" id="add-blocker" wire:key="add-blocker-{{ $task->blockedBy->count() }}" wire:change="addBlocker($event.target.value)">
+                            <option value="">Add a blocker...</option>
+                            @foreach($this->blockerCandidates as $candidate)
+                                <option value="{{ $candidate->id }}">{{ $candidate->title }}</option>
+                            @endforeach
+                        </select>
+                    @endif
+                @endcan
+                @if($task->blocking->isNotEmpty())
+                    <h3 class="section-title" style="font-size:14px">Blocking</h3>
+                    @foreach($task->blocking as $waiting)
+                        <p wire:key="blocking-{{ $waiting->id }}">{{ $waiting->title }}</p>
+                    @endforeach
+                @endif
+
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px">
+                    <h3 style="font-size:14px;font-weight:600">Subtasks ({{ $task->subtasks->count() }})</h3>
+                    @can('update', $task)
+                        <button class="btn small" wire:click="aiBreakdown" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="aiBreakdown">AI Breakdown</span>
+                            <span wire:loading wire:target="aiBreakdown">Breaking down...</span>
+                        </button>
+                    @endcan
                 </div>
+                @if($aiError)<p class="error">{{ $aiError }}</p>@endif
+                @if($task->subtasks->isNotEmpty())
+                    @foreach($task->subtasks as $sub)
+                        <div style="display:flex;align-items:center;gap:8px;min-height:30px">
+                            <span class="tick" style="width:14px;height:14px" aria-checked="{{ $sub->status === 'done' ? 'true' : 'false' }}"></span>
+                            <span style="flex:1">{{ $sub->title }}</span>
+                            @if($sub->estimated_minutes)<span class="num" style="color:var(--muted);font-size:12px">{{ $sub->estimated_minutes }}m</span>@endif
+                        </div>
+                    @endforeach
+                @else
+                    <p style="color:var(--muted)">No subtasks yet.@can('update', $task) Use AI Breakdown to generate them.@endcan</p>
+                @endif
 
-                {{-- Archive / delete --}}
                 @canany(['archive', 'delete'], $task)
-                    <div class="mb-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        @error('archive')<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
-                        @error('delete')<p class="text-xs text-red-600 mb-2">{{ $message }}</p>@enderror
-
+                    <div style="margin-top:20px">
+                        @error('archive')<p class="error">{{ $message }}</p>@enderror
+                        @error('delete')<p class="error">{{ $message }}</p>@enderror
                         @if($confirming === 'archive')
-                            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                            <p>
                                 @if($this->affectedSubtasks > 0)
                                     Archiving this task also archives its {{ $this->affectedSubtasks }} {{ \Illuminate\Support\Str::plural('subtask', $this->affectedSubtasks) }}.
                                 @else
@@ -191,12 +143,12 @@
                                 @endif
                                 It leaves the board and can be restored from the board's Archived list.
                             </p>
-                            <div class="flex gap-2">
-                                <button type="button" wire:click="archiveTask(true)" class="px-3 py-1.5 text-sm font-medium border-0 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700">Archive</button>
-                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium border-0 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
+                            <div class="page-actions" style="margin-top:8px">
+                                <button type="button" class="btn" wire:click="archiveTask(true)">Archive</button>
+                                <button type="button" class="btn quiet" wire:click="cancelConfirm">Cancel</button>
                             </div>
                         @elseif($confirming === 'delete')
-                            <p class="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                            <p>
                                 @if($this->affectedSubtasks > 0)
                                     Deleting this task also deletes its {{ $this->affectedSubtasks }} {{ \Illuminate\Support\Str::plural('subtask', $this->affectedSubtasks) }}.
                                 @else
@@ -204,53 +156,45 @@
                                 @endif
                                 It disappears for everyone. An admin or the owner can restore it from Removed.
                             </p>
-                            <div class="flex gap-2">
-                                <button type="button" wire:click="deleteTask(true)" class="px-3 py-1.5 text-sm font-medium border-0 text-white bg-red-600 rounded-lg hover:bg-red-700">Delete</button>
-                                <button type="button" wire:click="cancelConfirm" class="px-3 py-1.5 text-sm font-medium border-0 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg">Cancel</button>
+                            <div class="page-actions" style="margin-top:8px">
+                                <button type="button" class="btn danger" wire:click="deleteTask(true)">Delete</button>
+                                <button type="button" class="btn quiet" wire:click="cancelConfirm">Cancel</button>
                             </div>
                         @else
-                            <div class="flex gap-2">
+                            <div class="page-actions">
                                 @can('archive', $task)
-                                    <button type="button" wire:click="confirmArchive" class="px-3 py-1.5 text-sm border-0 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Archive task</button>
+                                    <button type="button" class="btn small" wire:click="confirmArchive">Archive task</button>
                                 @endcan
                                 @can('delete', $task)
-                                    <button type="button" wire:click="confirmDelete" class="px-3 py-1.5 text-sm border-0 text-red-600 dark:text-red-400 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">Delete task</button>
+                                    <button type="button" class="btn small danger" wire:click="confirmDelete">Delete task</button>
                                 @endcan
                             </div>
                         @endif
                     </div>
                 @endcanany
 
-                {{-- Comments --}}
-                <div>
-                    <h3 class="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Comments</h3>
-
-                    @forelse($task->comments as $comment)
-                        <div class="mb-3">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-medium text-gray-900 dark:text-white">{{ $comment->user->name }}</span>
-                                <span class="text-xs text-gray-400">{{ $comment->created_at->diffForHumans() }}</span>
-                            </div>
-                            <p class="text-sm text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 whitespace-pre-line">{!! $this->mentions->render($comment->body) !!}</p>
+                <h3 class="section-title" style="font-size:14px">Comments</h3>
+                @forelse($task->comments as $comment)
+                    <div class="comment">
+                        <div class="comment-who">
+                            <b>{{ $comment->user->name }}</b>
+                            <span>{{ $comment->created_at->diffForHumans() }}</span>
                         </div>
-                    @empty
-                        <p class="text-xs text-gray-400 dark:text-gray-500 mb-3">No comments yet.</p>
-                    @endforelse
+                        <p>{!! $this->mentions->render($comment->body) !!}</p>
+                    </div>
+                @empty
+                    <p style="color:var(--muted)">No comments yet.</p>
+                @endforelse
 
-                    @can('comment', $task)
-                        <form wire:submit="addComment" class="mt-3">
-                            <textarea wire:model="commentBody" rows="2" placeholder="Add a comment..." aria-label="Add a comment"
-                                      class="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-800 dark:text-white shadow-sm focus:ring-indigo-500 mb-2"></textarea>
-                            @error('commentBody')<p class="text-xs text-red-600 mb-1">{{ $message }}</p>@enderror
-                            <p class="text-xs text-gray-400 dark:text-gray-500 mb-2">Type @ and a teammate's full name to notify them.</p>
-                            <button type="submit"
-                                    class="px-4 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
-                                Comment
-                            </button>
-                        </form>
-                    @endcan
-                </div>
+                @can('comment', $task)
+                    <form wire:submit="addComment" style="margin-top:10px">
+                        <textarea class="textarea" wire:model="commentBody" rows="2" placeholder="Add a comment..." aria-label="Add a comment"></textarea>
+                        @error('commentBody')<p class="error">{{ $message }}</p>@enderror
+                        <p style="margin:4px 0 8px;color:var(--muted);font-size:12px">Type @ and a teammate's full name to notify them.</p>
+                        <button type="submit" class="btn">Comment</button>
+                    </form>
+                @endcan
             </div>
-        </div>
+        </aside>
     @endif
 </div>
