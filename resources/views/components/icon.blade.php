@@ -1,0 +1,36 @@
+@props(['name'])
+@php
+    $paths = [
+        'day' => '<circle cx="12" cy="12" r="4"/><path d="M12 3v2M12 19v2M5 5l1.5 1.5M17.5 17.5 19 19M3 12h2M19 12h2M5 19l1.5-1.5M17.5 6.5 19 5"/>',
+        'check' => '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+        'inbox' => '<path d="M4 13h4l2 3h4l2-3h4"/><path d="M5.5 6h13L21 13v5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-5z"/>',
+        'calendar' => '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M8 3v4M16 3v4"/>',
+        'timeline' => '<path d="M4 7h10M8 12h12M4 17h8"/>',
+        'team' => '<circle cx="9" cy="8" r="3.5"/><path d="M3 20c.5-4 2.8-6 6-6s5.5 2 6 6"/><path d="M16 5a3.5 3.5 0 0 1 0 6.5M18 14c1.8.7 2.8 2.8 3 6"/>',
+        'report' => '<path d="M5 20V10M12 20V4M19 20v-7"/>',
+        'home' => '<rect x="4" y="4" width="7" height="7" rx="1"/><rect x="13" y="4" width="7" height="7" rx="1"/><rect x="4" y="13" width="7" height="7" rx="1"/><rect x="13" y="13" width="7" height="7" rx="1"/>',
+        'label' => '<path d="M4 5h8l8 8-7 7-9-9z"/><circle cx="8.5" cy="9.5" r="1"/>',
+        'trash' => '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
+        'settings' => '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>',
+        'flag' => '<path d="M6 21V4h11l-2 4 2 4H6"/>',
+        'bell' => '<path d="M6 16V11a6 6 0 1 1 12 0v5l2 2H4z"/><path d="M10 21h4"/>',
+        'moon' => '<path d="M20 14.500A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.500z"/>',
+        'plus' => '<path d="M12 5v14M5 12h14"/>',
+        'search' => '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4-4"/>',
+        'close' => '<path d="M6 6l12 12M18 6 6 18"/>',
+        'menu' => '<path d="M4 7h16M4 12h16M4 17h16"/>',
+        'back' => '<path d="M14 6l-6 6 6 6"/>',
+        'forward' => '<path d="M10 6l6 6-6 6"/>',
+        'chevron' => '<path d="m7 10 5 5 5-5"/>',
+        'grip' => '<circle cx="9" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="6" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="9" cy="18" r="1.3" fill="currentColor" stroke="none"/><circle cx="15" cy="18" r="1.3" fill="currentColor" stroke="none"/>',
+        'repeat' => '<path d="M4 11V9a3 3 0 0 1 3-3h11l-3-3M20 13v2a3 3 0 0 1-3 3H6l3 3"/>',
+        'link' => '<path d="M10 14a4 4 0 0 0 6 0l3-3a4 4 0 0 0-6-6l-1 1"/><path d="M14 10a4 4 0 0 0-6 0l-3 3a4 4 0 0 0 6 6l1-1"/>',
+        'clip' => '<path d="m20 11-8.5 8.500a5 5 0 0 1-7-7L13 4a3.5 3.5 0 0 1 5 5l-8.5 8.500a2 2 0 0 1-3-3L14 7"/>',
+        'more' => '<circle cx="5" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.3" fill="currentColor" stroke="none"/>',
+        'bolt' => '<path d="M13 3 5 14h6l-1 7 8-11h-6z"/>',
+        'copy' => '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/>',
+        'board' => '<rect x="4" y="4" width="4.5" height="16" rx="1"/><rect x="10" y="4" width="4.5" height="11" rx="1"/><rect x="16" y="4" width="4.5" height="14" rx="1"/>',
+        'list' => '<path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01"/>',
+    ];
+@endphp
+<svg {{ $attributes->merge(['class' => 'icon']) }} viewBox="0 0 24 24" aria-hidden="true">{!! $paths[$name] ?? '' !!}</svg>

@@ -44,8 +44,7 @@ class TaskRolesEnforcementTest extends TestCase
 
         Livewire::actingAs($f->viewer)
             ->test(TaskBoard::class, ['taskList' => $f->list])
-            ->assertDontSee('+ Add Task')
-            ->assertDontSee('+ Add task');
+            ->assertDontSee('Add task');
 
         Livewire::actingAs($f->viewer)
             ->test(TaskDetail::class)
@@ -55,7 +54,7 @@ class TaskRolesEnforcementTest extends TestCase
 
         Livewire::actingAs($f->editor)
             ->test(TaskBoard::class, ['taskList' => $f->list])
-            ->assertSee('+ Add Task');
+            ->assertSee('Add task');
     }
 
     public function test_a_viewer_cannot_move_a_task(): void
@@ -179,8 +178,8 @@ class TaskRolesEnforcementTest extends TestCase
     {
         $f = $this->teamFixture();
 
-        $this->actingAs($f->editor)->get(route('dashboard'))->assertOk()->assertSee('New List');
-        $this->actingAs($f->viewer)->get(route('dashboard'))->assertOk()->assertDontSee('New List');
+        $this->actingAs($f->editor)->get(route('dashboard'))->assertOk()->assertSee('New board');
+        $this->actingAs($f->viewer)->get(route('dashboard'))->assertOk()->assertDontSee('New board');
     }
 
     public function test_assigning_a_task_to_yourself_from_the_drawer_does_not_notify_you(): void
