@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Task;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -34,10 +35,13 @@ class TaskStatusService
             }
         }
 
-        $task->update(['status' => $status]);
+        // Together, so a task cannot end up done without its next occurrence.
+        DB::transaction(function () use ($task, $status) {
+            $task->update(['status' => $status]);
 
-        if ($status === 'done') {
-            $this->recurrence->spawnNextOccurrence($task);
-        }
+            if ($status === 'done') {
+                $this->recurrence->spawnNextOccurrence($task);
+            }
+        });
     }
 }

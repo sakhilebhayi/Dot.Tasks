@@ -3,9 +3,13 @@
 use App\Http\Controllers\Auth\EcosystemAuthController;
 use App\Http\Controllers\CspReportController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\GuardianHealthController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\ReadyController;
 use App\Http\Controllers\RealtimeHealthController;
+use App\Http\Controllers\SchedulerProbeController;
 use App\Http\Controllers\TaskListController;
+use App\Http\Middleware\AuthenticateGuardian;
 use App\Models\TaskList;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Route;
@@ -57,6 +61,7 @@ Route::middleware([
     'auth:sanctum',
     config('jetstream.auth_session'),
     'verified',
+    'throttle:app',
 ])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
@@ -79,6 +84,17 @@ Route::middleware([
 
     Route::get('/escalations', fn () => view('escalations.index'))->name('escalations.index');
 });
+
+// Readiness for uptime monitors: /up says PHP answers, this says the app can do its job.
+Route::get('/ready', ReadyController::class)->name('ready');
+
+// Public liveness probe for the cron scheduler and queue worker.
+Route::get('/up/scheduler', SchedulerProbeController::class)->name('up.scheduler');
+
+// Operational detail for Dot.Brain, so behind a bearer token. Fails closed with 503 when none is configured.
+Route::get('/guardian/health', GuardianHealthController::class)
+    ->middleware(AuthenticateGuardian::class)
+    ->name('guardian.health');
 
 // Public sign-up is closed (accounts are created by InfoDot at first sign-in). Keep the named route so any link or
 // invitation email that points at it lands on the login page instead of failing.

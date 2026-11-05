@@ -1,0 +1,21 @@
+/*
+ * The signed-in pages. No base layer: they were written against the Tailwind CDN with preflight off, and their inline
+ * styles rely on it. This goes when the new design replaces those pages.
+ */
+@tailwind components;
+@tailwind utilities;
+
+[x-cloak] {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
