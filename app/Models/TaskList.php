@@ -29,4 +29,26 @@ class TaskList extends Model
     {
         return $this->hasMany(Task::class)->orderBy('sort_order');
     }
+
+    /** This board's columns, left to right. */
+    public function columns(): HasMany
+    {
+        return $this->hasMany(TaskStatus::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /** The column a task of this category goes in when nobody has said which. */
+    public function columnFor(string $category): ?TaskStatus
+    {
+        return $this->columns->firstWhere('category', $category) ?? $this->columns->first();
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (TaskList $board) {
+            $order = 0;
+            foreach (TaskStatus::DEFAULTS as $category => $name) {
+                $board->columns()->create(['name' => $name, 'category' => $category, 'sort_order' => ++$order]);
+            }
+        });
+    }
 }

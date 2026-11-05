@@ -64,8 +64,8 @@ class TaskTableTest extends TestCase
         $f->list->tasks()->create(['title' => 'Open-ended', 'status' => 'todo']);
         $f->list->tasks()->create(['title' => 'Finished', 'status' => 'done', 'due_date' => '2026-10-01']);
 
-        $status = collect($this->table($f)->instance()->groups)->mapWithKeys(fn ($g) => [$g['key'] => $g['tasks']->count()]);
-        $this->assertSame(['todo' => 4, 'in_progress' => 0, 'review' => 1, 'done' => 1], $status->all());
+        $status = collect($this->table($f)->instance()->groups)->mapWithKeys(fn ($g) => [$g['name'] => $g['tasks']->count()]);
+        $this->assertSame(['To Do' => 4, 'In Progress' => 0, 'Review' => 1, 'Done' => 1], $status->all());
 
         $due = collect($this->table($f, 'editor', ['group' => 'due'])->instance()->groups)->mapWithKeys(fn ($g) => [$g['name'] => $g['tasks']->pluck('title')->all()]);
         $this->assertSame([

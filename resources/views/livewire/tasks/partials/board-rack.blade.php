@@ -1,12 +1,12 @@
 <div class="rack kanban-scroll" data-rack tabindex="0" role="region" aria-label="{{ $lane['name'] ?: 'Task board' }} columns">
-    @foreach(\App\Livewire\Tasks\TaskBoard::COLUMNS as $status => $label)
-        <div class="slot kanban-col" wire:key="slot-{{ $lane['key'] }}-{{ $status }}">
-            <h3 class="slot-head">{{ $label }} <span class="count">{{ $lane['columns'][$status]->count() }}</span></h3>
-            <div class="slot-body" data-list data-status="{{ $status }}" data-name="{{ $label }}" @if($lane['key'] !== '') data-lane="{{ $lane['key'] }}" @endif
-                 @if($canWork) wire:key="cards-{{ $lane['key'] }}-{{ $status }}" x-data="boardColumn" x-on:keydown="keys($event)" @endif>
-                @foreach($lane['columns'][$status] as $task)
+    @foreach($this->columns as $column)
+        <div class="slot kanban-col" wire:key="slot-{{ $lane['key'] }}-{{ $column->id }}">
+            <h3 class="slot-head">{{ $column->name }} <span class="count">{{ $lane['columns'][$column->id]->count() }}</span></h3>
+            <div class="slot-body" data-list data-status="{{ $column->id }}" data-category="{{ $column->category }}" data-name="{{ $column->name }}" @if($lane['key'] !== '') data-lane="{{ $lane['key'] }}" @endif
+                 @if($canWork) wire:key="cards-{{ $lane['key'] }}-{{ $column->id }}" x-data="boardColumn" x-on:keydown="keys($event)" @endif>
+                @foreach($lane['columns'][$column->id] as $task)
                     <div @class(['card', 'is-done' => $task->status === 'done']) wire:key="card-{{ $task->id }}" tabindex="0" role="button"
-                         data-task="{{ $task->id }}" data-status="{{ $task->status }}" data-title="{{ $task->title }}" @if($canWork) aria-describedby="drag-help" @endif
+                         data-task="{{ $task->id }}" data-status="{{ $task->status_id }}" data-title="{{ $task->title }}" @if($canWork) aria-describedby="drag-help" @endif
                          @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done')) data-blocked @endif
                          wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })"
                          x-on:keydown.enter="$dispatch('open-task', { taskId: {{ $task->id }} })">
@@ -37,11 +37,11 @@
                     </div>
                 @endforeach
             </div>
-            @if($canWork && $status !== 'done')
-                <div class="slot-foot" wire:key="foot-{{ $lane['key'] }}-{{ $status }}" x-data="{ adding: false, title: '' }">
+            @if($canWork && $column->category !== 'done')
+                <div class="slot-foot" wire:key="foot-{{ $lane['key'] }}-{{ $column->id }}" x-data="{ adding: false, title: '' }">
                     <button type="button" class="add-line" x-show="! adding" x-on:click="adding = true; $nextTick(() => $refs.line.focus())"><x-icon name="plus" /> Add task</button>
-                    <form x-show="adding" x-cloak x-on:submit.prevent="if (title.trim()) { $wire.addHere('{{ $status }}', title); title = '' }">
-                        <input class="input" x-ref="line" x-model="title" maxlength="255" autocomplete="off" aria-label="New task in {{ $label }}" placeholder="Type, then Enter"
+                    <form x-show="adding" x-cloak x-on:submit.prevent="if (title.trim()) { $wire.addHere('{{ $column->id }}', title); title = '' }">
+                        <input class="input" x-ref="line" x-model="title" maxlength="255" autocomplete="off" aria-label="New task in {{ $column->name }}" placeholder="Type, then Enter"
                                x-on:keydown.escape="adding = false; title = ''" x-on:blur="if (! title.trim()) adding = false">
                     </form>
                 </div>

@@ -16,9 +16,14 @@
                 <a class="tab" href="{{ route('task-lists.show', [$taskList->id] + ($key === 'board' ? [] : ['view' => $key]) + $keep) }}" @if($view === $key) aria-current="page" @endif>{{ $name }}</a>
             @endforeach
             <a class="tab" href="{{ route('task-lists.show', [$taskList->id, 'show' => 'archived']) }}" @if($view === 'archived') aria-current="page" @endif>Archived</a>
-            @can('archive', $taskList)
-                <span style="margin-left:auto"><livewire:tasks.archive-board :task-list="$taskList" /></span>
-            @endcan
+            <span style="margin-left:auto;display:flex;gap:4px">
+                @can('update', $taskList)
+                    <livewire:tasks.board-columns :task-list="$taskList" />
+                @endcan
+                @can('archive', $taskList)
+                    <livewire:tasks.archive-board :task-list="$taskList" />
+                @endcan
+            </span>
         </nav>
         @if($view === 'list')
             <livewire:tasks.task-table :task-list="$taskList" />

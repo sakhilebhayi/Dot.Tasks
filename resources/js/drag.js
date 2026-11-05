@@ -114,7 +114,7 @@ const nextId = (item) => {
     return next ? Number(next.dataset.task) : null;
 };
 
-const blockedFromDone = (card, list) => (list.dataset.status === 'done' && card.dataset.blocked !== undefined ? 'A blocked task cannot be finished yet.' : null);
+const blockedFromDone = (card, list) => (list.dataset.category === 'done' && card.dataset.blocked !== undefined ? 'A blocked task cannot be finished yet.' : null);
 
 // The tasks on screen come back every 20 seconds, unless someone is in the middle of something.
 function pulse(seconds = 20) {

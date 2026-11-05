@@ -67,11 +67,11 @@
                     <div class="tgroup" data-name="{{ $group['name'] }}"
                          @if($this->canDrag)
                              data-list data-handle=".grip" wire:key="list-{{ $this->groupBy }}-{{ $group['key'] }}" x-data="boardColumn" x-on:keydown="keys($event)"
-                             @if($this->groupBy === 'status') data-status="{{ $group['key'] }}" @else data-lane="{{ $group['key'] }}" @endif
+                             @if($this->groupBy === 'status') data-status="{{ $group['key'] }}" data-category="{{ $group['category'] }}" @else data-lane="{{ $group['key'] }}" @endif
                          @endif>
                         @foreach($group['tasks'] as $task)
                             <div @class(['trow', 'is-done' => $task->status === 'done']) role="row" wire:key="row-{{ $task->id }}-{{ $edits }}"
-                                 data-task="{{ $task->id }}" data-status="{{ $task->status }}" data-title="{{ $task->title }}" tabindex="-1" x-data="{ open: false }"
+                                 data-task="{{ $task->id }}" data-status="{{ $task->status_id }}" data-title="{{ $task->title }}" tabindex="-1" x-data="{ open: false }"
                                  @if($task->blockedBy->contains(fn ($b) => $b->status !== 'done')) data-blocked @endif>
                                 @if($canWork)
                                     <span role="cell" class="cell"><input type="checkbox" aria-label="Select {{ $task->title }}" value="{{ $task->id }}" wire:model.live="selected"></span>
@@ -121,7 +121,9 @@
             <b class="num">{{ count($selected) }}</b> selected
             <select class="select bare" aria-label="Move what is selected" wire:change="bulk('status', $event.target.value)" wire:key="bulk-status-{{ $edits }}">
                 <option value="" selected disabled>Status</option>
-                <option value="todo">To Do</option><option value="in_progress">In Progress</option><option value="review">Review</option><option value="done">Done</option>
+                @foreach($this->columns as $column)
+                    <option value="{{ $column->id }}">{{ $column->name }}</option>
+                @endforeach
             </select>
             <select class="select bare" aria-label="Assign what is selected" wire:change="bulk('assignee', $event.target.value)" wire:key="bulk-person-{{ $edits }}">
                 <option value="" selected disabled>Person</option>

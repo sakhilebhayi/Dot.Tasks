@@ -18,8 +18,7 @@ use App\Services\TaskLabelService;
 use App\Services\TaskPlacement;
 use App\Services\TaskStatusService;
 use App\Services\TaskSteps;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -29,7 +28,7 @@ use Livewire\Component;
 class TaskDetail extends Component
 {
     /** Everything the drawer shows, loaded together. */
-    private const RELATIONS = ['assignee', 'collaborators', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
+    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
 
@@ -250,11 +249,13 @@ class TaskDetail extends Component
         $this->statusAttempts++;
         $this->resetErrorBag('status');
 
-        Validator::make(['status' => $status], [
-            'status' => ['required', Rule::in(Task::STATUSES)],
-        ])->validate();
+        $columns = $this->task->taskList->columns;
+        $column = ctype_digit($status) ? $columns->firstWhere('id', (int) $status) : $columns->firstWhere('category', $status);
+        if (! $column) {
+            throw ValidationException::withMessages(['status' => 'That column is not on this board.']);
+        }
 
-        app(TaskStatusService::class)->move($this->task, $status);
+        app(TaskStatusService::class)->move($this->task, $column);
 
         broadcast(new TaskBoardUpdated($this->task->taskList))->toOthers();
         $this->task = $this->task->fresh(self::RELATIONS);

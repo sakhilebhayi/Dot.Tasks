@@ -5,6 +5,7 @@ namespace App\Livewire\Concerns;
 use App\Models\Label;
 use App\Models\Task;
 use App\Models\TaskList;
+use App\Models\TaskStatus;
 use App\Models\TaskView;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -58,6 +59,21 @@ trait ShowsBoardTasks
         return ctype_digit($this->assignee) && $this->members->contains('id', (int) $this->assignee)
             ? (int) $this->assignee
             : null;
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, TaskStatus> this board's columns, left to right */
+    #[Computed]
+    public function columns()
+    {
+        return $this->taskList->columns()->get();
+    }
+
+    /** A column of this board, by its id, or the first of a category. */
+    protected function column(string $value): ?TaskStatus
+    {
+        return ctype_digit($value)
+            ? $this->columns->firstWhere('id', (int) $value)
+            : $this->columns->firstWhere('category', $value);
     }
 
     /** @return Collection<int, User> */

@@ -6,13 +6,14 @@ use App\Events\TaskBoardUpdated;
 use App\Livewire\Concerns\PlacesCards;
 use App\Livewire\Concerns\ShowsBoardTasks;
 use App\Models\Task;
+use App\Models\TaskStatus;
 use App\Models\User;
 use App\Services\TaskArchiveService;
 use App\Services\TaskHistory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
@@ -52,14 +53,9 @@ class TaskBoard extends Component
             ->orderBy('tasks.sort_order')
             ->orderBy('tasks.id')
             ->get()
-            ->groupBy('status');
+            ->groupBy('status_id');
 
-        $columns = [];
-        foreach (array_keys(self::COLUMNS) as $status) {
-            $columns[$status] = $tasks->get($status, collect());
-        }
-
-        return $columns;
+        return $this->columns->mapWithKeys(fn (TaskStatus $column) => [$column->id => $tasks->get($column->id, collect())])->all();
     }
 
     /**
@@ -125,18 +121,21 @@ class TaskBoard extends Component
     {
         $this->authorize('create', [Task::class, $this->taskList]);
 
-        Validator::make(['status' => $status, 'title' => trim($title)], [
-            'status' => ['required', Rule::in(['todo', 'in_progress', 'review'])],
-            'title' => ['required', 'string', 'max:255'],
-        ])->validate();
+        Validator::make(['title' => trim($title)], ['title' => ['required', 'string', 'max:255']])->validate();
+
+        $column = $this->column($status);
+        if (! $column || $column->category === 'done') {
+            throw ValidationException::withMessages(['status' => 'A new card cannot start in that column.']);
+        }
 
         $task = Task::create([
             'task_list_id' => $this->taskList->id,
             'creator_id' => auth()->id(),
             'title' => trim($title),
-            'status' => $status,
+            'status' => $column->category,
+            'status_id' => $column->id,
             'priority' => 'medium',
-            'sort_order' => (int) $this->taskList->tasks()->where('status', $status)->max('sort_order') + 1,
+            'sort_order' => (int) $this->taskList->tasks()->where('status_id', $column->id)->max('sort_order') + 1,
         ]);
         app(TaskHistory::class)->record($task, 'created', 'Created it');
 
@@ -169,7 +168,7 @@ class TaskBoard extends Component
 
     protected function forgetTasks(): void
     {
-        unset($this->tasksByStatus, $this->swimlanes, $this->archivedTasks, $this->filtersActive);
+        unset($this->columns, $this->tasksByStatus, $this->swimlanes, $this->archivedTasks, $this->filtersActive);
     }
 
     protected function ownSettings(): array

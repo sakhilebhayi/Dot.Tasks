@@ -24,12 +24,12 @@
                     <span>Status</span>
                     @can('move', $task)
                         <select class="select" wire:key="status-{{ $statusAttempts }}" wire:change="updateStatus($event.target.value)" aria-label="Status">
-                            @foreach(['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'] as $val => $lbl)
-                                <option value="{{ $val }}" @selected($task->status === $val)>{{ $lbl }}</option>
+                            @foreach($task->taskList->columns as $option)
+                                <option value="{{ $option->id }}" @selected($task->status_id === $option->id)>{{ $option->name }}</option>
                             @endforeach
                         </select>
                     @else
-                        <div>{{ ['todo' => 'To Do', 'in_progress' => 'In Progress', 'review' => 'Review', 'done' => 'Done'][$task->status] ?? $task->status }}</div>
+                        <div>{{ $task->taskList->columns->firstWhere('id', $task->status_id)?->name ?? $task->status }}</div>
                     @endcan
 
                     <label for="task-priority" style="color:var(--muted);font-size:12px">Priority</label>
