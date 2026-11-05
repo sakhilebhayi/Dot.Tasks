@@ -1,6 +1,6 @@
 <x-app-layout :title="$taskList->name">
     @php
-        $keep = request()->only(['q', 'priority', 'label', 'due', 'assignee']);
+        $keep = request()->only(['q', 'priority', 'label', 'due', 'assignee', 'field', 'value']);
         $views = ['board' => 'Board', 'list' => 'List', 'calendar' => 'Calendar', 'timeline' => 'Timeline'];
     @endphp
     <div class="page">

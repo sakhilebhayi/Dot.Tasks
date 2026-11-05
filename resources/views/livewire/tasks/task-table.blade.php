@@ -19,7 +19,7 @@
         <details class="pick">
             <summary class="btn quiet">Columns</summary>
             <div class="menu">
-                @foreach(\App\Livewire\Tasks\TaskTable::COLUMNS as $key => $name)
+                @foreach($this->allColumns as $key => $name)
                     <label class="pick-line"><input type="checkbox" @checked(in_array($key, $this->shown, true)) wire:click="toggleColumn('{{ $key }}')"> {{ $name }}</label>
                 @endforeach
             </div>
@@ -34,7 +34,7 @@
 
     @php
         $canWork = auth()->user()->can('create', [\App\Models\Task::class, $taskList]);
-        $track = collect($this->shown)->map(fn ($c) => ['status' => '124px', 'assignee' => '150px', 'priority' => '104px', 'due' => '132px', 'labels' => '150px', 'estimate' => '84px'][$c])->implode(' ');
+        $track = collect($this->shown)->map(fn ($c) => ['status' => '124px', 'assignee' => '150px', 'priority' => '104px', 'due' => '132px', 'labels' => '150px', 'estimate' => '84px'][$c] ?? '130px')->implode(' ');
         $columns = ($canWork ? '28px ' : '').($this->canDrag ? '20px ' : '').'minmax(220px, 1fr) '.$track.' 32px';
     @endphp
 
@@ -51,9 +51,9 @@
                 @foreach($this->shown as $column)
                     <span role="columnheader" @class(['cell', 'cell-opt' => $column !== 'due'])>
                         @if(in_array($column, ['due', 'priority'], true))
-                            <button type="button" class="thead-sort" wire:click="sortOn('{{ $column }}')">{{ \App\Livewire\Tasks\TaskTable::COLUMNS[$column] }}</button>
+                            <button type="button" class="thead-sort" wire:click="sortOn('{{ $column }}')">{{ $this->allColumns[$column] }}</button>
                         @else
-                            {{ \App\Livewire\Tasks\TaskTable::COLUMNS[$column] }}
+                            {{ $this->allColumns[$column] }}
                         @endif
                     </span>
                 @endforeach

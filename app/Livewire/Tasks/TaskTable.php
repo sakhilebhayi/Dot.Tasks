@@ -82,18 +82,25 @@ class TaskTable extends Component
         return array_key_exists($this->sort, self::SORTS) ? $this->sort : 'manual';
     }
 
+    /** @return array<string, string> the fixed columns, then this team's custom fields */
+    #[Computed]
+    public function allColumns(): array
+    {
+        return self::COLUMNS + $this->customFields->mapWithKeys(fn ($field) => ['f'.$field->id => $field->name])->all();
+    }
+
     /** @return list<string> */
     #[Computed]
     public function shown(): array
     {
         $picked = $this->cols === '' ? self::SHOWN : explode(',', $this->cols);
 
-        return array_values(array_intersect(array_keys(self::COLUMNS), $picked));
+        return array_values(array_intersect(array_keys($this->allColumns), $picked));
     }
 
     public function toggleColumn(string $column): void
     {
-        if (! array_key_exists($column, self::COLUMNS)) {
+        if (! array_key_exists($column, $this->allColumns)) {
             return;
         }
 
@@ -121,7 +128,7 @@ class TaskTable extends Component
     #[Computed]
     public function tasks(): Collection
     {
-        $tasks = $this->sorted($this->filteredQuery())->with(['assignee', 'labels', 'subtasks', 'blockedBy'])->get();
+        $tasks = $this->sorted($this->filteredQuery())->with(['assignee', 'labels', 'subtasks', 'blockedBy', 'fieldValues'])->get();
 
         // Every row asks the same board whether this person may edit it.
         return $tasks->each(fn (Task $task) => $task->setRelation('taskList', $this->taskList));

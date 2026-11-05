@@ -4,6 +4,7 @@ namespace App\Livewire\Concerns;
 
 use App\Models\Label;
 use App\Models\Task;
+use App\Models\TaskField;
 use Illuminate\Database\Eloquent\Builder;
 use Livewire\Attributes\Url;
 
@@ -30,6 +31,13 @@ trait FiltersTasks
     #[Url(except: '')]
     public string $due = '';
 
+    /** A custom field of this team, and the value to look for in it. */
+    #[Url(as: 'field', except: '')]
+    public string $fieldId = '';
+
+    #[Url(as: 'value', except: '')]
+    public string $fieldValue = '';
+
     /** The team whose labels the filter may refer to. */
     abstract protected function filterTeamId(): int;
 
@@ -45,6 +53,7 @@ trait FiltersTasks
             ->when(trim($this->search) !== '', fn ($q) => $q->searchText($this->search))
             ->when(in_array($this->priority, Task::PRIORITIES, true), fn ($q) => $q->where('tasks.priority', $this->priority))
             ->when($labelId !== null, fn ($q) => $q->whereHas('labels', fn ($l) => $l->where('labels.id', $labelId)))
+            ->when($this->fieldFilter() !== null, fn ($q) => $q->whereHas('fieldValues', fn ($v) => $v->where('task_field_id', $this->fieldFilter())->where('value', trim($this->fieldValue))))
             ->when(array_key_exists($this->due, self::DUE_STATES), fn ($q) => $q->dueState($this->due));
     }
 
@@ -60,9 +69,20 @@ trait FiltersTasks
         return Label::where('team_id', $this->filterTeamId())->whereKey($id)->exists() ? $id : null;
     }
 
+    /** Only a field of this team counts, and only with something to look for. */
+    protected function fieldFilter(): ?int
+    {
+        if (! ctype_digit($this->fieldId) || trim($this->fieldValue) === '') {
+            return null;
+        }
+
+        return TaskField::where('team_id', $this->filterTeamId())->whereKey((int) $this->fieldId)->exists() ? (int) $this->fieldId : null;
+    }
+
     protected function hasTaskFilters(): bool
     {
         return trim($this->search) !== ''
+            || $this->fieldFilter() !== null
             || in_array($this->priority, Task::PRIORITIES, true)
             || $this->validLabelId() !== null
             || array_key_exists($this->due, self::DUE_STATES);
@@ -70,6 +90,6 @@ trait FiltersTasks
 
     protected function resetTaskFilters(): void
     {
-        $this->reset('search', 'priority', 'labelId', 'due');
+        $this->reset('search', 'priority', 'labelId', 'due', 'fieldId', 'fieldValue');
     }
 }

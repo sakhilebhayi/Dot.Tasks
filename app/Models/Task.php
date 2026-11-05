@@ -186,6 +186,12 @@ class Task extends Model
         return $this->belongsToMany(User::class, 'task_collaborators');
     }
 
+    /** What this task holds in the team's custom fields. */
+    public function fieldValues(): HasMany
+    {
+        return $this->hasMany(TaskFieldValue::class);
+    }
+
     public function checklistItems(): HasMany
     {
         return $this->hasMany(TaskChecklistItem::class)->orderBy('sort_order');

@@ -79,6 +79,7 @@ Route::middleware([
     Route::get('/lists/{taskList}', [TaskListController::class, 'show'])->name('task-lists.show');
 
     Route::get('/labels', fn () => view('labels.index'))->name('labels.index');
+    Route::get('/templates', fn () => view('tasks.templates'))->name('tasks.templates');
 
     // Deleted tasks: list and restore (admins and the owner restore)
     Route::get('/removed', fn () => view('removed.index'))->name('removed.index');

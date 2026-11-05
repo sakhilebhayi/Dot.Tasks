@@ -4,11 +4,13 @@ namespace App\Livewire\Tasks;
 
 use App\Models\Task;
 use App\Models\TaskList;
+use App\Models\TaskTemplate;
 use App\Models\User;
 use App\Services\InboxLists;
 use App\Services\TaskEditor;
 use App\Services\TaskHistory;
 use App\Services\TaskSentenceReader;
+use App\Services\TaskTemplates;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -32,6 +34,8 @@ class QuickAdd extends Component
 
     public string $listId = '';
 
+    public string $templateId = '';
+
     /** The task just made, so the person can see where it went. */
     public ?int $addedId = null;
 
@@ -47,6 +51,7 @@ class QuickAdd extends Component
     {
         $this->open = true;
         $this->sentence = '';
+        $this->templateId = '';
         $this->resetErrorBag();
         $this->listId = (string) ($this->board && $this->lists->contains('id', $this->board) ? $this->board : app(InboxLists::class)->for($this->user(), $this->user()->currentTeam)->id);
     }
@@ -84,8 +89,22 @@ class QuickAdd extends Component
         return app(TaskSentenceReader::class)->read($this->sentence, $this->user()->currentTeam);
     }
 
+    /** @return \Illuminate\Database\Eloquent\Collection<int, TaskTemplate> */
+    #[Computed]
+    public function templates()
+    {
+        return TaskTemplate::where('team_id', $this->user()->current_team_id)->orderBy('sort_order')->orderBy('id')->get(['id', 'name']);
+    }
+
     public function save(): void
     {
+        $template = $this->templateId === '' ? null : ($this->templates->firstWhere('id', (int) $this->templateId) ?? abort(404));
+        if ($template) {
+            $this->saveFromTemplate(TaskTemplate::find($template->id));
+
+            return;
+        }
+
         $read = $this->read();
         if ($read['title'] === '') {
             $this->addError('sentence', 'Say what needs doing.');
@@ -110,6 +129,19 @@ class QuickAdd extends Component
             app(TaskEditor::class)->assign($task, User::find($read['assignee_id']), $this->user());
         }
 
+        $this->added($task, $list);
+    }
+
+    /** What is typed names this one. Nothing typed keeps the template's own title. */
+    private function saveFromTemplate(TaskTemplate $template): void
+    {
+        $list = $this->lists->firstWhere('id', (int) $this->listId) ?? abort(403);
+
+        $this->added(app(TaskTemplates::class)->apply($template, $list, $this->user(), trim($this->sentence) ?: null), $list);
+    }
+
+    private function added(Task $task, TaskList $list): void
+    {
         $this->open = false;
         $this->sentence = '';
         $this->addedId = $task->id;

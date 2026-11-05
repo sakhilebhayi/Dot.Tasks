@@ -4,6 +4,7 @@ namespace App\Livewire\Concerns;
 
 use App\Models\Label;
 use App\Models\Task;
+use App\Models\TaskField;
 use App\Models\TaskList;
 use App\Models\TaskStatus;
 use App\Models\TaskView;
@@ -83,6 +84,13 @@ trait ShowsBoardTasks
         return $this->taskList->team->allUsers()->sortBy('name')->values();
     }
 
+    /** @return \Illuminate\Database\Eloquent\Collection<int, TaskField> */
+    #[Computed]
+    public function customFields()
+    {
+        return TaskField::where('team_id', $this->taskList->team_id)->orderBy('sort_order')->orderBy('id')->get();
+    }
+
     /** @return \Illuminate\Database\Eloquent\Collection<int, Label> */
     #[Computed]
     public function labels()
@@ -152,7 +160,7 @@ trait ShowsBoardTasks
         TaskView::updateOrCreate(
             ['user_id' => auth()->id(), 'task_list_id' => $this->taskList->id, 'name' => $name],
             ['settings' => array_filter([
-                'q' => $this->search, 'priority' => $this->priority, 'label' => $this->labelId, 'due' => $this->due, 'assignee' => $this->assignee,
+                'q' => $this->search, 'priority' => $this->priority, 'label' => $this->labelId, 'due' => $this->due, 'assignee' => $this->assignee, 'field' => $this->fieldId, 'value' => $this->fieldValue,
             ] + $this->ownSettings(), fn (string $value) => $value !== '')],
         );
 

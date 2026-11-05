@@ -57,6 +57,11 @@ class Team extends JetstreamTeam
     }
 
     /** The team's shared boards: everything but people's private Inboxes. */
+    public function labels(): HasMany
+    {
+        return $this->hasMany(Label::class);
+    }
+
     public function boards(): HasMany
     {
         return $this->taskLists()->where('is_inbox', false);

@@ -6,7 +6,9 @@ use App\Events\TaskBoardUpdated;
 use App\Models\Label;
 use App\Models\Task;
 use App\Models\TaskChecklistItem;
+use App\Models\TaskField;
 use App\Models\TaskList;
+use App\Models\TaskTemplate;
 use App\Models\User;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
@@ -14,10 +16,12 @@ use App\Services\TaskArchiveService;
 use App\Services\TaskCommentService;
 use App\Services\TaskDependencyService;
 use App\Services\TaskEditor;
+use App\Services\TaskFieldValues;
 use App\Services\TaskLabelService;
 use App\Services\TaskPlacement;
 use App\Services\TaskStatusService;
 use App\Services\TaskSteps;
+use App\Services\TaskTemplates;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -28,7 +32,7 @@ use Livewire\Component;
 class TaskDetail extends Component
 {
     /** Everything the drawer shows, loaded together. */
-    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
+    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'fieldValues', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
 
@@ -36,6 +40,8 @@ class TaskDetail extends Component
     public string $commentBody = '';
 
     public string $blockerType = 'ff';
+
+    public bool $templateSaved = false;
 
     public string $newSubtask = '';
 
@@ -67,6 +73,7 @@ class TaskDetail extends Component
         $this->authorize('view', $task);
 
         $this->task = $task;
+        $this->templateSaved = false;
         $this->confirming = null;
         $this->aiError = null;
         $this->breaking = false;
@@ -317,6 +324,47 @@ class TaskDetail extends Component
         app(TaskStatusService::class)->move($sub, $sub->status === 'done' ? 'todo' : 'done');
 
         $this->refreshTask();
+    }
+
+    /** @return \Illuminate\Database\Eloquent\Collection<int, TaskField> */
+    #[Computed]
+    public function customFields()
+    {
+        return TaskField::where('team_id', $this->task?->taskList->team_id)->orderBy('sort_order')->orderBy('id')->get();
+    }
+
+    public function saveCustomField(int $fieldId, ?string $value): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        $field = $this->customFields->firstWhere('id', $fieldId) ?? abort(404);
+        app(TaskFieldValues::class)->set($this->task, $field, $value);
+
+        $this->refreshTask();
+    }
+
+    /** Keep this task's shape for next time. */
+    public function saveAsTemplate(string $name): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        $name = trim($name);
+        $taken = TaskTemplate::where('team_id', $this->task->taskList->team_id)->where('name', $name)->exists();
+        if ($name === '' || mb_strlen($name) > 120 || $taken) {
+            throw ValidationException::withMessages(['template' => $taken ? 'There is already a template with that name.' : 'Give the template a name.']);
+        }
+
+        app(TaskTemplates::class)->fromTask($this->task, $name, auth()->user());
+
+        $this->templateSaved = true;
     }
 
     /** @return Collection<int, TaskList> the other places this task can go */

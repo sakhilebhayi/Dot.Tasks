@@ -30,6 +30,17 @@
             @endforeach
         </select>
     @endif
+    @if($this->customFields->isNotEmpty())
+        <select class="select bare" wire:model.live="fieldId" aria-label="Custom field">
+            <option value="">Any field</option>
+            @foreach($this->customFields as $custom)
+                <option value="{{ $custom->id }}">{{ $custom->name }}</option>
+            @endforeach
+        </select>
+        @if($fieldId !== '')
+            <input class="input" style="width:140px" wire:model.live.debounce.300ms="fieldValue" aria-label="Value to look for" placeholder="Is exactly">
+        @endif
+    @endif
     @if($extras === 'board')
         <select class="select bare" wire:model.live="lanes" aria-label="Group into lanes">
             <option value="">No lanes</option>

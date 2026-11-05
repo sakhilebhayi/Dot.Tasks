@@ -64,6 +64,9 @@ class TaskRecurrenceService
         }
 
         $occurrence->labels()->sync($series->labels()->pluck('labels.id'));
+        foreach ($series->fieldValues as $value) {
+            $occurrence->fieldValues()->create(['task_field_id' => $value->task_field_id, 'value' => $value->value]);
+        }
 
         return $occurrence;
     }
