@@ -226,7 +226,114 @@ function stepList(method) {
     };
 }
 
+const shifted = (date, days) => {
+    const moved = new Date(`${date}T12:00:00Z`);
+    moved.setUTCDate(moved.getUTCDate() + days);
+    return moved.toISOString().slice(0, 10);
+};
+
+// One day of the calendar. Cards keep no order inside a day: the date is what moves.
+function dayList() {
+    return {
+        init() {
+            this.sorter = sortable(this.$el, {
+                keepOrder: true,
+                sharing: 'days',
+                drop: (evt) => save(evt, () => this.$wire.reschedule(Number(evt.item.dataset.task), evt.to.dataset.date || null, evt.item.dataset.date || null)),
+            });
+        },
+        destroy() {
+            this.sorter?.destroy();
+        },
+        keys(event) {
+            const card = event.target.closest('[data-task]');
+            const step = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[event.key];
+            if (!card || !event.altKey || !step || !card.dataset.date) return;
+            event.preventDefault();
+
+            const id = card.dataset.task;
+            const date = shifted(card.dataset.date, step);
+            saving(() => this.$wire.reschedule(Number(id), date, card.dataset.date), () => {}).then((answer) => {
+                if (answer?.ok === false) return answer.message && say(answer.message);
+                say(`${card.dataset.title} moved to ${date}.`);
+                this.$nextTick(() => document.querySelector(`[data-task="${id}"]`)?.focus());
+            });
+        },
+    };
+}
+
+// Bars on the timeline: drag the middle to move, an end to change the length, or Alt and the arrows to do either.
+function timeline(dayWidth) {
+    return {
+        held: null,
+        down(event) {
+            const bar = event.target.closest('[data-bar]');
+            if (!bar || event.button !== 0) return;
+
+            const edge = event.target.closest('[data-edge]')?.dataset.edge ?? null;
+            this.held = { bar, edge, x: event.clientX, left: bar.offsetLeft, width: bar.offsetWidth, days: 0, id: event.pointerId };
+            bar.setPointerCapture(event.pointerId);
+            document.body.classList.add('dragging');
+        },
+        move(event) {
+            const held = this.held;
+            if (!held || event.pointerId !== held.id) return;
+
+            const span = Math.round(held.width / dayWidth);
+            let days = Math.round((event.clientX - held.x) / dayWidth);
+            if (held.edge === 'start') days = Math.min(days, span - 1);
+            if (held.edge === 'due') days = Math.max(days, 1 - span);
+            held.days = days;
+
+            held.bar.classList.toggle('moving', days !== 0);
+            held.bar.style.left = `${held.left + (held.edge === 'due' ? 0 : days * dayWidth)}px`;
+            held.bar.style.width = `${held.width + (held.edge === 'start' ? -days : held.edge === 'due' ? days : 0) * dayWidth}px`;
+        },
+        up(event) {
+            const held = this.held;
+            if (!held || event.pointerId !== held.id) return;
+
+            this.held = null;
+            document.body.classList.remove('dragging');
+            held.bar.classList.remove('moving');
+            if (held.days === 0) return this.$dispatch('open-task', { taskId: Number(held.bar.dataset.task) });
+
+            const put = () => {
+                held.bar.style.left = `${held.left}px`;
+                held.bar.style.width = `${held.width}px`;
+            };
+            this.commit(held.bar, held.edge, held.days, put);
+        },
+        commit(bar, edge, days, put) {
+            const { task, start, due } = bar.dataset;
+            const nextStart = edge === 'due' ? start : shifted(start, days);
+            const nextDue = edge === 'start' ? due : shifted(due, days);
+
+            return saving(() => this.$wire.setDates(Number(task), nextStart, nextDue, start, due), put).then((answer) => {
+                if (answer?.ok === false) return answer.message && say(answer.message);
+                say(`${bar.dataset.title} runs ${nextStart} to ${nextDue}.`);
+                this.$nextTick(() => document.querySelector(`[data-bar][data-task="${task}"]`)?.focus());
+            });
+        },
+        keys(event) {
+            const bar = event.target.closest('[data-bar]');
+            const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
+            if (bar && !event.altKey && (event.key === 'Enter' || event.key === ' ')) {
+                event.preventDefault();
+                return this.$dispatch('open-task', { taskId: Number(bar.dataset.task) });
+            }
+            if (!bar || !event.altKey || !step) return;
+            event.preventDefault();
+
+            if (event.shiftKey && step < 0 && bar.dataset.start === bar.dataset.due) return;
+            this.commit(bar, event.shiftKey ? 'due' : null, step, () => {});
+        },
+    };
+}
+
 document.addEventListener('alpine:init', () => {
+    window.Alpine.data('dayList', dayList);
+    window.Alpine.data('timeline', timeline);
     window.Alpine.data('boardColumn', boardColumn);
     window.Alpine.data('stepList', stepList);
     window.Alpine.data('pulse', pulse);

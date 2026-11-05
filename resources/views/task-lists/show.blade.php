@@ -1,7 +1,7 @@
 <x-app-layout :title="$taskList->name">
     @php
         $keep = request()->only(['q', 'priority', 'label', 'due', 'assignee']);
-        $views = ['board' => 'Board', 'list' => 'List'];
+        $views = ['board' => 'Board', 'list' => 'List', 'calendar' => 'Calendar', 'timeline' => 'Timeline'];
     @endphp
     <div class="page">
         <div class="page-head">
@@ -22,6 +22,10 @@
         </nav>
         @if($view === 'list')
             <livewire:tasks.task-table :task-list="$taskList" />
+        @elseif($view === 'calendar')
+            <livewire:tasks.task-calendar :task-list="$taskList" />
+        @elseif($view === 'timeline')
+            <livewire:tasks.task-timeline :task-list="$taskList" />
         @else
             <livewire:tasks.task-board :task-list="$taskList" />
         @endif
