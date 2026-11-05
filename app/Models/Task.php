@@ -27,7 +27,7 @@ class Task extends Model
         'task_list_id', 'assignee_id', 'parent_id',
         'title', 'description', 'status', 'priority', 'due_date',
         'estimated_minutes', 'sort_order', 'escalated_at',
-        'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_parent_id',
+        'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_parent_id', 'recurrence_source_id',
         'creator_id',
     ];
 

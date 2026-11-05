@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Task;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Spawns the next occurrence of a recurring task once the current one is
@@ -16,7 +18,8 @@ class TaskRecurrenceService
 {
     /**
      * Create the next occurrence of $completedTask, or return null if the
-     * task isn't recurring.
+     * task isn't recurring or has already made its next one. A task finished
+     * again after being reopened, or dropped on Done twice, makes no more.
      */
     public function spawnNextOccurrence(Task $completedTask): ?Task
     {
@@ -27,6 +30,10 @@ class TaskRecurrenceService
         // A series stops when its source is archived or deleted, or sits on an
         // archived board: completing it then must not quietly make new work.
         if ($completedTask->trashed() || $completedTask->isArchived() || $completedTask->taskList === null) {
+            return null;
+        }
+
+        if ($this->alreadyMade($completedTask)) {
             return null;
         }
 
@@ -42,7 +49,28 @@ class TaskRecurrenceService
 
         $seriesParentId = $completedTask->recurrence_parent_id ?? $completedTask->id;
 
-        $occurrence = Task::create([
+        try {
+            // Its own savepoint: Postgres abandons a whole transaction after a refused insert unless it can step back.
+            $occurrence = DB::transaction(fn () => $this->makeOccurrence($completedTask, $nextDueDate, $seriesParentId));
+        } catch (UniqueConstraintViolationException) {
+            // Someone else finished it at the same moment, and theirs made the occurrence.
+            return null;
+        }
+
+        $occurrence->labels()->sync($completedTask->labels->pluck('id'));
+
+        return $occurrence;
+    }
+
+    /** Archived and deleted occurrences count: they were made, and someone chose to set them aside. */
+    protected function alreadyMade(Task $task): bool
+    {
+        return Task::withTrashed()->withArchived()->where('recurrence_source_id', $task->id)->exists();
+    }
+
+    private function makeOccurrence(Task $completedTask, Carbon $nextDueDate, int $seriesParentId): Task
+    {
+        return Task::create([
             'task_list_id' => $completedTask->task_list_id,
             'assignee_id' => $completedTask->assignee_id,
             'creator_id' => $completedTask->creator_id,
@@ -63,11 +91,8 @@ class TaskRecurrenceService
             'recurrence_interval' => $completedTask->recurrence_interval ?? 1,
             'recurrence_anchor' => $completedTask->recurrence_anchor ?? 'due_date',
             'recurrence_parent_id' => $seriesParentId,
+            'recurrence_source_id' => $completedTask->id,
         ]);
-
-        $occurrence->labels()->sync($completedTask->labels->pluck('id'));
-
-        return $occurrence;
     }
 
     private function nextDate(Carbon $from, string $type, int $interval): Carbon
