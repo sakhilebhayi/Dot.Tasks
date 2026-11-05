@@ -54,6 +54,12 @@ class TaskListController extends Controller
 
         $labels = Label::where('team_id', $taskList->team_id)->get();
 
-        return view('task-lists.show', compact('taskList', 'labels'));
+        $view = match (true) {
+            $request->query('show') === 'archived' => 'archived',
+            $request->query('view') === 'list' => 'list',
+            default => 'board',
+        };
+
+        return view('task-lists.show', compact('view', 'taskList', 'labels'));
     }
 }

@@ -7,15 +7,12 @@ use App\Models\Label;
 use App\Models\Task;
 use App\Models\TaskChecklistItem;
 use App\Models\User;
-use App\Notifications\TaskAssignedNotification;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
-use App\Services\Notify\NotifyClient;
 use App\Services\TaskArchiveService;
 use App\Services\TaskCommentService;
 use App\Services\TaskDependencyService;
 use App\Services\TaskEditor;
-use App\Services\TaskHistory;
 use App\Services\TaskLabelService;
 use App\Services\TaskPlacement;
 use App\Services\TaskStatusService;
@@ -433,13 +430,7 @@ class TaskDetail extends Component
             abort_unless($assignee && $assignee->belongsToTeam($this->task->taskList->team), 403);
         }
 
-        $this->task->update(['assignee_id' => $assignee?->id]);
-        app(TaskHistory::class)->record($this->task, 'people', $assignee ? 'Assigned it to '.$assignee->name : 'Left it unassigned');
-
-        if ($assignee && $assignee->id !== auth()->id()) {
-            $assignee->notify(new TaskAssignedNotification($this->task));
-            app(NotifyClient::class)->taskAssigned($this->task, $assignee, auth()->user());
-        }
+        app(TaskEditor::class)->assign($this->task, $assignee, auth()->user());
 
         $this->task = $this->task->fresh(self::RELATIONS);
     }

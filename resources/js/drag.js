@@ -59,7 +59,7 @@ function save(evt, send) {
     });
 }
 
-function sortable(element, { handle, canDrop, drop, sharing = 'cards' }) {
+function sortable(element, { handle, canDrop, drop, keepOrder = false, sharing = 'cards' }) {
     let refused = null;
     const clear = () => {
         refused?.classList.remove('refuse');
@@ -68,6 +68,7 @@ function sortable(element, { handle, canDrop, drop, sharing = 'cards' }) {
 
     return Sortable.create(element, {
         group: sharing,
+        sort: !keepOrder,
         draggable: '[data-task]',
         handle,
         filter: handle ? undefined : 'a, button, input, select, textarea',
@@ -86,6 +87,9 @@ function sortable(element, { handle, canDrop, drop, sharing = 'cards' }) {
         bubbleScroll: true,
         scrollSensitivity: 48,
         scrollSpeed: 12,
+        onStart() {
+            document.body.classList.add('dragging');
+        },
         onMove(evt) {
             clear();
             const refusal = canDrop?.(evt.dragged, evt.to);
@@ -97,6 +101,7 @@ function sortable(element, { handle, canDrop, drop, sharing = 'cards' }) {
         },
         onEnd(evt) {
             clear();
+            document.body.classList.remove('dragging');
             const moved = evt.from !== evt.to || evt.oldDraggableIndex !== evt.newDraggableIndex;
             if (moved) drop(evt);
         },
@@ -111,20 +116,37 @@ const nextId = (item) => {
 
 const blockedFromDone = (card, list) => (list.dataset.status === 'done' && card.dataset.blocked !== undefined ? 'A blocked task cannot be finished yet.' : null);
 
+// The tasks on screen come back every 20 seconds, unless someone is in the middle of something.
+function pulse(seconds = 20) {
+    return {
+        init() {
+            this.timer = setInterval(() => {
+                const busy = document.hidden || document.body.classList.contains('dragging') || document.activeElement?.matches('input, textarea, select');
+                if (!busy) this.$wire.refreshBoard();
+            }, seconds * 1000);
+        },
+        destroy() {
+            clearInterval(this.timer);
+        },
+    };
+}
+
 // One column of the board.
 function boardColumn() {
     return {
         init() {
             this.sorter = sortable(this.$el, {
+                handle: this.$el.dataset.handle,
+                keepOrder: this.$el.dataset.status === undefined,
                 canDrop: blockedFromDone,
-                drop: (evt) => save(evt, () => this.send(evt.item, evt.to, evt.from.dataset.status, nextId(evt.item))),
+                drop: (evt) => save(evt, () => this.send(evt.item, evt.to, evt.item.dataset.status, nextId(evt.item))),
             });
         },
         destroy() {
             this.sorter?.destroy();
         },
         send(card, list, from, before) {
-            return this.$wire.place(Number(card.dataset.task), list.dataset.status, before, from, list.dataset.lane ?? null);
+            return this.$wire.place(Number(card.dataset.task), list.dataset.status ?? from, before, from, list.dataset.lane ?? null);
         },
         keys(event) {
             const card = event.target.closest('[data-task]');
@@ -132,12 +154,14 @@ function boardColumn() {
             event.preventDefault();
 
             const here = this.$el;
-            const lists = [...(here.closest('[data-rack]')?.querySelectorAll('[data-status]') ?? [])];
+            const lists = [...(here.closest('[data-rack]')?.querySelectorAll('[data-list]') ?? [])];
             const siblings = items(here);
             const index = siblings.indexOf(card);
             const step = { ArrowLeft: -1, ArrowRight: 1 }[event.key];
             let target = here;
             let before;
+
+            if (!step && here.dataset.status === undefined) return;
 
             if (step) {
                 target = lists[lists.indexOf(here) + step];
@@ -156,10 +180,13 @@ function boardColumn() {
 
             const id = card.dataset.task;
             const title = card.dataset.title;
-            saving(() => this.send(card, target, here.dataset.status, before), () => {}).then((answer) => {
+            saving(() => this.send(card, target, card.dataset.status, before), () => {}).then((answer) => {
                 if (answer?.ok === false) return answer.message && say(answer.message);
                 say(step ? `${title} moved to ${target.dataset.name}.` : `${title} moved.`);
-                this.$nextTick(() => document.querySelector(`[data-task="${id}"]`)?.focus());
+                this.$nextTick(() => {
+                    const moved = document.querySelector(`[data-task="${id}"]`);
+                    (moved?.querySelector('.grip') ?? moved)?.focus();
+                });
             });
         },
     };
@@ -202,4 +229,5 @@ function stepList(method) {
 document.addEventListener('alpine:init', () => {
     window.Alpine.data('boardColumn', boardColumn);
     window.Alpine.data('stepList', stepList);
+    window.Alpine.data('pulse', pulse);
 });

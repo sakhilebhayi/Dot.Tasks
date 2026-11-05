@@ -421,7 +421,7 @@ class TaskCoreTest extends TestCase
         $this->assertTrue($task->taskList->is_inbox);
         $this->assertSame($f->editor->id, $task->taskList->owner_id);
         $this->assertSame($f->admin->id, $task->assignee_id);
-        $this->assertSame(1, $task->activities()->count());
+        $this->assertSame(1, $task->activities()->where('kind', 'created')->count());
         Notification::assertSentTo($f->admin, TaskAssignedNotification::class);
     }
 

@@ -3,36 +3,25 @@
 namespace App\Livewire\Tasks;
 
 use App\Events\TaskBoardUpdated;
-use App\Livewire\Concerns\FiltersTasks;
-use App\Models\Label;
+use App\Livewire\Concerns\PlacesCards;
+use App\Livewire\Concerns\ShowsBoardTasks;
 use App\Models\Task;
-use App\Models\TaskList;
 use App\Models\User;
 use App\Services\TaskArchiveService;
-use App\Services\TaskEditor;
 use App\Services\TaskHistory;
-use App\Services\TaskPlacement;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class TaskBoard extends Component
 {
-    use FiltersTasks;
-
-    public TaskList $taskList;
-
-    /** 'me', 'none' or a team member's user id. */
-    #[Url(except: '')]
-    public string $assignee = '';
+    use PlacesCards;
+    use ShowsBoardTasks;
 
     /** '' for the live board, 'archived' for the archived list. */
     #[Url(except: '')]
@@ -49,81 +38,16 @@ class TaskBoard extends Component
         'done' => 'Done',
     ];
 
-    public function mount(TaskList $taskList): void
-    {
-        $this->authorize('view', $taskList);
-
-        $this->taskList = $taskList;
-    }
-
-    protected function filterTeamId(): int
-    {
-        return $this->taskList->team_id;
-    }
-
     #[Computed]
     public function showingArchived(): bool
     {
         return $this->show === 'archived';
     }
 
-    /** The assignee filter as a user id, 0 for "nobody", or null for no filter. */
-    private function assigneeFilter(): int|string|null
-    {
-        if ($this->assignee === 'me') {
-            return auth()->id();
-        }
-
-        if ($this->assignee === 'none') {
-            return 'none';
-        }
-
-        // Anyone who is not on this board's team filters nothing in.
-        return ctype_digit($this->assignee) && $this->members->contains('id', (int) $this->assignee)
-            ? (int) $this->assignee
-            : null;
-    }
-
-    /** @return Collection<int, User> */
-    #[Computed]
-    public function members(): Collection
-    {
-        return $this->taskList->team->allUsers()->sortBy('name')->values();
-    }
-
-    /** @return \Illuminate\Database\Eloquent\Collection<int, Label> */
-    #[Computed]
-    public function labels()
-    {
-        return Label::where('team_id', $this->taskList->team_id)->orderBy('name')->get();
-    }
-
-    #[Computed]
-    public function filtersActive(): bool
-    {
-        return $this->hasTaskFilters() || $this->assigneeFilter() !== null;
-    }
-
-    /**
-     * This board's tasks of this team, through Task::forTeam like every other
-     * team-wide query, so no filter can reach another team's rows.
-     *
-     * @return Builder<Task>
-     */
-    private function boardQuery(): Builder
-    {
-        return Task::forTeam($this->taskList->team_id)->where('tasks.task_list_id', $this->taskList->id);
-    }
-
     #[Computed]
     public function tasksByStatus(): array
     {
-        $assignee = $this->assigneeFilter();
-
-        $tasks = $this->applyTaskFilters($this->boardQuery())
-            ->whereNull('tasks.parent_id')
-            ->when($assignee === 'none', fn ($q) => $q->whereNull('tasks.assignee_id'))
-            ->when(is_int($assignee), fn ($q) => $q->where('tasks.assignee_id', $assignee))
+        $tasks = $this->filteredQuery()
             ->with(['assignee', 'labels', 'subtasks', 'blockedBy'])
             ->orderBy('tasks.sort_order')
             ->orderBy('tasks.id')
@@ -196,13 +120,6 @@ class TaskBoard extends Component
         return Task::onlyArchived()->forTeam($this->taskList->team_id)->where('tasks.task_list_id', $this->taskList->id);
     }
 
-    public function clearFilters(): void
-    {
-        $this->resetTaskFilters();
-        $this->reset('assignee');
-        $this->forgetBoard();
-    }
-
     /** Add a card at the foot of a column by typing its title. */
     public function addHere(string $status, string $title): void
     {
@@ -224,79 +141,7 @@ class TaskBoard extends Component
         app(TaskHistory::class)->record($task, 'created', 'Created it');
 
         broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
-        $this->forgetBoard();
-    }
-
-    /**
-     * Where a card landed, by hand or by keyboard. A refusal leaves the card where it was and says why: the browser has
-     * already shown the move, so this has to answer rather than fail. $from is the column the person saw it in.
-     *
-     * @return array{ok: bool, message?: string}
-     */
-    public function place(int $taskId, string $status, ?int $beforeId = null, ?string $from = null, ?string $lane = null): array
-    {
-        $this->resetErrorBag('status');
-
-        Validator::make(['status' => $status], ['status' => ['required', Rule::in(Task::STATUSES)]])->validate();
-
-        $task = $this->boardQuery()->find($taskId);
-        $this->forgetBoard();
-
-        if (! $task) {
-            return $this->refuse('That card is no longer on this board.');
-        }
-
-        $this->authorize('move', $task);
-
-        if ($from !== null && $task->status !== $from) {
-            return $this->refuse('Someone else moved that card, so here is where it is now.');
-        }
-
-        try {
-            DB::transaction(function () use ($task, $status, $beforeId, $lane) {
-                $this->applyLane($task, $lane);
-                app(TaskPlacement::class)->place($task, $status, $beforeId);
-            });
-        } catch (ValidationException $refused) {
-            return $this->refuse($refused->validator->errors()->first());
-        }
-
-        broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
-
-        return ['ok' => true];
-    }
-
-    /** @return array{ok: bool, message: string} */
-    private function refuse(string $message): array
-    {
-        $this->addError('status', $message);
-
-        return ['ok' => false, 'message' => $message];
-    }
-
-    /** A card dropped in another lane takes on what that lane stands for. */
-    private function applyLane(Task $task, ?string $lane): void
-    {
-        if ($lane === null || $this->lanes === '') {
-            return;
-        }
-
-        if ($this->lanes === 'priority') {
-            app(TaskEditor::class)->set($task, 'priority', $lane);
-
-            return;
-        }
-
-        $this->authorize('assign', $task);
-        $person = $lane === 'none' ? null : $this->members->firstWhere('id', (int) $lane);
-        if ($lane !== 'none' && ! $person) {
-            throw ValidationException::withMessages(['status' => 'That person is not on this team.']);
-        }
-
-        if ($task->assignee_id !== $person?->id) {
-            $task->update(['assignee_id' => $person?->id]);
-            app(TaskHistory::class)->record($task, 'people', $person ? 'Assigned it to '.$person->name : 'Left it unassigned');
-        }
+        $this->forgetTasks();
     }
 
     /** Bring an archived task (and the subtasks archived with it) back to the board. */
@@ -308,7 +153,7 @@ class TaskBoard extends Component
         app(TaskArchiveService::class)->restore($task);
 
         broadcast(new TaskBoardUpdated($this->taskList))->toOthers();
-        $this->forgetBoard();
+        $this->forgetTasks();
     }
 
     /** Delete an archived task: a soft delete, with its subtasks. Admins and the owner only. */
@@ -319,35 +164,22 @@ class TaskBoard extends Component
 
         app(TaskArchiveService::class)->delete($task, $confirmed);
 
-        $this->forgetBoard();
+        $this->forgetTasks();
     }
 
-    /** Hide the whole board. Admins only; its tasks are untouched and come back with it. */
-    public function archiveBoard(): void
-    {
-        $this->authorize('archive', $this->taskList);
-
-        $this->taskList->archive();
-
-        $this->redirectRoute('dashboard');
-    }
-
-    /**
-     * Called from the board view's Echo listener when another viewer's
-     * action broadcasts a TaskBoardUpdated event, and when the drawer or the
-     * new-task form changes something -- just invalidates the cached computed
-     * properties so the next render re-fetches current state.
-     */
-    #[On('task-created')]
-    #[On('task-updated')]
-    public function refreshBoard(): void
-    {
-        $this->forgetBoard();
-    }
-
-    private function forgetBoard(): void
+    protected function forgetTasks(): void
     {
         unset($this->tasksByStatus, $this->swimlanes, $this->archivedTasks, $this->filtersActive);
+    }
+
+    protected function ownSettings(): array
+    {
+        return ['lanes' => $this->lanes];
+    }
+
+    protected function laneKind(): string
+    {
+        return $this->lanes;
     }
 
     public function render(): View
