@@ -68,7 +68,7 @@ class TaskRecurrenceService
         return Task::withTrashed()->withArchived()->where('recurrence_source_id', $task->id)->exists();
     }
 
-    private function makeOccurrence(Task $completedTask, Carbon $nextDueDate, int $seriesParentId): Task
+    protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, int $seriesParentId): Task
     {
         return Task::create([
             'task_list_id' => $completedTask->task_list_id,

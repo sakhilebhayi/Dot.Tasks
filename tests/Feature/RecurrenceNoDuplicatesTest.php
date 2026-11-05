@@ -7,6 +7,7 @@ use App\Models\TaskList;
 use App\Models\User;
 use App\Services\TaskRecurrenceService;
 use App\Services\TaskStatusService;
+use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -140,14 +141,24 @@ class RecurrenceNoDuplicatesTest extends TestCase
                 $next->{$fate}();
             }
 
-            $inserts = 0;
-            DB::listen(function ($query) use (&$inserts) {
-                $inserts += str_starts_with($query->sql, 'insert into "tasks"') ? 1 : 0;
-            });
+            $service = new class extends TaskRecurrenceService
+            {
+                public int $tries = 0;
+
+                protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, int $seriesParentId): Task
+                {
+                    $this->tries++;
+
+                    return parent::makeOccurrence($completedTask, $nextDueDate, $seriesParentId);
+                }
+            };
+            $this->app->instance(TaskRecurrenceService::class, $service);
+
             $this->move($task, 'todo');
             $this->move($task, 'done');
+            $this->app->forgetInstance(TaskRecurrenceService::class);
 
-            $this->assertSame(0, $inserts, "The next occurrence {$fate}.");
+            $this->assertSame(0, $service->tries, "The next occurrence {$fate}.");
         }
     }
 
