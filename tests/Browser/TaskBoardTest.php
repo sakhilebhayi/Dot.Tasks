@@ -159,6 +159,7 @@ class TaskBoardTest extends DuskTestCase
 
             $this->assertSame([], $this->titles($browser, 3));
             $this->assertContains('Start the shutdown', $this->titles($browser, 0));
+            $browser->assertSeeIn('#announce', 'A blocked task cannot be finished yet.');
             $this->assertSame('todo', $task->fresh()->status);
             $this->assertNoConsoleErrors($browser);
         });

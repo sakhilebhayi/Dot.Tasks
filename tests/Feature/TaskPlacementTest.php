@@ -171,7 +171,7 @@ class TaskPlacementTest extends TestCase
     {
         $f = $this->teamFixture();
         [$a, $b] = $this->cards($f, ['A', 'B'], 'done');
-        $b->update(['recurrence' => 'weekly', 'due_date' => '2026-11-10', 'recurrence_interval' => 1]);
+        $b->update(['recurrence_type' => 'weekly', 'due_date' => '2026-11-10', 'recurrence_interval' => 1, 'recurrence_anchor' => 'due_date']);
 
         $this->board($f)->call('place', $b->id, 'done', $a->id, 'done');
 
@@ -225,6 +225,17 @@ class TaskPlacementTest extends TestCase
         $this->board($f)->set('lanes', 'priority')->call('place', $a->id, 'todo', null, 'todo', 'urgent');
 
         $this->assertSame('urgent', $a->fresh()->priority);
+    }
+
+    public function test_a_refused_drop_takes_the_lane_change_back_with_it(): void
+    {
+        $f = $this->teamFixture();
+        [$a, $b] = $this->cards($f, ['A', 'First']);
+        DB::table('task_dependencies')->insert(['task_id' => $a->id, 'blocked_by_id' => $b->id]);
+
+        $this->board($f)->set('lanes', 'priority')->call('place', $a->id, 'done', null, 'todo', 'urgent');
+
+        $this->assertSame('medium', $a->fresh()->priority);
     }
 
     public function test_a_lane_is_ignored_when_the_board_has_none(): void
