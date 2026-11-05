@@ -98,12 +98,12 @@ class TaskCoreTest extends DuskTestCase
     public function test_a_template_is_used_from_quick_add(): void
     {
         [$user, $list] = $this->board();
-        TaskTemplate::create(['team_id' => $list->team_id, 'name' => 'Inspection', 'title' => 'Inspect the plant', 'subtasks' => ['Walk the line']]);
+        $template = TaskTemplate::create(['team_id' => $list->team_id, 'name' => 'Inspection', 'title' => 'Inspect the plant', 'subtasks' => ['Walk the line']]);
 
-        $this->browse(function (Browser $browser) use ($user, $list) {
+        $this->browse(function (Browser $browser) use ($user, $list, $template) {
             $browser->loginAs($user)->openLivewire("/lists/{$list->id}");
             $browser->driver->getKeyboard()->sendKeys('q');
-            $browser->waitFor('#quick-add-template')->select('#quick-add-template', 'Inspection')->settle()
+            $browser->waitFor('#quick-add-template')->select('#quick-add-template', (string) $template->id)->settle()
                 ->press('Create task')->waitForText('Added to Monthly operations.');
 
             $this->assertSame(['Walk the line'], Task::where('title', 'Inspect the plant')->sole()->subtasks()->pluck('title')->all());
