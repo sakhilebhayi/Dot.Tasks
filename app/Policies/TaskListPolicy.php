@@ -14,6 +14,10 @@ class TaskListPolicy
 
     public function view(User $user, TaskList $taskList): bool
     {
+        if ($taskList->is_inbox) {
+            return $user->id === $taskList->owner_id;
+        }
+
         return $user->belongsToTeam($taskList->team);
     }
 
@@ -26,13 +30,17 @@ class TaskListPolicy
     /** Work on the board's tasks: move cards between columns. */
     public function update(User $user, TaskList $taskList): bool
     {
+        if ($taskList->is_inbox) {
+            return $user->id === $taskList->owner_id;
+        }
+
         return $this->holds($user, $taskList->team, 'update');
     }
 
     /** Archiving a board hides it and everything on it: admins and the owner only. */
     public function archive(User $user, TaskList $taskList): bool
     {
-        return $this->holds($user, $taskList->team, 'delete');
+        return ! $taskList->is_inbox && $this->holds($user, $taskList->team, 'delete');
     }
 
     public function restore(User $user, TaskList $taskList): bool

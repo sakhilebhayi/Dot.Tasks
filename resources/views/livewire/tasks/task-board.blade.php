@@ -161,9 +161,13 @@
                         <p style="padding:12px 4px;color:var(--muted);font-size:12px;text-align:center">No tasks here.</p>
                     @endforelse
                 </div>
-                @if($canWork)
-                    <div class="slot-foot">
-                        <button class="add-line" wire:click="$dispatch('open-create-task', { status: '{{ $status }}' })"><x-icon name="plus" /> Add task</button>
+                @if($canWork && $status !== 'done')
+                    <div class="slot-foot" x-data="{ adding: false, title: '' }">
+                        <button type="button" class="add-line" x-show="! adding" x-on:click="adding = true; $nextTick(() => $refs.line.focus())"><x-icon name="plus" /> Add task</button>
+                        <form x-show="adding" x-cloak x-on:submit.prevent="if (title.trim()) { $wire.addHere('{{ $status }}', title); title = '' }">
+                            <input class="input" x-ref="line" x-model="title" maxlength="255" autocomplete="off" aria-label="New task in {{ $label }}" placeholder="Type, then Enter"
+                                   x-on:keydown.escape="adding = false; title = ''" x-on:blur="if (! title.trim()) adding = false">
+                        </form>
                     </div>
                 @endif
             </div>

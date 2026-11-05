@@ -92,7 +92,7 @@ The brand's gold and green live in the logo only. Chrome stays ink.
 
 ## Typography
 
-One face, Schibsted Grotesk, at 24, 16, 14 and 12. Figures are tabular wherever they update. Weight 600 for titles, 500 for a card's title, 400 for the rest. Sentence case, always.
+One face, Schibsted Grotesk, at 24, 16, 14 and 12. Figures are tabular on bare numbers only (counts, totals): in this face the tabular feature also widens commas and full stops, so it never goes on running text. Weight 600 for titles, 500 for a card's title, 400 for the rest. Sentence case, always.
 
 ## Layout
 

@@ -68,3 +68,33 @@ function theme() {
 
 drawer();
 theme();
+
+// New task and search, from a button or a key. Keys are left alone while someone is typing.
+function shortcuts() {
+    const send = (name) => window.Livewire?.dispatch(name);
+
+    document.addEventListener('click', (event) => {
+        if (event.target.closest?.('[data-open-quick-add]')) send('open-quick-add');
+        if (event.target.closest?.('[data-open-search]')) send('open-search');
+    });
+    document.addEventListener('keydown', (event) => {
+        const typing = event.target.closest?.('input, textarea, select, [contenteditable]');
+        if (typing || event.altKey || event.isComposing) return;
+        if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+            event.preventDefault();
+            send('open-search');
+            return;
+        }
+        if (event.metaKey || event.ctrlKey) return;
+        if (event.key === 'q') {
+            event.preventDefault();
+            send('open-quick-add');
+        }
+        if (event.key === '/') {
+            event.preventDefault();
+            send('open-search');
+        }
+    });
+}
+
+shortcuts();

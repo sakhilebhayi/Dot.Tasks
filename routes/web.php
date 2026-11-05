@@ -66,6 +66,7 @@ Route::middleware([
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
     Route::get('/my-tasks', fn () => view('tasks.mine'))->name('tasks.mine');
+    Route::get('/inbox', [TaskListController::class, 'inbox'])->name('tasks.inbox');
     Route::get('/today', fn () => view('tasks.today'))->name('tasks.today');
     Route::get('/upcoming', fn () => view('tasks.upcoming'))->name('tasks.upcoming');
 
