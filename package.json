@@ -19,6 +19,7 @@
     },
     "dependencies": {
         "laravel-echo": "^2.4.0",
-        "pusher-js": "^8.6.0"
+        "pusher-js": "^8.6.0",
+        "sortablejs": "^1.15.6"
     }
 }

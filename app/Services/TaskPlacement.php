@@ -1,0 +1,49 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Task;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Where a card sits. A column keeps plain positions 1, 2, 3, and a drop renumbers it inside one transaction, so a
+ * refresh, another person or a failed step can never leave two truths. Callers authorize first.
+ */
+class TaskPlacement
+{
+    public function __construct(private readonly TaskStatusService $status) {}
+
+    /** Into a column, before another card, or at the foot of it. A refused status change moves nothing. */
+    public function place(Task $task, string $status, ?int $beforeId = null): void
+    {
+        DB::transaction(function () use ($task, $status, $beforeId) {
+            if ($task->status !== $status) {
+                $this->status->move($task, $status);
+            }
+
+            $this->seat($task, $beforeId, Task::where('task_list_id', $task->task_list_id)->whereNull('parent_id')->where('status', $status));
+        });
+    }
+
+    public function placeSubtask(Task $subtask, ?int $beforeId = null): void
+    {
+        DB::transaction(fn () => $this->seat($subtask, $beforeId, Task::where('parent_id', $subtask->parent_id)));
+    }
+
+    /** @param  Builder<Task>  $siblings */
+    private function seat(Task $task, ?int $beforeId, Builder $siblings): void
+    {
+        $order = $siblings->lockForUpdate()->orderBy('sort_order')->orderBy('id')->pluck('id')
+            ->reject(fn (int $id) => $id === $task->id)->values();
+
+        // A card that left while this one was in the air: the foot of the column is still a true place.
+        $at = $beforeId === null ? false : $order->search($beforeId);
+        $order->splice($at === false ? $order->count() : $at, 0, [$task->id]);
+
+        // Positions are not an edit, so they go straight to the column and leave updated_at alone.
+        foreach ($order as $index => $id) {
+            DB::table('tasks')->where('id', $id)->where('sort_order', '!=', $index + 1)->update(['sort_order' => $index + 1]);
+        }
+    }
+}

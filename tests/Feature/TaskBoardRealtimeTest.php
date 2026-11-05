@@ -36,7 +36,7 @@ class TaskBoardRealtimeTest extends TestCase
 
         Livewire::actingAs($owner)
             ->test(TaskBoard::class, ['taskList' => $taskList])
-            ->call('moveTask', $task->id, 'in_progress');
+            ->call('place', $task->id, 'in_progress');
 
         Event::assertDispatched(TaskBoardUpdated::class, fn ($event) => $event->taskList->is($taskList));
     }

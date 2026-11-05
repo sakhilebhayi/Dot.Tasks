@@ -2,12 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Tasks\TaskBoard;
 use App\Models\Team;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Testing\TestResponse;
-use Livewire\Livewire;
 use Tests\Concerns\CreatesTeamFixtures;
 use Tests\TestCase;
 
@@ -44,13 +41,6 @@ class ResponsiveShellTest extends TestCase
         $this->assertSame(1, preg_match('/<aside id="shell-drawer".*?<\/aside>/s', $response->getContent(), $m), 'The layout has no #shell-drawer element.');
 
         return $m[0];
-    }
-
-    private function selectHtml(string $html, int $taskId): string
-    {
-        preg_match('/<select id="move-'.$taskId.'".*?<\/select>/s', $html, $m);
-
-        return $m[0] ?? '';
     }
 
     public function test_every_page_in_the_layout_has_the_menu_button_drawer_backdrop_and_viewport_meta(): void
@@ -164,65 +154,26 @@ class ResponsiveShellTest extends TestCase
         $this->assertSame(4, preg_match_all('/<div class="slot kanban-col"/', $html), 'one column per status');
     }
 
-    public function test_an_editor_gets_a_visible_move_to_select_on_every_card_without_the_current_status(): void
+    public function test_every_card_can_be_reached_and_opened_from_the_keyboard(): void
     {
         $f = $this->teamFixture();
-        $other = $f->list->tasks()->create(['title' => 'Second card for the move test', 'status' => 'review']);
 
         $html = $this->actingAs($f->editor)->get(route('task-lists.show', $f->list))->assertOk()->getContent();
 
-        foreach ([$f->task, $other] as $task) {
-            $select = $this->selectHtml($html, $task->id);
-
-            $this->assertStringContainsString('wire:change="moveTask('.$task->id.', $event.target.value)"', $select, "select for task {$task->id}");
-            $this->assertStringContainsString('Move to...', $select);
-            // Always rendered, never inside a hover-only wrapper.
-            $this->assertStringNotContainsString('group-hover', $select);
-            $this->assertStringNotContainsString('hidden', $select);
-            $this->assertStringContainsString('<label for="move-'.$task->id.'" class="sr">Move', $html);
-        }
-
-        $todoCard = $this->selectHtml($html, $f->task->id);
-        $this->assertStringNotContainsString('value="todo"', $todoCard, 'a todo card is not offered "To Do"');
-        $this->assertStringContainsString('value="done"', $todoCard);
-        $this->assertStringNotContainsString('value="review"', $this->selectHtml($html, $other->id));
+        $this->assertStringContainsString('data-task="'.$f->task->id.'"', $html);
+        $this->assertStringContainsString('tabindex="0" role="button"', $html);
+        $this->assertStringContainsString('aria-describedby="drag-help"', $html);
+        $this->assertStringContainsString('id="drag-help"', $html);
     }
 
-    public function test_a_viewer_gets_no_move_control(): void
+    public function test_a_viewer_gets_no_way_to_move_a_card(): void
     {
         $f = $this->teamFixture();
 
         $html = $this->actingAs($f->viewer)->get(route('task-lists.show', $f->list))->assertOk()->getContent();
 
         $this->assertStringContainsString('Fixture task', $html);
-        $this->assertStringNotContainsString('id="move-'.$f->task->id.'"', $html);
-        $this->assertStringNotContainsString('wire:change="moveTask', $html);
-    }
-
-    public function test_choosing_a_column_in_the_select_moves_the_card_and_every_attempt_rekeys_the_selects(): void
-    {
-        $f = $this->teamFixture();
-
-        $board = Livewire::actingAs($f->editor)->test(TaskBoard::class, ['taskList' => $f->list]);
-        $this->assertSame(0, $board->get('moveAttempts'));
-
-        $board->call('moveTask', $f->task->id, 'review')->assertHasNoErrors();
-
-        $this->assertSame('review', $f->task->fresh()->status);
-        $this->assertSame(1, $board->get('moveAttempts'));
-    }
-
-    public function test_a_refused_move_leaves_the_card_and_still_resets_the_select(): void
-    {
-        $f = $this->teamFixture();
-        $blocker = $f->list->tasks()->create(['title' => 'The unfinished blocker', 'status' => 'todo']);
-        DB::table('task_dependencies')->insert(['task_id' => $f->task->id, 'blocked_by_id' => $blocker->id]);
-
-        $board = Livewire::actingAs($f->editor)->test(TaskBoard::class, ['taskList' => $f->list])
-            ->call('moveTask', $f->task->id, 'done')
-            ->assertHasErrors(['status']);
-
-        $this->assertSame('todo', $f->task->fresh()->status);
-        $this->assertSame(1, $board->get('moveAttempts'), 'the counter that re-keys the selects moves even when the move is refused');
+        $this->assertStringNotContainsString('boardColumn', $html);
+        $this->assertStringNotContainsString('aria-describedby="drag-help"', $html);
     }
 }

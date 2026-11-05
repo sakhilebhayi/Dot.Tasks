@@ -63,7 +63,7 @@ class TaskRolesEnforcementTest extends TestCase
 
         Livewire::actingAs($f->viewer)
             ->test(TaskBoard::class, ['taskList' => $f->list])
-            ->call('moveTask', $f->task->id, 'done')
+            ->call('place', $f->task->id, 'done')
             ->assertForbidden();
 
         $this->assertSame('todo', $f->task->fresh()->status);
@@ -140,7 +140,7 @@ class TaskRolesEnforcementTest extends TestCase
 
             Livewire::actingAs($user)
                 ->test(TaskBoard::class, ['taskList' => $f->list])
-                ->call('moveTask', $f->task->id, 'in_progress')
+                ->call('place', $f->task->id, 'in_progress')
                 ->assertOk();
             $this->assertSame('in_progress', $f->task->fresh()->status, $role);
 

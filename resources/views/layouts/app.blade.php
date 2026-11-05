@@ -136,6 +136,8 @@
         <livewire:tasks.task-detail />
         <livewire:tasks.quick-add :board="request()->route('taskList')?->id" />
         <livewire:tasks.find-tasks />
+        <p class="sr" id="drag-help">Press Enter to open. Hold Alt and use the arrow keys to move it.</p>
+        <div class="sr" id="announce" role="status" aria-live="polite"></div>
     @endauth
 
     @stack('modals')
