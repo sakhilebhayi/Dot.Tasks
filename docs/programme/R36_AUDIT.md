@@ -147,12 +147,14 @@ Each piece is one pull request with tests. Nothing deploys until the owner says 
 
 T1 to T4 are the product. If time runs short, they alone make Dot.Tasks better than it is.
 
-## Decisions for the owner
+## Decisions
 
-1. **Who owns project tasks.** Recommended: Dot.Projects keeps them and Dot.Tasks links to them, as set out above.
-2. **Natural language without AI.** Recommended: a rule-based reader for dates and names first, which works with no key and no cost. AI adds to it once a provider is chosen. Your example sentence can be read this way.
-3. **AI provider and monthly cap.** Same answer as the other platforms. The code uses Anthropic today, and T6 needs it for breakdown, summaries and clarification.
-4. **Live updates.** `/up/realtime` is 503 on the shared host. Recommended: the 20-second refresh used on Dot.Sheets, keeping Reverb as an option.
-5. **Drag library.** The app's rules ask for approval to add a dependency. Recommended: SortableJS, which is small and covers touch and auto-scroll, with keyboard moves built by hand. Timeline and calendar moves use the same pattern.
-6. **Time zones.** Recommended: one per business, as on Dot.HR, with a person's own zone later.
-7. **Where tasks without a list live.** The brief wants tasks with no project. Recommended: every person gets a private Inbox list, so nothing needs a board first.
+Taken by the owner on 2026-11-05, all as recommended.
+
+1. **Project tasks.** Dot.Projects keeps owning them. Dot.Tasks owns everything else, shows a person's project tasks as linked items, and writes changes through, so there is one status and no second copy. This needs a read and write API in Dot.Projects.
+2. **Natural language.** A rule-based reader for dates and names comes first, with no key and no cost. AI adds to it once a provider is chosen.
+3. **AI provider and monthly cap.** The same answer as the other platforms, still to come. The code uses Anthropic today, and T6 waits on it.
+4. **Live updates.** A 20-second refresh, as on Dot.Sheets. Reverb stays as an option.
+5. **Drag library.** SortableJS, with keyboard moves built by hand. Timeline and calendar moves follow the same pattern.
+6. **Time zones.** One per business, as on Dot.HR. A person's own zone can come later.
+7. **Tasks with no list.** Every person gets a private Inbox list, so nothing needs a board first.
