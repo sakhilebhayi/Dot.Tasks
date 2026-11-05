@@ -179,9 +179,42 @@
                     @endforelse
                 @endcan
 
+                @if($this->customFields->isNotEmpty())
+                    <h3 class="section-title" style="font-size:14px">Details</h3>
+                    @error('field')<p role="alert" class="error">{{ $message }}</p>@enderror
+                    <div class="props">
+                        @foreach($this->customFields as $custom)
+                            @php $held = $task->fieldValues->firstWhere('task_field_id', $custom->id)?->value; @endphp
+                            <label for="custom-{{ $custom->id }}" style="color:var(--muted);font-size:12px">{{ $custom->name }}</label>
+                            @can('update', $task)
+                                @switch($custom->type)
+                                    @case('select')
+                                        <select class="select" id="custom-{{ $custom->id }}" wire:key="custom-{{ $custom->id }}-{{ $task->id }}" wire:change="saveCustomField({{ $custom->id }}, $event.target.value)">
+                                            <option value="">Not set</option>
+                                            @foreach($custom->options ?? [] as $option)
+                                                <option value="{{ $option }}" @selected($held === $option)>{{ $option }}</option>
+                                            @endforeach
+                                        </select>
+                                        @break
+                                    @case('checkbox')
+                                        <div><input type="checkbox" id="custom-{{ $custom->id }}" @checked($held === '1') wire:change="saveCustomField({{ $custom->id }}, $event.target.checked ? '1' : '0')"></div>
+                                        @break
+                                    @default
+                                        <input class="input" id="custom-{{ $custom->id }}" wire:key="custom-{{ $custom->id }}-{{ $task->id }}" type="{{ ['number' => 'number', 'date' => 'date'][$custom->type] ?? 'text' }}" value="{{ $held }}" wire:change="saveCustomField({{ $custom->id }}, $event.target.value)">
+                                @endswitch
+                            @else
+                                <div>{{ $custom->type === 'checkbox' ? ($held ? 'Yes' : 'No') : ($held ?? '-') }}</div>
+                            @endcan
+                        @endforeach
+                    </div>
+                @endif
+
                 @if($task->isRecurring() || auth()->user()->can('update', $task))
                     <livewire:tasks.task-repeat :task="$task" wire:key="repeat-{{ $task->id }}-{{ $task->recurrence_type }}" />
                 @endif
+
+                @error('template')<p role="alert" class="error">{{ $message }}</p>@enderror
+                @if($templateSaved)<p role="status" style="color:var(--muted)">Saved as a template.</p>@endif
 
                 <h3 class="section-title" style="font-size:14px">Blocked by</h3>
                 @error('blocker')<p role="alert" class="error">{{ $message }}</p>@enderror
@@ -316,6 +349,15 @@
                             <div class="page-actions">
                                 @can('create', [\App\Models\Task::class, $task->taskList])
                                     <button type="button" class="btn small" wire:click="duplicate">Duplicate</button>
+                                @endcan
+                                @can('update', $task)
+                                    <span x-data="{ naming: false, name: '' }">
+                                        <button type="button" class="btn small" x-show="! naming" x-on:click="naming = true; name = @js($task->title); $nextTick(() => $refs.name.select())">Save as template</button>
+                                        <form x-show="naming" x-cloak x-on:submit.prevent="$wire.saveAsTemplate(name); naming = false" style="display:inline-flex;gap:4px">
+                                            <input class="input" style="min-height:30px;padding:4px 8px" x-ref="name" x-model="name" maxlength="120" aria-label="Name the template">
+                                            <button type="submit" class="btn small">Save</button>
+                                        </form>
+                                    </span>
                                 @endcan
                                 @can('archive', $task)
                                     <button type="button" class="btn small" wire:click="confirmArchive">Archive task</button>

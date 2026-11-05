@@ -4,6 +4,7 @@ namespace Tests\Browser;
 
 use App\Models\Task;
 use App\Models\TaskList;
+use App\Models\TaskTemplate;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
@@ -91,6 +92,21 @@ class TaskCoreTest extends DuskTestCase
                 ->assertSeeIn('.dialog', 'Inspect the haul road')
                 ->click('.dialog .row')->waitFor('#task-title')
                 ->assertValue('#task-title', 'Inspect the haul road');
+        });
+    }
+
+    public function test_a_template_is_used_from_quick_add(): void
+    {
+        [$user, $list] = $this->board();
+        TaskTemplate::create(['team_id' => $list->team_id, 'name' => 'Inspection', 'title' => 'Inspect the plant', 'subtasks' => ['Walk the line']]);
+
+        $this->browse(function (Browser $browser) use ($user, $list) {
+            $browser->loginAs($user)->openLivewire("/lists/{$list->id}");
+            $browser->driver->getKeyboard()->sendKeys('q');
+            $browser->waitFor('#quick-add-template')->select('#quick-add-template', 'Inspection')->settle()
+                ->press('Create task')->waitForText('Added to Monthly operations.');
+
+            $this->assertSame(['Walk the line'], Task::where('title', 'Inspect the plant')->sole()->subtasks()->pluck('title')->all());
         });
     }
 

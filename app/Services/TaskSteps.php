@@ -78,6 +78,10 @@ class TaskSteps
                 $copy->checklistItems()->create(['title' => $item->title, 'sort_order' => $item->sort_order]);
             }
 
+            foreach ($task->fieldValues as $value) {
+                $copy->fieldValues()->create(['task_field_id' => $value->task_field_id, 'value' => $value->value]);
+            }
+
             $this->history->record($copy, 'created', 'Made as a copy of '.$task->title);
 
             return $copy;

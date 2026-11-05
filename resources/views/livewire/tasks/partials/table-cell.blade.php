@@ -46,6 +46,11 @@
                 <x-label-chip :label="$chip" />
             @endforeach
             @break
+        @default
+            @if(str_starts_with($column, 'f'))
+                {{ $task->fieldValues->firstWhere('task_field_id', (int) substr($column, 1))?->value }}
+            @endif
+            @break
         @case('estimate')
             @can('update', $task)
                 <input class="ghost-input num" type="number" min="0" aria-label="Estimate in minutes for {{ $task->title }}" value="{{ $task->estimated_minutes }}" placeholder="min" wire:change="saveCell({{ $task->id }}, 'estimated_minutes', $event.target.value)">

@@ -7,5 +7,6 @@
             </div>
         </div>
         <livewire:labels.label-manager />
+        <div style="margin-top:32px"><livewire:tasks.manage-fields /></div>
     </div>
 </x-app-layout>

@@ -29,6 +29,17 @@
                         @endif
                     </div>
                 @endif
+                @if($this->templates->isNotEmpty())
+                    <div class="field">
+                        <label for="quick-add-template">From a template</label>
+                        <select class="select" id="quick-add-template" wire:model="templateId">
+                            <option value="">No template</option>
+                            @foreach($this->templates as $template)
+                                <option value="{{ $template->id }}">{{ $template->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                @endif
                 <div class="field">
                     <label for="quick-add-list">Goes on</label>
                     <select class="select" id="quick-add-list" wire:model="listId">

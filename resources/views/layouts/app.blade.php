@@ -43,7 +43,8 @@
                 ['tasks.upcoming', 'calendar', 'Upcoming'],
                 ['tasks.team', 'team', 'Team'],
                 ['dashboard', 'home', 'Overview'],
-                ['labels.index', 'label', 'Labels'],
+                ['tasks.templates', 'copy', 'Templates'],
+                ['labels.index', 'label', 'Labels and fields'],
                 ['removed.index', 'trash', 'Removed'],
             ] as [$route, $icon, $label])
                 <a href="{{ route($route) }}" class="nav-item {{ request()->routeIs($route) ? 'active' : '' }}" @if (request()->routeIs($route)) aria-current="page" @endif>
