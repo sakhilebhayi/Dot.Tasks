@@ -110,6 +110,27 @@ class TaskCoreTest extends DuskTestCase
         });
     }
 
+    public function test_a_reply_and_a_file_land_in_the_panel(): void
+    {
+        [$user, $list] = $this->board();
+
+        $file = tempnam(sys_get_temp_dir(), 'plan').'.pdf';
+        file_put_contents($file, "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF");
+
+        $this->browse(function (Browser $browser) use ($user, $list, $file) {
+            $browser->loginAs($user)->openLivewire("/lists/{$list->id}")
+                ->click('.card')->waitFor('#task-title')
+                ->type('textarea[wire\\:model="commentBody"]', 'First thought')->press('Comment')->waitForText('First thought')
+                ->press('Reply')->waitForText('Replying.')
+                ->type('textarea[wire\\:model="commentBody"]', 'An answer')->press('Comment')->waitFor('.comment.is-reply')
+                ->attach('input[aria-label="Attach a file"]', $file)->waitFor('.step-title.link', 10);
+
+            $this->assertSame(1, Task::sole()->attachments()->count());
+        });
+
+        @unlink($file);
+    }
+
     public function test_typing_q_into_a_field_stays_in_the_field(): void
     {
         [$user, $list] = $this->board();

@@ -4,8 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Task;
 use App\Models\TaskEscalationProposal;
+use App\Support\Today;
 use Illuminate\Console\Command;
-use Illuminate\Support\Carbon;
 
 /**
  * Detects tasks that are significantly overdue (more than 7 days past their
@@ -26,7 +26,7 @@ class DetectEscalationCandidates extends Command
 
     public function handle(): int
     {
-        $cutoff = Carbon::today()->subDays(self::OVERDUE_THRESHOLD_DAYS)->toDateString();
+        $cutoff = Today::date()->subDays(self::OVERDUE_THRESHOLD_DAYS)->toDateString();
 
         // whereHas('taskList') leaves out tasks on archived boards; archived and
         // deleted tasks are already excluded by the model's scopes.
@@ -48,7 +48,7 @@ class DetectEscalationCandidates extends Command
                 continue;
             }
 
-            $daysOverdue = $task->due_date->diffInDays(Carbon::today());
+            $daysOverdue = $task->due_date->diffInDays(Today::date());
 
             TaskEscalationProposal::create([
                 'task_id' => $task->id,

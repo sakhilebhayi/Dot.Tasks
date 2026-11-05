@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Task;
+use App\Services\NotificationPreferences;
 use Illuminate\Notifications\Notification;
 
 /**
@@ -19,7 +20,7 @@ class TaskDueSoonNotification extends Notification
      */
     public function via(object $notifiable): array
     {
-        return ['database'];
+        return app(NotificationPreferences::class)->wants($notifiable, 'due_soon') ? ['database'] : [];
     }
 
     /**

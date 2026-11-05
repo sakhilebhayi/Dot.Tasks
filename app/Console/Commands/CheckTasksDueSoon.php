@@ -4,7 +4,9 @@ namespace App\Console\Commands;
 
 use App\Models\Task;
 use App\Notifications\TaskDueSoonNotification;
+use App\Services\NotificationPreferences;
 use App\Services\Notify\NotifyClient;
+use App\Support\Today;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -23,8 +25,10 @@ class CheckTasksDueSoon extends Command
 
     public function handle(): int
     {
-        $windowEnd = Carbon::today()->addDays(2)->toDateString();
-        $windowStart = Carbon::today()->toDateString();
+        // A day wider than the window each way: every team's today is somewhere inside this, and each task is checked
+        // against its own team's calendar below.
+        $windowEnd = Today::date()->addDays(3)->toDateString();
+        $windowStart = Today::date()->subDay()->toDateString();
 
         // whereHas('taskList') leaves out tasks on archived boards; archived and
         // deleted tasks are already excluded by the model's scopes.
@@ -35,7 +39,7 @@ class CheckTasksDueSoon extends Command
             ->whereDate('due_date', '<=', $windowEnd)
             ->whereDate('due_date', '>=', $windowStart)
             ->where('status', '!=', 'done')
-            ->with('assignee')
+            ->with(['assignee', 'taskList.team'])
             ->get();
 
         $notified = 0;
@@ -43,6 +47,11 @@ class CheckTasksDueSoon extends Command
         foreach ($tasks as $task) {
             $assignee = $task->assignee;
             if (! $assignee) {
+                continue;
+            }
+
+            Today::use($task->taskList->team?->timezone);
+            if ($task->due_date->lt(Today::date()) || $task->due_date->gt(Today::date()->addDays(2))) {
                 continue;
             }
 
@@ -60,9 +69,13 @@ class CheckTasksDueSoon extends Command
             }
 
             $assignee->notify(new TaskDueSoonNotification($task));
-            app(NotifyClient::class)->taskDueSoon($task, $assignee);
+            if (app(NotificationPreferences::class)->wants($assignee, 'due_soon', 'email')) {
+                app(NotifyClient::class)->taskDueSoon($task, $assignee);
+            }
             $notified++;
         }
+
+        Today::use(null);
 
         $this->info("Sent {$notified} task due-soon notification(s).");
 

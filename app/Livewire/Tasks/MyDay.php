@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Services\DayPlanner;
 use App\Services\TaskEditor;
 use App\Services\TaskStatusService;
+use App\Support\Today;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
@@ -52,7 +53,7 @@ class MyDay extends Component
     #[Computed]
     public function planIds(): array
     {
-        return app(DayPlanner::class)->ids($this->user(), Carbon::today())->all();
+        return app(DayPlanner::class)->ids($this->user(), Today::date())->all();
     }
 
     /** @return \Illuminate\Support\Collection<int, Task> */
@@ -71,7 +72,7 @@ class MyDay extends Component
     public function leftOver(): int
     {
         $planner = app(DayPlanner::class);
-        $last = $planner->lastDayBefore($this->user(), Carbon::today());
+        $last = $planner->lastDayBefore($this->user(), Today::date());
 
         return $last === null ? 0 : $this->mineFrom($planner->ids($this->user(), $last)->all())->count();
     }
@@ -86,13 +87,13 @@ class MyDay extends Component
     #[Computed]
     public function overdue(): Collection
     {
-        return $this->open($this->mine()->whereDate('tasks.due_date', '<', Carbon::today()));
+        return $this->open($this->mine()->whereDate('tasks.due_date', '<', Today::date()));
     }
 
     #[Computed]
     public function day(): Carbon
     {
-        return Carbon::hasFormatWithModifiers($this->picked, 'Y#m#d') ? Carbon::createFromFormat('!Y-m-d', $this->picked) : Carbon::today();
+        return Carbon::hasFormatWithModifiers($this->picked, 'Y#m#d') ? Carbon::createFromFormat('!Y-m-d', $this->picked) : Today::date();
     }
 
     /** @return Collection<int, Task> */
@@ -117,14 +118,14 @@ class MyDay extends Component
     #[Computed]
     public function upcoming(): Collection
     {
-        return $this->open($this->mine()->whereDate('tasks.due_date', '>', Carbon::today())->whereDate('tasks.due_date', '<=', Carbon::today()->addDays(7)));
+        return $this->open($this->mine()->whereDate('tasks.due_date', '>', Today::date())->whereDate('tasks.due_date', '<=', Today::date()->addDays(7)));
     }
 
     /** @return Collection<int, Task> */
     #[Computed]
     public function finished(): Collection
     {
-        return $this->mine()->where('tasks.status', 'done')->where('tasks.completed_at', '>=', Carbon::today()->subDays(2))
+        return $this->mine()->where('tasks.status', 'done')->where('tasks.completed_at', '>=', Today::date()->subDays(2))
             ->orderByDesc('tasks.completed_at')->limit(5)->get();
     }
 
@@ -137,7 +138,7 @@ class MyDay extends Component
     #[Computed]
     public function week(): array
     {
-        $today = Carbon::today();
+        $today = Today::date();
         $monday = $today->copy()->startOfWeek(Carbon::MONDAY);
 
         $tasks = $this->mine()->where('tasks.status', '!=', 'done')
@@ -179,7 +180,7 @@ class MyDay extends Component
 
         $this->authorize('view', $task);
 
-        app(DayPlanner::class)->put($this->user(), $task, Carbon::today(), $beforeId);
+        app(DayPlanner::class)->put($this->user(), $task, Today::date(), $beforeId);
         $this->forget();
 
         return ['ok' => true];
@@ -189,7 +190,7 @@ class MyDay extends Component
     {
         $task = Task::withArchived()->find($taskId);
         if ($task) {
-            app(DayPlanner::class)->remove($this->user(), $task, Carbon::today());
+            app(DayPlanner::class)->remove($this->user(), $task, Today::date());
         }
 
         $this->forget();
@@ -199,7 +200,7 @@ class MyDay extends Component
     public function carryOver(): void
     {
         $planner = app(DayPlanner::class);
-        $last = $planner->lastDayBefore($this->user(), Carbon::today());
+        $last = $planner->lastDayBefore($this->user(), Today::date());
         if ($last === null) {
             return;
         }
@@ -207,7 +208,7 @@ class MyDay extends Component
         $ids = $planner->ids($this->user(), $last)->all();
         $order = array_flip($ids);
         $this->mineFrom($ids)->get()->sortBy(fn (Task $task) => $order[$task->id])
-            ->each(fn (Task $task) => $planner->put($this->user(), $task, Carbon::today()));
+            ->each(fn (Task $task) => $planner->put($this->user(), $task, Today::date()));
 
         $this->forget();
     }

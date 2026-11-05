@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Task;
 use App\Models\Team;
+use App\Support\Today;
 use Illuminate\Support\Carbon;
 
 /**
@@ -23,7 +24,7 @@ class DashboardStats
      */
     public function forTeam(Team $team): array
     {
-        $today = Carbon::today()->toDateString();
+        $today = Today::date()->toDateString();
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
 
         $row = Task::forTeam($team)

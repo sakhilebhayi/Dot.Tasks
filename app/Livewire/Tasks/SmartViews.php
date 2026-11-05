@@ -5,7 +5,7 @@ namespace App\Livewire\Tasks;
 use App\Events\TaskBoardUpdated;
 use App\Models\Task;
 use App\Services\TaskStatusService;
-use Illuminate\Support\Carbon;
+use App\Support\Today;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -40,7 +40,7 @@ class SmartViews extends Component
     public function todayTasks()
     {
         return $this->teamTaskQuery()
-            ->whereDate('due_date', '<=', Carbon::today())
+            ->whereDate('due_date', '<=', Today::date())
             ->orderBy('due_date')
             ->orderByPriorityRank()
             ->get();
@@ -54,8 +54,8 @@ class SmartViews extends Component
     public function upcomingTasksByDate()
     {
         $tasks = $this->teamTaskQuery()
-            ->whereDate('due_date', '>', Carbon::today())
-            ->whereDate('due_date', '<=', Carbon::today()->addDays(7))
+            ->whereDate('due_date', '>', Today::date())
+            ->whereDate('due_date', '<=', Today::date()->addDays(7))
             ->orderBy('due_date')
             ->get();
 

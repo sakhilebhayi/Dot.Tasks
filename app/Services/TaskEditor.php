@@ -29,7 +29,7 @@ class TaskEditor
         'estimated_minutes' => 'estimate', 'actual_minutes' => 'time spent', 'completion_criteria' => 'what done means', 'priority' => 'priority',
     ];
 
-    public function __construct(private readonly TaskHistory $history) {}
+    public function __construct(private readonly TaskHistory $history, private readonly TaskNotifier $notifier) {}
 
     /**
      * @throws ValidationException (key is the field)
@@ -54,6 +54,10 @@ class TaskEditor
 
         $task->update([$field => $value]);
         $this->history->record($task, 'edit', $this->sentence($field, $value));
+
+        if ($field === 'due_date') {
+            $this->notifier->dueChanged($task);
+        }
     }
 
     /** A new due date. A task that has a start keeps its length, so the start moves with it. */
@@ -76,7 +80,12 @@ class TaskEditor
             throw ValidationException::withMessages(['due_date' => 'The start date has to be on or before the due date.']);
         }
 
+        $wasDue = $task->due_date?->toDateString();
         $task->update(['start_date' => $start, 'due_date' => $due]);
+        if ($wasDue !== $task->fresh()->due_date?->toDateString()) {
+            $this->notifier->dueChanged($task);
+        }
+
         $this->history->record($task, 'edit', match (true) {
             $due === null => 'Took it off the calendar',
             $start === null || $start === $due => 'Set the due date to '.Carbon::parse($due)->format('M j, Y'),
@@ -96,7 +105,9 @@ class TaskEditor
 
         if ($assignee && $assignee->id !== $by->id) {
             $assignee->notify(new TaskAssignedNotification($task));
-            app(NotifyClient::class)->taskAssigned($task, $assignee, $by);
+            if (app(NotificationPreferences::class)->wants($assignee, 'assigned', 'email')) {
+                app(NotifyClient::class)->taskAssigned($task, $assignee, $by);
+            }
         }
     }
 

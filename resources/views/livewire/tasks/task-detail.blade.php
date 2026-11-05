@@ -370,26 +370,62 @@
                     </div>
                 @endcanany
 
-                <h3 class="section-title" style="font-size:14px">Comments</h3>
-                @forelse($task->comments as $comment)
-                    <div class="comment">
-                        <div class="comment-who">
-                            <b>{{ $comment->user->name }}</b>
-                            <span>{{ $comment->created_at->diffForHumans() }}</span>
-                        </div>
-                        <p>{!! $this->mentions->render($comment->body) !!}</p>
+                <h3 class="section-title" style="font-size:14px">Files</h3>
+                @foreach($task->attachments as $file)
+                    <div class="step" wire:key="file-{{ $file->id }}">
+                        <a class="step-title link" style="text-decoration:none" href="{{ route('tasks.files', [$task, $file]) }}">{{ $file->name }}</a>
+                        <span class="num" style="color:var(--muted);font-size:12px">{{ \Illuminate\Support\Number::fileSize($file->size) }}</span>
+                        @can('update', $task)
+                            <button type="button" class="btn small quiet" wire:click="removeFile({{ $file->id }})" wire:confirm="Remove {{ $file->name }}?" aria-label="Remove {{ $file->name }}">Remove</button>
+                        @endcan
                     </div>
+                @endforeach
+                @if($task->attachments->isEmpty())<p style="color:var(--muted)">No files.</p>@endif
+                @can('update', $task)
+                    <label class="btn small" style="margin-top:6px;cursor:pointer">
+                        Attach a file
+                        <input class="sr" type="file" wire:model="upload" aria-label="Attach a file">
+                    </label>
+                    <span wire:loading wire:target="upload" style="color:var(--muted);font-size:12px">Uploading</span>
+                    @error('upload')<p class="error">{{ $message }}</p>@enderror
+                @endcan
+
+                <h3 class="section-title" style="font-size:14px">Comments</h3>
+                @forelse($this->discussion as $thread)
+                    @include('livewire.tasks.partials.comment', ['comment' => $thread['comment'], 'reply' => false])
+                    @foreach($thread['replies'] as $reply)
+                        @include('livewire.tasks.partials.comment', ['comment' => $reply, 'reply' => true])
+                    @endforeach
                 @empty
                     <p style="color:var(--muted)">No comments yet.</p>
                 @endforelse
 
                 @can('comment', $task)
                     <form wire:submit="addComment" style="margin-top:10px">
+                        @if($replyingTo)
+                            <p style="margin-bottom:4px;color:var(--muted);font-size:12px">Replying. <button type="button" class="link" wire:click="replyTo(null)">Cancel</button></p>
+                        @endif
                         <textarea class="textarea" wire:model="commentBody" rows="2" placeholder="Add a comment..." aria-label="Add a comment"></textarea>
                         @error('commentBody')<p class="error">{{ $message }}</p>@enderror
                         <p style="margin:4px 0 8px;color:var(--muted);font-size:12px">Type @ and a teammate's full name to notify them.</p>
-                        <button type="submit" class="btn">Comment</button>
+                        <div class="page-actions">
+                            <button type="submit" class="btn">Comment</button>
+                            <label class="pick-line" style="padding:0"><input type="checkbox" wire:model="commentInternal"> Internal note, hidden from viewers</label>
+                        </div>
                     </form>
+                    <details class="repeat" x-data="{ person: '', note: '' }">
+                        <summary style="color:var(--muted);font-size:12px;cursor:pointer">Hand this task over</summary>
+                        @error('handover')<p class="error">{{ $message }}</p>@enderror
+                        <label class="sr" for="handover-person">Hand over to</label>
+                        <select class="select" id="handover-person" x-model="person" style="margin-bottom:6px">
+                            <option value="">Who to</option>
+                            @foreach($this->assignableUsers as $member)
+                                <option value="{{ $member->id }}">{{ $member->name }}</option>
+                            @endforeach
+                        </select>
+                        <textarea class="textarea" rows="2" x-model="note" aria-label="What they need to know" placeholder="What they need to know"></textarea>
+                        <button type="button" class="btn small" style="margin-top:6px" x-on:click="if (person) { $wire.handOver(Number(person), note); note = '' }">Hand over</button>
+                    </details>
                 @endcan
 
                 @if($task->activities->isNotEmpty())

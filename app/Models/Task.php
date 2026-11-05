@@ -4,13 +4,13 @@ namespace App\Models;
 
 use App\Models\Concerns\Archivable;
 use App\Models\Scopes\NotArchivedScope;
+use App\Support\Today;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Support\Carbon;
 
 class Task extends Model
 {
@@ -114,8 +114,8 @@ class Task extends Model
     public function scopeDueState(Builder $query, string $state): void
     {
         match ($state) {
-            'overdue' => $query->whereNotNull('tasks.due_date')->whereDate('tasks.due_date', '<', Carbon::today())->where('tasks.status', '!=', 'done'),
-            'today' => $query->whereDate('tasks.due_date', Carbon::today())->where('tasks.status', '!=', 'done'),
+            'overdue' => $query->whereNotNull('tasks.due_date')->whereDate('tasks.due_date', '<', Today::date())->where('tasks.status', '!=', 'done'),
+            'today' => $query->whereDate('tasks.due_date', Today::date())->where('tasks.status', '!=', 'done'),
             'none' => $query->whereNull('tasks.due_date'),
             default => null,
         };
@@ -181,6 +181,12 @@ class Task extends Model
         return $this->belongsToMany(Label::class, 'task_label');
     }
 
+    /** People following this task without working on it. */
+    public function watchers(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'task_watchers');
+    }
+
     public function collaborators(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'task_collaborators');
@@ -190,6 +196,11 @@ class Task extends Model
     public function fieldValues(): HasMany
     {
         return $this->hasMany(TaskFieldValue::class);
+    }
+
+    public function attachments(): HasMany
+    {
+        return $this->hasMany(TaskAttachment::class)->orderBy('id');
     }
 
     public function checklistItems(): HasMany
@@ -218,6 +229,22 @@ class Task extends Model
         return $this->blockedBy->contains(fn (Task $blocker) => in_array($blocker->pivot->type, ['ff', 'fs'], true)
             ? $blocker->status !== 'done'
             : $blocker->status === 'todo');
+    }
+
+    /** Past its date and not finished, by the team's own calendar. */
+    public function isOverdue(): bool
+    {
+        return $this->status !== 'done' && $this->due_date !== null && $this->due_date->lt(Today::date());
+    }
+
+    public function isDueToday(): bool
+    {
+        return $this->due_date !== null && $this->due_date->isSameDay(Today::date());
+    }
+
+    public function isDueTomorrow(): bool
+    {
+        return $this->due_date !== null && $this->due_date->isSameDay(Today::date()->addDay());
     }
 
     public function isRecurring(): bool

@@ -7,8 +7,8 @@ use App\Models\TaskList;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\TaskEditor;
+use App\Support\Today;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -54,7 +54,7 @@ class TeamWork extends Component
     #[Computed]
     public function people(): array
     {
-        $today = Carbon::today();
+        $today = Today::date();
         $boardId = ctype_digit($this->board) && $this->boards->contains('id', (int) $this->board) ? (int) $this->board : null;
 
         $tasks = Task::forTeam($this->team())

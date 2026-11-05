@@ -7,7 +7,7 @@ use App\Models\TaskList;
 use App\Models\TaskTemplate;
 use App\Models\Team;
 use App\Models\User;
-use Illuminate\Support\Carbon;
+use App\Support\Today;
 use Illuminate\Support\Facades\DB;
 
 /** Make a template from a task, make a task from a template, and offer a team some to start from. Callers authorize first. */
@@ -61,7 +61,7 @@ class TaskTemplates
                 'description' => $template->description,
                 'status' => 'todo',
                 'priority' => $template->priority,
-                'due_date' => $template->due_in_days === null ? null : Carbon::today()->addDays($template->due_in_days),
+                'due_date' => $template->due_in_days === null ? null : Today::date()->addDays($template->due_in_days),
                 'estimated_minutes' => $template->estimated_minutes,
                 'sort_order' => (int) $board->tasks()->where('status', 'todo')->max('sort_order') + 1,
             ]);

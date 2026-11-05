@@ -4,10 +4,13 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TaskComment extends Model
 {
-    protected $fillable = ['task_id', 'user_id', 'body'];
+    protected $fillable = ['task_id', 'user_id', 'body', 'parent_id', 'internal'];
+
+    protected $casts = ['internal' => 'boolean'];
 
     public function task(): BelongsTo
     {
@@ -17,5 +20,10 @@ class TaskComment extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(TaskComment::class, 'parent_id')->orderBy('id');
     }
 }

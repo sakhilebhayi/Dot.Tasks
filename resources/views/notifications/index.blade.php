@@ -5,6 +5,7 @@
                 <h1>Notifications</h1>
                 <p>Task assignments, comments, and due-date reminders.</p>
             </div>
+            <div class="page-actions"><a class="btn" href="{{ route('notifications.settings') }}">Settings</a></div>
         </div>
 
         @if($notifications->isEmpty())
