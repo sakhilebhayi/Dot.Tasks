@@ -11,11 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { darkMode: 'class', corePlugins: { preflight: false } }</script>
-    {{-- Only Echo/Reverb (task board realtime updates) needs the Vite bundle here --
-         Tailwind/Alpine stay CDN-loaded, unchanged, per this layout's existing convention. --}}
-    @vite(['resources/js/app.js'])
+    @vite(['resources/css/signed-in.css', 'resources/js/app.js'])
     <script>
         // Dark mode: this dashboard's own markup is intentionally fixed-dark (inline styles,
         // not Tailwind dark: classes), so this toggle mainly affects Jetstream-rendered pages
