@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Models\DashboardLayout;
 use App\Models\Team;
 use App\Services\DashboardFigures;
+use App\Services\DashboardStats;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -68,6 +69,13 @@ class Dashboard extends Component
     private function boardId(): ?int
     {
         return ctype_digit($this->board) && $this->boards->contains('id', (int) $this->board) ? (int) $this->board : null;
+    }
+
+    /** @return array<string, int> */
+    #[Computed]
+    public function counts(): array
+    {
+        return app(DashboardStats::class)->forTeam($this->team());
     }
 
     /** @return array<string, mixed> */

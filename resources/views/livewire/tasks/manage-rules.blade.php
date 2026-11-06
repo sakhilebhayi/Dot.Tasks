@@ -161,7 +161,10 @@
     @endif
 
     @if($this->rules->isEmpty())
-        <div class="empty">No rules yet.</div>
+        <div class="empty">
+            <p>No rules yet.</p>
+            <p>A rule does one repetitive job, such as handing every new safety task to the same person. It stays off until someone turns it on.</p>
+        </div>
     @else
         <div class="rows">
             @foreach($this->rules as $rule)

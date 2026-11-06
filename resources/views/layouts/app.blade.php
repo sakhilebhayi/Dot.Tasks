@@ -37,21 +37,18 @@
 
         <nav class="nav" aria-label="Primary">
             @foreach ([
-                ['tasks.today', 'day', 'My Day'],
-                ['tasks.inbox', 'inbox', 'Inbox'],
-                ['tasks.mine', 'check', 'My tasks'],
-                ['tasks.upcoming', 'calendar', 'Upcoming'],
-                ['tasks.team', 'team', 'Team'],
-                ['dashboard', 'home', 'Overview'],
-                ['reports.index', 'report', 'Reports'],
-                ['tasks.templates', 'copy', 'Templates'],
-                ['tasks.automation', 'bolt', 'Automation'],
-                ['labels.index', 'label', 'Labels and fields'],
-                ['removed.index', 'trash', 'Removed'],
-            ] as [$route, $icon, $label])
-                <a href="{{ route($route) }}" class="nav-item {{ request()->routeIs($route) ? 'active' : '' }}" @if (request()->routeIs($route)) aria-current="page" @endif>
-                    <x-icon :name="$icon" /> {{ $label }}
-                </a>
+                '' => [['tasks.today', 'day', 'My Day'], ['tasks.inbox', 'inbox', 'Inbox'], ['tasks.mine', 'check', 'My tasks'], ['tasks.upcoming', 'calendar', 'Upcoming']],
+                'Team' => [['dashboard', 'home', 'Overview'], ['tasks.team', 'team', 'Who holds what'], ['reports.index', 'report', 'Reports']],
+                'Set up' => [['tasks.templates', 'copy', 'Templates'], ['tasks.automation', 'bolt', 'Automation'], ['labels.index', 'label', 'Labels and fields'], ['removed.index', 'trash', 'Removed']],
+            ] as $group => $items)
+                @if($group !== '')
+                    <div class="nav-group"><span>{{ $group }}</span></div>
+                @endif
+                @foreach ($items as [$route, $icon, $label])
+                    <a href="{{ route($route) }}" class="nav-item {{ request()->routeIs($route) ? 'active' : '' }}" @if (request()->routeIs($route)) aria-current="page" @endif>
+                        <x-icon :name="$icon" /> {{ $label }}
+                    </a>
+                @endforeach
             @endforeach
 
             @auth
