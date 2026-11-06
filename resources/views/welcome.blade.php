@@ -1,3 +1,8 @@
+@php
+    // Public sign-up here is closed: an account starts on InfoDot, and this app makes its side at the first sign-in.
+    $open = \Laravel\Fortify\Features::enabled(\Laravel\Fortify\Features::registration());
+    $join = $open ? route('register') : config('ecosystem.signup_url');
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -24,9 +29,7 @@
                     <a class="btn primary" href="{{ url('/dashboard') }}">Open Dot.Tasks</a>
                 @else
                     <a class="btn quiet" href="{{ route('login') }}">Sign in</a>
-                    @if (Route::has('register'))
-                        <a class="btn primary" href="{{ route('register') }}">Create account</a>
-                    @endif
+                    <a class="btn primary l-join" href="{{ $join }}">Create account</a>
                 @endauth
             </nav>
         </header>
@@ -40,12 +43,13 @@
                         @auth
                             <a class="btn primary" href="{{ url('/dashboard') }}">Open Dot.Tasks</a>
                         @else
-                            @if (Route::has('register'))
-                                <a class="btn primary" href="{{ route('register') }}">Create account</a>
-                            @endif
+                            <a class="btn primary" href="{{ $join }}">Create account</a>
                             <a class="btn" href="{{ route('login') }}">Sign in</a>
                         @endauth
                     </div>
+                    @guest
+                        @unless($open)<p class="l-note">Accounts are made on InfoDot. Dot.Tasks opens from there.</p>@endunless
+                    @endguest
                 </div>
                 <div class="l-rack" aria-hidden="true">
                     <div class="l-col">
@@ -134,9 +138,7 @@
                         @auth
                             <a class="btn" href="{{ url('/dashboard') }}">Open Dot.Tasks</a>
                         @else
-                            @if (Route::has('register'))
-                                <a class="btn" href="{{ route('register') }}">Create account</a>
-                            @endif
+                            <a class="btn" href="{{ $join }}">Create account</a>
                             <a class="btn quiet" href="{{ route('login') }}">Sign in</a>
                         @endauth
                     </div>

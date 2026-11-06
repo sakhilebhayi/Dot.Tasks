@@ -4,9 +4,9 @@ Brief: `docs/programme/requirements/dot-tasks-transformation.md`, section 22. Au
 
 ## Where it stands
 
-T1 to T9 are built and merged to `main`. **None of it is in production.** The last production deploy was in late October, before T1. The deploy is manual and the owner runs it.
+T1 to T9 are built, merged and live on `tasks.infodot.co.za`, deployed on 2026-11-06 (run 42238976057). The deploy's gate, migrations and smoke check passed. After it, `/up`, `/ready` and `/up/scheduler` answered 200, with no migrations pending and the scheduler and queue both beating. The script policy is enforced and HSTS is on. `/up/realtime` answers 503 because Reverb does not run on this host, and `/guardian/health` answers 503 because no token is set.
 
-This report does not call the platform production-ready. It is ready to deploy. What can only be proven after that is listed under production blockers.
+This report does not call the platform production-ready. Signed-in pages have not been checked on the live site, and what can only be proven there is listed under production blockers.
 
 | Check | Result |
 |---|---|
@@ -186,14 +186,11 @@ In a browser, on the single-threaded local server with SQLite: the board loaded 
 
 **Owner only:**
 
-1. Run the deploy.
-2. Take a database backup first, and run the deploy when a failed migration can be handled. 12 migrations have not run on real data.
-3. Prove recovery: restore a backup and run `tasks:verify-restore`. Attachments live on the disk, so the backup must include `storage/app/private`. The Mac backups were failing at last check.
-4. Renew `infodot.co.za` before 2026-11-27 13:53 UTC.
-5. Merge sakhilebhayi/Dot.Files#122 when Files integration is wanted, then set the matching secrets.
+1. Prove recovery: restore a backup and run `tasks:verify-restore`. Attachments live on the disk, so the backup must include `storage/app/private`. The Mac backups were failing at last check.
+2. Renew `infodot.co.za` before 2026-11-27 13:53 UTC.
+3. Merge sakhilebhayi/Dot.Files#122 when Files integration is wanted, then set the matching secrets.
 
-**To check straight after the deploy:**
+**Still to check on the live site:**
 
-- `/up`, `/ready`, `/up/scheduler` and `/guardian/health` answer as expected. `/up/scheduler` shows whether `schedule:run` fires, which `tasks:run-rules` depends on.
-- The enforced script policy on the live host: no violations in the `/csp-report` logs, and the board, panel and drag work. Set `SECURITY_CSP_REPORT_ONLY=true` if not.
+- The enforced script policy on signed-in pages: no violations in the `/csp-report` logs, and the board, panel and drag work. Set `SECURITY_CSP_REPORT_ONLY=true` if not.
 - The upload limit on the host allows the attachment size.
