@@ -13,9 +13,7 @@ use Illuminate\Support\Carbon;
  * Counts go through Task::forTeam like every team-wide query, so another
  * team's tasks never leak in; archived and deleted tasks and tasks on archived
  * boards are already left out by the models' scopes. Due-today and overdue
- * mean "not done yet". "Completed this week" counts done tasks last touched
- * since Monday, which is when a task was moved to done (there is no separate
- * completed-at column).
+ * mean "not done yet". "Completed this week" counts tasks finished since Monday.
  */
 class DashboardStats
 {
@@ -37,7 +35,7 @@ class DashboardStats
                 COALESCE(SUM(CASE WHEN tasks.status = 'done' THEN 1 ELSE 0 END), 0) AS done,
                 COALESCE(SUM(CASE WHEN tasks.status <> 'done' AND DATE(tasks.due_date) = ? THEN 1 ELSE 0 END), 0) AS due_today,
                 COALESCE(SUM(CASE WHEN tasks.status <> 'done' AND DATE(tasks.due_date) < ? THEN 1 ELSE 0 END), 0) AS overdue,
-                COALESCE(SUM(CASE WHEN tasks.status = 'done' AND tasks.updated_at >= ? THEN 1 ELSE 0 END), 0) AS completed_week",
+                COALESCE(SUM(CASE WHEN tasks.status = 'done' AND tasks.completed_at >= ? THEN 1 ELSE 0 END), 0) AS completed_week",
                 [$today, $today, $weekStart]
             )
             ->first();

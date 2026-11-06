@@ -50,6 +50,11 @@ class Task extends Model
         static::created(fn (Task $task) => app(Automations::class)->fire('created', $task, 'created:'.$task->id));
 
         static::saving(function (Task $task) {
+            // However a task came to be done, the reports need to know when.
+            if ($task->status === 'done' && $task->completed_at === null) {
+                $task->completed_at = now();
+            }
+
             if ($task->status_id && ! $task->isDirty(['task_list_id', 'status', 'status_id'])) {
                 return;
             }
@@ -77,6 +82,14 @@ class Task extends Model
 
         $query->whereHas('taskList', fn (Builder $list) => $list->where('team_id', $teamId)
             ->where(fn (Builder $mine) => $mine->where('is_inbox', false)->orWhere('owner_id', auth()->id())));
+    }
+
+    /** A person's own work: given to them, shared with them, or in their Inbox. forTeam shows nobody else's Inbox. @param Builder<Task> $query */
+    public function scopeMine(Builder $query, User $user): void
+    {
+        $query->where(fn ($q) => $q->where('tasks.assignee_id', $user->id)
+            ->orWhereHas('collaborators', fn ($people) => $people->whereKey($user->id))
+            ->orWhereHas('taskList', fn ($list) => $list->where('is_inbox', true)));
     }
 
     /** A team's tasks with nobody signed in: only for rules and reports, and never with anyone's Inbox. @param Builder<Task> $query */
