@@ -7,6 +7,7 @@ use App\Models\TaskList;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\TaskEditor;
+use App\Services\WorkloadCheck;
 use App\Support\Today;
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Support\Collection;
@@ -74,6 +75,9 @@ class TeamWork extends Component
             default => true,
         };
 
+        $people = max(1, $this->members->count());
+        $average = $tasks->whereNotNull('assignee_id')->count() / $people;
+
         $slot = fn (string $key, string $name, Collection $held) => [
             'key' => $key,
             'name' => $name,
@@ -82,6 +86,7 @@ class TeamWork extends Component
             'blocked' => $held->filter($isBlocked)->count(),
             'minutes' => (int) $held->sum('estimated_minutes'),
             'tasks' => $held->filter($wanted)->values(),
+            'flags' => $key === 'none' ? [] : app(WorkloadCheck::class)->flags($held, $average),
         ];
 
         return $this->members

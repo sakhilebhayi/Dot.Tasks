@@ -3,8 +3,14 @@
         <div class="veil over-sheet" wire:click="close"></div>
         <div class="dialog" role="dialog" aria-modal="true" aria-label="Find a task" x-data x-on:keydown.escape.window="$wire.close()">
             <label class="sr" for="find-input">Find a task</label>
-            <input class="input" id="find-input" type="search" wire:model.live.debounce.200ms="query" placeholder="Find a task" autocomplete="off" x-init="$nextTick(() => $el.focus())">
+            <input class="input" id="find-input" type="search" wire:model.live.debounce.200ms="query" placeholder="Find a task, or ask: overdue maintenance for James" autocomplete="off" x-init="$nextTick(() => $el.focus())">
             @if(mb_strlen(trim($query)) >= 2)
+                @if($this->reading['understood'] !== [])
+                    <div class="page-actions" style="margin-top:8px" aria-label="What was understood">
+                        @foreach($this->reading['understood'] as $part)<span class="chip">{{ $part }}</span>@endforeach
+                        @if($this->reading['words'] !== '')<span class="chip">Words: {{ $this->reading['words'] }}</span>@endif
+                    </div>
+                @endif
                 @if($this->results->isEmpty())
                     <p style="padding:16px 4px 4px;color:var(--muted)">Nothing matches that.</p>
                 @else

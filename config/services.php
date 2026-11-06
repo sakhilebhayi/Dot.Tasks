@@ -57,9 +57,11 @@ return [
 
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
-        'model' => env('ANTHROPIC_MODEL', 'claude-sonnet-4-6'),
-        'version' => env('ANTHROPIC_VERSION', '2023-06-01'),
-        'timeout' => (int) env('ANTHROPIC_TIMEOUT', 30),
+        'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),
+        'version' => env('ANTHROPIC_VERSION', '2026-10-21'),
+        'timeout' => (int) env('ANTHROPIC_TIMEOUT', 60),
+        // Input plus output tokens a month, across the whole app. AI stays off while this is 0.
+        'monthly_token_cap' => (int) env('ANTHROPIC_MONTHLY_TOKEN_CAP', 0),
     ],
 
 ];

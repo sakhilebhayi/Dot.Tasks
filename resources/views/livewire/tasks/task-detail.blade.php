@@ -20,6 +20,17 @@
                     <p class="blocked-line" style="margin:0 0 8px">This task cannot be marked done until {{ $this->openBlockers->count() === 1 ? 'its blocker is' : 'its blockers are' }} done.</p>
                 @endif
 
+                @can('update', $task)
+                    @if($this->gaps !== [] && $task->status !== 'done')
+                        <details class="gaps">
+                            <summary>{{ count($this->gaps) }} {{ \Illuminate\Support\Str::plural('thing', count($this->gaps)) }} could be clearer</summary>
+                            <ul>
+                                @foreach($this->gaps as $gap)<li>{{ $gap }}</li>@endforeach
+                            </ul>
+                        </details>
+                    @endif
+                @endcan
+
                 <div class="props">
                     <span>Status</span>
                     @can('move', $task)
@@ -284,12 +295,24 @@
                     <h3 style="font-size:14px;font-weight:600">Subtasks ({{ $task->subtasks->count() }})</h3>
                     @can('update', $task)
                         <button class="btn small" wire:click="aiBreakdown" wire:loading.attr="disabled">
-                            <span wire:loading.remove wire:target="aiBreakdown">AI Breakdown</span>
-                            <span wire:loading wire:target="aiBreakdown">Breaking down...</span>
+                            <span wire:loading.remove wire:target="aiBreakdown">Suggest subtasks</span>
+                            <span wire:loading wire:target="aiBreakdown">Thinking...</span>
                         </button>
                     @endcan
                 </div>
                 @if($aiError)<p class="error">{{ $aiError }}</p>@endif
+                @if($suggested !== [])
+                    <div class="suggested" x-data="{ picked: @js(array_keys($suggested)) }">
+                        <p class="suggested-note">Suggested by AI. Nothing is added until you choose.</p>
+                        @foreach($suggested as $index => $item)
+                            <label class="pick-line" wire:key="suggested-{{ $index }}"><input type="checkbox" value="{{ $index }}" x-model.number="picked"> {{ $item['title'] }}@if($item['estimated_minutes']) <span class="num" style="color:var(--muted);font-size:12px">{{ $item['estimated_minutes'] }}m</span>@endif</label>
+                        @endforeach
+                        <div class="page-actions" style="margin-top:6px">
+                            <button type="button" class="btn small primary" style="opacity:1" x-on:click="$wire.acceptSuggested(picked)">Add these</button>
+                            <button type="button" class="btn small quiet" style="opacity:1" wire:click="dismissSuggested">Dismiss</button>
+                        </div>
+                    </div>
+                @endif
                 @if($task->subtasks->isNotEmpty())
                     <div @can('update', $task) x-data="stepList('placeSubtask')" @endcan>
                     @foreach($task->subtasks as $sub)
@@ -416,7 +439,20 @@
                     @error('upload')<p class="error">{{ $message }}</p>@enderror
                 @endcan
 
-                <h3 class="section-title" style="font-size:14px">Comments</h3>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px">
+                    <h3 style="font-size:14px;font-weight:600">Comments</h3>
+                    @if($task->comments->count() >= 3)
+                        <button type="button" class="btn small" wire:click="aiSummary" wire:loading.attr="disabled" wire:target="aiSummary">Summarise</button>
+                    @endif
+                </div>
+                @if($summary !== [])
+                    <div class="suggested">
+                        <p class="suggested-note">Summarised by AI. Each point names the comments it came from.</p>
+                        @foreach($summary as $point)
+                            <p>{{ $point['text'] }} <span style="color:var(--muted);font-size:12px">{{ implode(', ', $point['sources']) }}</span></p>
+                        @endforeach
+                    </div>
+                @endif
                 @forelse($this->discussion as $thread)
                     @include('livewire.tasks.partials.comment', ['comment' => $thread['comment'], 'reply' => false])
                     @foreach($thread['replies'] as $reply)
