@@ -12,7 +12,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     @vite(['resources/css/signed-in.css', 'resources/css/job-card.css', 'resources/js/app.js'])
-    <script>
+    <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         (function () {
             var stored = null;
             try { stored = localStorage.getItem('dot-theme'); } catch (e) {}

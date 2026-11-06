@@ -117,6 +117,18 @@ const nextId = (item) => {
 const blockedFromDone = (card, list) => (list.dataset.category === 'done' && card.dataset.blocked !== undefined ? 'A blocked task cannot be finished yet.' : null);
 
 // The tasks on screen come back every 20 seconds, unless someone is in the middle of something.
+/* Reverb is optional: without it window.Echo is absent and the 20-second pulse keeps the board current. */
+function boardLive(listId) {
+    return {
+        init() {
+            window.Echo?.private(`task-list.${listId}`).listen('.board.updated', () => this.$wire.refreshBoard());
+        },
+        destroy() {
+            window.Echo?.leave(`task-list.${listId}`);
+        },
+    };
+}
+
 function pulse(seconds = 20) {
     return {
         init() {
@@ -453,4 +465,5 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('boardColumn', boardColumn);
     window.Alpine.data('stepList', stepList);
     window.Alpine.data('pulse', pulse);
+    window.Alpine.data('boardLive', boardLive);
 });

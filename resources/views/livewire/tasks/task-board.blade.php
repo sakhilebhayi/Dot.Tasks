@@ -65,16 +65,5 @@
 
     <div x-data="pulse" hidden></div>
 
-    <script>
-        document.addEventListener('livewire:init', () => {
-            if (! window.Echo) {
-                return; // BROADCAST_CONNECTION isn't reverb (e.g. local "log"/tests) -- nothing to subscribe to.
-            }
-
-            window.Echo.private(`task-list.{{ $taskList->id }}`)
-                .listen('.board.updated', () => {
-                    $wire.call('refreshBoard');
-                });
-        });
-    </script>
+    <div x-data="boardLive({{ $taskList->id }})" hidden></div>
 </div>
