@@ -7,6 +7,7 @@ use App\Http\Controllers\GuardianHealthController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ReadyController;
 use App\Http\Controllers\RealtimeHealthController;
+use App\Http\Controllers\ReportExportController;
 use App\Http\Controllers\SchedulerProbeController;
 use App\Http\Controllers\TaskFileController;
 use App\Http\Controllers\TaskListController;
@@ -82,6 +83,8 @@ Route::middleware([
     Route::get('/labels', fn () => view('labels.index'))->name('labels.index');
     Route::get('/templates', fn () => view('tasks.templates'))->name('tasks.templates');
     Route::get('/automation', fn () => view('tasks.automation'))->name('tasks.automation');
+    Route::get('/reports', fn () => view('tasks.reports'))->name('reports.index');
+    Route::get('/reports/export', ReportExportController::class)->name('reports.export');
     Route::get('/tasks/{task}/files/{attachment}', [TaskFileController::class, 'show'])->name('tasks.files');
     Route::get('/notifications/settings', fn () => view('notifications.settings'))->name('notifications.settings');
 

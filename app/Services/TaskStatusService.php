@@ -73,7 +73,7 @@ class TaskStatusService
             });
 
             if ($was !== $status || $wasIn !== $task->status_id) {
-                $this->history->record($task, 'status', match (true) {
+                $this->history->record($task, $was === 'done' && $status !== 'done' ? 'reopened' : 'status', match (true) {
                     $was !== 'done' && $status === 'done' => 'Finished it',
                     $was === 'done' && $status !== 'done' => 'Reopened it',
                     default => 'Moved it to '.($column?->name ?? TaskStatus::find($task->status_id)?->name ?? $status),
