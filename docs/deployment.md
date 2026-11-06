@@ -178,6 +178,13 @@ ANTHROPIC_API_KEY=
 NOTIFY_INGEST_URL=
 NOTIFY_INGEST_SECRET=
 NOTIFY_PLATFORM_KEY=tasks
+
+# Copies of task files in Dot.Files (blank = the action stays hidden).
+# FILES_PLATFORM_SECRET here equals DOT_SERVICE_SECRET_TASKS on Dot.Files.
+FILES_PLATFORM_SECRET=
+
+# Back to report-only without a deploy, if the enforced script policy blocks something.
+# SECURITY_CSP_REPORT_ONLY=true
 ```
 
 Why these values: `QUEUE_CONNECTION`, `CACHE_STORE` and `SESSION_DRIVER` must be `database` (there is no Redis; `.env.production.example` says `QUEUE_CONNECTION=redis`). `APP_ENV=production` and `APP_DEBUG=false` are forced by every deploy anyway. The `DOT_*_URL` values matter: `config/ecosystem.php` defaults them to `https://<key>.infodot.app`, which is not where these apps run, and the platform switcher builds its links from them. Mail: with `MAIL_MAILER=log` (the default) verification and password-reset emails vanish; use the SMTP account the other Dot apps use.
@@ -244,8 +251,9 @@ Code and files only. Over SSH: put the site in maintenance mode, `tar xzf ~/dot-
 - **Nothing was run against a host.** Untested on the real account: the `find` for the app folder, `rsync` to `public/build.incoming`, `flock`, the real `crontab`, cPanel's LiteSpeed in front of the app, the docroot wiring, the smoke URLs from a GitHub runner.
 - The shared-crontab block was run against a fake `crontab` (empty first reads, other apps' lines, a stray line, a bad read-back); `flock` itself was not exercised (macOS has none), the real file lock is only as good as the reference pipelines that use it.
 - No Reverb (above): no live updates, by design, until a host that can run it exists.
-- No scheduler watchdog and no `/up/scheduler` probe (Dot.Agents has both); a dead cron is found by reading `cron-scheduler.log` or by a missing effect.
+- `/up/scheduler` shows whether cron fires; nothing watches it yet. A dead cron stops `tasks:run-rules`, so rules, delays and dated triggers wait.
 - No automated database backup, and no restore automation. The pipeline neither takes nor verifies a database backup; it prints the driver and warns.
+- After restoring a backup, run `php artisan tasks:verify-restore --connection=restore --against=pgsql`. It checks migrations, row counts, encrypted values against this `APP_KEY`, and a sample of attached files. Attachments are on the disk under `storage/app/private`, so a database backup alone does not bring them back.
 - A deploy always migrates; there is no "deploy without migrating" except in `adopt`.
 - A release deploys the branch tip, not a chosen commit or tag.
 - One server, one crontab, one queue: the worker count is whatever `* * * * *` and `--max-time=50` give you.

@@ -40,7 +40,8 @@ class AuditedSetup
     {
         $team = $model instanceof TaskStatus ? $model->taskList?->team_id : $model->team_id;
 
-        if ($team !== null) {
+        // A person's private Inbox is theirs, not part of how the business is set up.
+        if ($team !== null && ! ($model instanceof TaskList && $model->is_inbox)) {
             AuditLog::record($team, $action, $words.' '.self::NAMES[$model::class].' "'.$model->name.'"'.$detail);
         }
     }
