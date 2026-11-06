@@ -16,6 +16,7 @@ use App\Services\TaskEditor;
 use App\Services\TaskSentenceReader;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -594,8 +595,8 @@ class TaskCoreTest extends TestCase
         $f = $this->teamFixture();
         $migration = include database_path('migrations/2026_11_06_000001_add_task_lifecycle_fields.php');
         $migration->down();
-        $done = $f->list->tasks()->create(['title' => 'Old', 'status' => 'done']);
-        $open = $f->list->tasks()->create(['title' => 'Open', 'status' => 'todo']);
+        $done = Task::find(DB::table('tasks')->insertGetId(['task_list_id' => $f->list->id, 'title' => 'Old', 'status' => 'done', 'updated_at' => now()]));
+        $open = Task::find(DB::table('tasks')->insertGetId(['task_list_id' => $f->list->id, 'title' => 'Open', 'status' => 'todo']));
 
         $migration->up();
 

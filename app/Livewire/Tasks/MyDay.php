@@ -36,12 +36,7 @@ class MyDay extends Component
     /** @return Builder<Task> tasks that are this person's: given to them, shared with them, or in their Inbox */
     private function mine(): Builder
     {
-        $me = auth()->id();
-
-        return Task::forTeam($this->user()->currentTeam)
-            ->where(fn ($q) => $q->where('tasks.assignee_id', $me)
-                ->orWhereHas('collaborators', fn ($people) => $people->whereKey($me))
-                ->orWhereHas('taskList', fn ($list) => $list->where('is_inbox', true))) // forTeam shows nobody else's Inbox.
+        return Task::forTeam($this->user()->currentTeam)->mine($this->user())
             ->with(['taskList:id,team_id,name,is_inbox,owner_id', 'blockedBy:id,status']);
     }
 

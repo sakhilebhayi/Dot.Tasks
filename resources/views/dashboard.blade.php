@@ -20,6 +20,8 @@
             <div class="figure"><span>Completed</span><b>{{ $taskCounts['done'] }}</b></div>
         </div>
 
+        <livewire:dashboard />
+
         <h2 class="section-title">Boards</h2>
         @if($lists->isEmpty())
             <div class="empty">
