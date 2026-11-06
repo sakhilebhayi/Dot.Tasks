@@ -107,6 +107,8 @@ Concurrent edits: a save of long text that would overwrite someone else's stops 
 
 One slip to record: `database/dev.sqlite` and `database/dusk.sqlite` were on a pushed branch of this public repository for a short time during T6b (commit 59bdada). They held local fake data and a test password hash only. They never reached `main`, and `.gitignore` now excludes them.
 
+A second slip: #56 was merged with its browser job red. The failure was a race in the test setup, not in the product, and the same code passed all three jobs on `main`. The cause, a cookie shared between journeys, was fixed in the next pull request.
+
 ## Performance
 
 `LoadSeeder`: 20,200 synthetic tasks, 8 boards, 20 people, 2,000 tasks on the measured board. Server time through the HTTP kernel on PostgreSQL 16 on a laptop, best of three, before and after batching:
