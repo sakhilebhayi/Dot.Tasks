@@ -36,6 +36,23 @@
         </section>
 
         <div class="day-sources">
+            @if($this->focus !== [])
+                <section aria-labelledby="focus-heading">
+                    <h3 class="group-head" style="padding-top:0" id="focus-heading">Worth doing first <span class="count" title="A suggestion, worked out from the dates, priority and links on these tasks">suggested</span></h3>
+                    <div class="source" data-source x-data="dayPlan">
+                        @foreach($this->focus as $row)
+                            @php $task = $row['task']; @endphp
+                            <div class="day-card" wire:key="focus-{{ $task->id }}" data-task="{{ $task->id }}" data-title="{{ $task->title }}" data-date="{{ $task->due_date?->toDateString() }}">
+                                <button type="button" class="day-title" wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })">
+                                    <b>{{ $task->title }}</b>
+                                    <span class="focus-why">{{ implode('. ', $row['reasons']) }}.</span>
+                                </button>
+                                <button type="button" class="icon-btn" aria-label="Add {{ $task->title }} to the plan" wire:click="planIt({{ $task->id }})"><x-icon name="plus" /></button>
+                            </div>
+                        @endforeach
+                    </div>
+                </section>
+            @endif
             @foreach([
                 ['To approve', $this->toApprove, 'approve'],
                 ['Overdue', $this->overdue, 'overdue'],

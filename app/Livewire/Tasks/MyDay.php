@@ -5,6 +5,7 @@ namespace App\Livewire\Tasks;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\DayPlanner;
+use App\Services\FocusRanking;
 use App\Services\TaskEditor;
 use App\Services\TaskStatusService;
 use App\Support\Today;
@@ -112,6 +113,16 @@ class MyDay extends Component
             // Unqualified: in a link from tasks to tasks, the other task is an alias, and `tasks.status` would be this one.
             ->orWhereHas('blockedBy', fn ($b) => $b->where(fn ($link) => $link->whereIn('task_dependencies.type', ['ff', 'fs'])->where('status', '!=', 'done'))
                 ->orWhere(fn ($link) => $link->whereIn('task_dependencies.type', ['ss', 'sf'])->where('status', 'todo')))));
+    }
+
+    /** What may deserve attention first, with the reason for each. A suggestion, from the dates and links on the tasks. */
+    #[Computed]
+    public function focus(): array
+    {
+        $tasks = $this->mine()->where('tasks.status', '!=', 'done')->whereNotIn('tasks.id', $this->planIds)
+            ->with('blocking:id,status')->limit(200)->get();
+
+        return app(FocusRanking::class)->rank($tasks);
     }
 
     /** Tasks waiting for this person to sign them off. */
@@ -284,7 +295,7 @@ class MyDay extends Component
 
     private function forget(): void
     {
-        unset($this->planIds, $this->plan, $this->leftOver, $this->overdue, $this->dueOnDay, $this->attention, $this->toApprove, $this->upcoming, $this->finished, $this->week);
+        unset($this->planIds, $this->plan, $this->leftOver, $this->overdue, $this->dueOnDay, $this->attention, $this->focus, $this->toApprove, $this->upcoming, $this->finished, $this->week);
     }
 
     public function render(): View

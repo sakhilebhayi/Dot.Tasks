@@ -16,6 +16,7 @@ use App\Services\CommentMentions;
 use App\Services\TaskApprovals;
 use App\Services\TaskArchiveService;
 use App\Services\TaskAttachments;
+use App\Services\TaskClarity;
 use App\Services\TaskCommentService;
 use App\Services\TaskDependencyService;
 use App\Services\TaskEditor;
@@ -24,10 +25,12 @@ use App\Services\TaskLabelService;
 use App\Services\TaskPlacement;
 use App\Services\TaskStatusService;
 use App\Services\TaskSteps;
+use App\Services\TaskSummaries;
 use App\Services\TaskTemplates;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Validate;
 use Livewire\Component;
@@ -45,6 +48,14 @@ class TaskDetail extends Component
 
     #[Validate('required|string|max:5000')]
     public string $commentBody = '';
+
+    /** Subtasks the AI suggests, waiting for a person to choose. @var list<array{title: string, priority: string, estimated_minutes: int|null}> */
+    #[Locked]
+    public array $suggested = [];
+
+    /** @var list<array{text: string, sources: list<string>}> */
+    #[Locked]
+    public array $summary = [];
 
     public ?int $replyingTo = null;
 
@@ -88,6 +99,8 @@ class TaskDetail extends Component
 
         $this->task = $task;
         $this->templateSaved = false;
+        $this->suggested = [];
+        $this->summary = [];
         $this->replyingTo = null;
         $this->commentInternal = false;
         $this->confirming = null;
@@ -340,6 +353,13 @@ class TaskDetail extends Component
         app(TaskStatusService::class)->move($sub, $sub->status === 'done' ? 'todo' : 'done');
 
         $this->refreshTask();
+    }
+
+    /** What this task still leaves open, from what is on it. @return list<string> */
+    #[Computed]
+    public function gaps(): array
+    {
+        return $this->task ? app(TaskClarity::class)->gaps($this->task) : [];
     }
 
     /** @return \Illuminate\Database\Eloquent\Collection<int, TaskField> */
@@ -681,6 +701,7 @@ class TaskDetail extends Component
         $this->refreshTask();
     }
 
+    /** Ask for suggested subtasks. Nothing is added until a person picks from them. */
     public function aiBreakdown(): void
     {
         if (! $this->task) {
@@ -689,38 +710,70 @@ class TaskDetail extends Component
 
         $this->authorize('update', $this->task);
 
-        $this->breaking = true;
         $this->aiError = null;
+        $this->suggested = [];
 
         $result = app(AiTaskBreakdownService::class)->breakdown($this->task, auth()->id());
 
         if ($result['source'] !== AiTaskBreakdownService::SOURCE_AI) {
             // Never fall back to canned subtasks: say plainly that the AI is
             // unavailable and create nothing.
-            $this->aiError = match ($result['reason'] ?? null) {
-                'not_configured' => 'AI breakdown unavailable: no API key is configured.',
-                default => 'AI breakdown unavailable: the AI service did not return a usable answer. Please try again later.',
-            };
-            $this->breaking = false;
+            $this->aiError = 'AI breakdown unavailable: '.$this->aiReason($result['reason'] ?? null);
 
             return;
         }
 
-        foreach ($result['subtasks'] ?? [] as $i => $sub) {
-            Task::create([
-                'task_list_id' => $this->task->task_list_id,
-                'parent_id' => $this->task->id,
-                'title' => $sub['title'],
-                'priority' => $sub['priority'] ?? 'medium',
-                'estimated_minutes' => $sub['estimated_minutes'] ?? null,
-                'status' => 'todo',
-                'creator_id' => auth()->id(),
-                'sort_order' => $i,
-            ]);
+        $this->suggested = $result['subtasks'];
+    }
+
+    /** @param  list<int|string>  $picked  positions in the suggestions */
+    public function acceptSuggested(array $picked): void
+    {
+        if (! $this->task) {
+            return;
         }
 
-        $this->breaking = false;
-        $this->task = $this->task->fresh(self::RELATIONS);
+        $this->authorize('update', $this->task);
+
+        foreach (array_map('intval', $picked) as $index) {
+            if (isset($this->suggested[$index])) {
+                $sub = app(TaskSteps::class)->addSubtask($this->task, $this->suggested[$index]['title']);
+                $sub->update(['priority' => $this->suggested[$index]['priority'], 'estimated_minutes' => $this->suggested[$index]['estimated_minutes']]);
+            }
+        }
+
+        $this->suggested = [];
+        $this->refreshTask();
+    }
+
+    public function dismissSuggested(): void
+    {
+        $this->suggested = [];
+    }
+
+    /** A summary with each point tied to the comments it came from. Shown, never saved. */
+    public function aiSummary(): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('view', $this->task);
+
+        $this->aiError = null;
+        $result = app(TaskSummaries::class)->summarise($this->task, auth()->id(), $this->discussion->flatMap(fn (array $t) => [$t['comment'], ...$t['replies']]));
+
+        $result['ok'] ? $this->summary = $result['points'] : $this->aiError = 'AI summary unavailable: '.$this->aiReason($result['reason'] ?? null);
+    }
+
+    private function aiReason(?string $reason): string
+    {
+        return match ($reason) {
+            'not_configured' => 'AI has not been set up for this workspace.',
+            'over_cap' => "this month's AI allowance is used up.",
+            'refused' => 'the AI service declined this request.',
+            default => 'the AI service did not return a usable answer. Please try again later.',
+        };
     }
 
     public function render(): View

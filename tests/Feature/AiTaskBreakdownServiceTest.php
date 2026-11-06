@@ -30,8 +30,9 @@ class AiTaskBreakdownServiceTest extends TestCase
 
     private function configureKey(): void
     {
-        config([
+        config(['services.anthropic.monthly_token_cap' => 100000,
             'services.anthropic.api_key' => 'test-key-not-real',
+            'services.anthropic.monthly_token_cap' => 100000,
             'services.anthropic.model' => 'claude-test-model',
         ]);
     }
@@ -59,7 +60,7 @@ class AiTaskBreakdownServiceTest extends TestCase
         Http::assertSent(function (Request $request) {
             return $request->url() === 'https://api.anthropic.com/v1/messages'
                 && $request->header('x-api-key') === ['test-key-not-real']
-                && $request->header('anthropic-version') === ['2023-06-01']
+                && $request->header('anthropic-version') === ['2026-10-21']
                 && $request->header('Authorization') === []
                 && $request['model'] === 'claude-test-model';
         });
@@ -81,7 +82,7 @@ class AiTaskBreakdownServiceTest extends TestCase
         // Model output is untrusted: an invalid priority/estimate is normalised, not passed to the DB.
         $this->assertSame('medium', $result['subtasks'][1]['priority']);
         $this->assertNull($result['subtasks'][1]['estimated_minutes']);
-        $this->assertDatabaseHas('ai_breakdown_logs', ['task_id' => $task->id, 'user_id' => $owner->id, 'tokens_used' => 42]);
+        $this->assertDatabaseHas('ai_breakdown_logs', ['task_id' => $task->id, 'user_id' => $owner->id, 'tokens_used' => 52]);
     }
 
     public function test_a_401_is_flagged_unavailable_and_logged_rather_than_hidden(): void
@@ -169,7 +170,7 @@ class AiTaskBreakdownServiceTest extends TestCase
         $this->assertSame(0, Task::where('parent_id', $task->id)->count());
     }
 
-    public function test_the_ui_creates_subtasks_from_a_real_response(): void
+    public function test_the_ui_shows_suggestions_and_adds_only_what_is_chosen(): void
     {
         $this->configureKey();
         [$owner, $task] = $this->task();
@@ -181,8 +182,18 @@ class AiTaskBreakdownServiceTest extends TestCase
             ->test(TaskDetail::class)
             ->call('openTask', $task->id)
             ->call('aiBreakdown')
-            ->assertSet('aiError', null);
+            ->assertSet('aiError', null)
+            ->assertSee('Suggested by AI')
+            ->assertSee('Plan');
 
-        $this->assertSame(['Plan', 'Build'], $task->subtasks()->pluck('title')->all());
+        $this->assertSame(0, $task->subtasks()->count(), 'nothing is added until a person chooses');
+
+        Livewire::actingAs($owner)
+            ->test(TaskDetail::class)
+            ->call('openTask', $task->id)
+            ->call('aiBreakdown')
+            ->call('acceptSuggested', [1]);
+
+        $this->assertSame(['Build'], $task->subtasks()->pluck('title')->all());
     }
 }

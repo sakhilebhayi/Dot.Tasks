@@ -3,6 +3,7 @@
 namespace App\Livewire\Tasks;
 
 use App\Models\Task;
+use App\Services\TaskSearchReader;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -39,12 +40,27 @@ class FindTasks extends Component
             return new Collection;
         }
 
-        return Task::forTeam($team)->searchText($this->query)
-            ->with('taskList:id,name')
+        $read = $this->reading;
+
+        return Task::forTeam($team)
+            ->when($read['words'] !== '', fn ($q) => $q->searchText($read['words']))
+            ->where(function ($q) use ($read) {
+                foreach ($read['apply'] as $apply) {
+                    $apply($q);
+                }
+            })
+            ->with('taskList:id,name,is_inbox')
             ->orderByRaw("CASE WHEN tasks.status = 'done' THEN 1 ELSE 0 END")
             ->orderByDesc('tasks.updated_at')
             ->limit(self::SHOWN)
             ->get();
+    }
+
+    /** @return array{words: string, understood: list<string>, apply: list<callable>} */
+    #[Computed]
+    public function reading(): array
+    {
+        return app(TaskSearchReader::class)->read($this->query, auth()->user()->currentTeam, auth()->user());
     }
 
     public function render(): View

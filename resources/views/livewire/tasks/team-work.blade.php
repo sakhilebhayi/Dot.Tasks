@@ -25,6 +25,9 @@
                     @if($person['blocked'])<span class="wait"><span class="num">{{ $person['blocked'] }}</span> blocked</span>@endif
                     @if($person['minutes'])<span><span class="num">{{ round($person['minutes'] / 60, 1) }}</span>h estimated</span>@endif
                 </p>
+                @foreach($person['flags'] as $flag)
+                    <p class="slot-sums wait" style="padding-bottom:4px">{{ $flag }}</p>
+                @endforeach
                 <div class="slot-body" data-list data-person="{{ $person['key'] }}" data-name="{{ $person['name'] }}" wire:key="held-{{ $person['key'] }}" x-data="personList" x-on:keydown="keys($event)">
                     @foreach($person['tasks'] as $task)
                         <div class="card" wire:key="held-card-{{ $task->id }}" tabindex="0" role="button" data-task="{{ $task->id }}" data-title="{{ $task->title }}" data-person="{{ $person['key'] }}"
