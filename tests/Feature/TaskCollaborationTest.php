@@ -141,7 +141,7 @@ class TaskCollaborationTest extends TestCase
         $this->assertStringContainsString('attachment', $response->headers->get('Content-Disposition'));
         $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
 
-        $this->actingAs($f->outsider)->get(route('tasks.files', [$f->task, $file]))->assertForbidden();
+        $this->actingAs($f->outsider)->get(route('tasks.files', [$f->task, $file]))->assertNotFound();
     }
 
     public function test_a_file_cannot_be_reached_through_another_task(): void

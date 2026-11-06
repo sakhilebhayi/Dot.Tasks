@@ -198,7 +198,7 @@ class TaskRecurrenceTest extends TestCase
 
         Livewire::actingAs($outsider)
             ->test(TaskBoard::class, ['taskList' => $taskList])
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertSame(1, $taskList->tasks()->count());
     }

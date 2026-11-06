@@ -1,6 +1,6 @@
 <div class="md:col-span-1 flex justify-between">
     <div class="account-title">
-        <h3>{{ $title }}</h3>
+        <h2>{{ $title }}</h2>
 
         <p>
             {{ $description }}

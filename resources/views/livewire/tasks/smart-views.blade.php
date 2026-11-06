@@ -35,7 +35,7 @@
             <div class="empty">Nothing due in the next 7 days.</div>
         @else
             @foreach($this->upcomingTasksByDate as $date => $tasks)
-                <h3 class="group-head">{{ \Illuminate\Support\Carbon::parse($date)->isSameDay(\App\Support\Today::date()->addDay()) ? 'Tomorrow' : \Illuminate\Support\Carbon::parse($date)->format('l, M j') }}</h3>
+                <h2 class="group-head">{{ \Illuminate\Support\Carbon::parse($date)->isSameDay(\App\Support\Today::date()->addDay()) ? 'Tomorrow' : \Illuminate\Support\Carbon::parse($date)->format('l, M j') }}</h2>
                 <div class="rows">
                     @foreach($tasks as $task)
                         <div class="row" wire:key="upcoming-{{ $task->id }}">

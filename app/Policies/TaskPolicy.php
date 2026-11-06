@@ -7,6 +7,7 @@ use App\Models\TaskList;
 use App\Models\User;
 use App\Policies\Concerns\ChecksTeamRole;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 /**
  * A task's authorization boundary is the team that owns its parent
@@ -24,12 +25,13 @@ class TaskPolicy
     use ChecksTeamRole;
     use HandlesAuthorization;
 
-    public function view(User $user, Task $task): bool
+    /** Refused as not found, so ids cannot be walked to learn which tasks exist. */
+    public function view(User $user, Task $task): Response
     {
         // taskList is null for a task on an archived board.
         $board = $task->taskList;
 
-        return $board !== null && $user->can('view', $board);
+        return $board !== null && $user->can('view', $board) ? Response::allow() : Response::denyAsNotFound();
     }
 
     /** Add a task to a board: authorized against the board it lands on. */

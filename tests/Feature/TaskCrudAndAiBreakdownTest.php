@@ -49,7 +49,7 @@ class TaskCrudAndAiBreakdownTest extends TestCase
 
         Livewire::actingAs($outsider)
             ->test(CreateTask::class, ['taskList' => $taskList])
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     /**
@@ -93,7 +93,7 @@ class TaskCrudAndAiBreakdownTest extends TestCase
         Livewire::actingAs($outsider)
             ->test(TaskDetail::class)
             ->call('openTask', $task->id)
-            ->assertForbidden();
+            ->assertNotFound();
 
         $this->assertEquals(0, $task->subtasks()->count());
         $this->assertDatabaseCount('ai_breakdown_logs', 0);

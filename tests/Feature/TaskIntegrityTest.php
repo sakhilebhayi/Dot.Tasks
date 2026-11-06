@@ -148,9 +148,9 @@ class TaskIntegrityTest extends TestCase
         $task = $list->tasks()->create(['title' => 'A-private', 'status' => 'todo']);
 
         // view
-        Livewire::actingAs($b)->test(TaskDetail::class)->call('openTask', $task->id)->assertForbidden();
+        Livewire::actingAs($b)->test(TaskDetail::class)->call('openTask', $task->id)->assertNotFound();
         // move (board mount is the authorization boundary)
-        Livewire::actingAs($b)->test(TaskBoard::class, ['taskList' => $list])->assertForbidden();
+        Livewire::actingAs($b)->test(TaskBoard::class, ['taskList' => $list])->assertNotFound();
 
         // comment / assign / status with the task loaded as A, then replayed as B is covered
         // by the policy: B has no ability on the task at all.
@@ -237,7 +237,7 @@ class TaskIntegrityTest extends TestCase
 
         $this->assertSame(['mine-label'], $labels->pluck('name')->all());
         // And B cannot reach A's list page to see A's labels.
-        $this->actingAs($b)->get(route('task-lists.show', $list))->assertForbidden();
+        $this->actingAs($b)->get(route('task-lists.show', $list))->assertNotFound();
     }
 
     // ---- finding 5: indexes ---------------------------------------------------------

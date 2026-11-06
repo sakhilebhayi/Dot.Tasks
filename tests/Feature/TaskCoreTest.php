@@ -489,9 +489,9 @@ class TaskCoreTest extends TestCase
         $task = $inbox->tasks()->create(['title' => 'Private thought', 'status' => 'todo']);
 
         $this->actingAs($f->editor)->get(route('task-lists.show', $inbox))->assertOk();
-        $this->actingAs($f->owner)->get(route('task-lists.show', $inbox))->assertForbidden();
+        $this->actingAs($f->owner)->get(route('task-lists.show', $inbox))->assertNotFound();
 
-        Livewire::actingAs($f->owner)->test(TaskDetail::class)->call('openTask', $task->id)->assertForbidden();
+        Livewire::actingAs($f->owner)->test(TaskDetail::class)->call('openTask', $task->id)->assertNotFound();
         Livewire::actingAs($f->owner)->test(FindTasks::class)->set('query', 'Private')->assertDontSee('Private thought');
         Livewire::actingAs($f->owner)->test(SmartViews::class, ['view' => 'upcoming'])->assertDontSee('Private thought');
         $this->actingAs($f->owner)->get(route('dashboard'))->assertDontSee('Private thought');

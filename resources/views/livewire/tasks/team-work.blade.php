@@ -18,7 +18,7 @@
     <div class="rack" data-rack tabindex="0" role="region" aria-label="Work by person">
         @foreach($this->people as $person)
             <div class="slot" wire:key="person-{{ $person['key'] }}">
-                <h3 class="slot-head">{{ $person['name'] }}</h3>
+                <h2 class="slot-head">{{ $person['name'] }}</h2>
                 <p class="slot-sums">
                     <span><span class="num">{{ $person['open'] }}</span> open</span>
                     @if($person['overdue'])<span class="overdue"><span class="num">{{ $person['overdue'] }}</span> overdue</span>@endif

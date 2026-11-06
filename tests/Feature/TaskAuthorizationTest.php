@@ -43,7 +43,7 @@ class TaskAuthorizationTest extends TestCase
 
         $this->actingAs($outsider)
             ->get(route('task-lists.show', $taskList))
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_a_user_cannot_move_a_task_on_another_teams_board(): void
@@ -63,7 +63,7 @@ class TaskAuthorizationTest extends TestCase
 
         Livewire::actingAs($outsider)
             ->test(TaskBoard::class, ['taskList' => $taskList])
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     /**
@@ -91,7 +91,7 @@ class TaskAuthorizationTest extends TestCase
         Livewire::actingAs($outsider)
             ->test(TaskDetail::class)
             ->call('openTask', $task->id)
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_a_user_can_open_a_task_belonging_to_their_own_team(): void
