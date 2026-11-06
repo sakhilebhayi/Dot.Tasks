@@ -39,7 +39,7 @@
             @foreach ([
                 '' => [['tasks.today', 'day', 'My Day'], ['tasks.inbox', 'inbox', 'Inbox'], ['tasks.mine', 'check', 'My tasks'], ['tasks.upcoming', 'calendar', 'Upcoming']],
                 'Team' => [['dashboard', 'home', 'Overview'], ['tasks.team', 'team', 'Who holds what'], ['reports.index', 'report', 'Reports']],
-                'Set up' => [['tasks.templates', 'copy', 'Templates'], ['tasks.automation', 'bolt', 'Automation'], ['labels.index', 'label', 'Labels and fields'], ['removed.index', 'trash', 'Removed']],
+                'Set up' => [['tasks.templates', 'copy', 'Templates'], ['tasks.automation', 'bolt', 'Automation'], ['labels.index', 'label', 'Labels and fields'], ['tasks.connections', 'link', 'Connections'], ['removed.index', 'trash', 'Removed']],
             ] as $group => $items)
                 @if($group !== '')
                     <div class="nav-group"><span>{{ $group }}</span></div>
