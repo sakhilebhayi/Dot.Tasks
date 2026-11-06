@@ -37,6 +37,7 @@
 
         <div class="day-sources">
             @foreach([
+                ['To approve', $this->toApprove, 'approve'],
                 ['Overdue', $this->overdue, 'overdue'],
                 [$this->day->isSameDay(\App\Support\Today::date()) ? 'Due today' : 'Due '.$this->day->format('l'), $this->dueOnDay, 'day'],
                 ['Needs attention', $this->attention, 'attention'],

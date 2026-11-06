@@ -114,6 +114,16 @@ class MyDay extends Component
                 ->orWhere(fn ($link) => $link->whereIn('task_dependencies.type', ['ss', 'sf'])->where('status', 'todo')))));
     }
 
+    /** Tasks waiting for this person to sign them off. */
+    #[Computed]
+    public function toApprove(): Collection
+    {
+        return Task::forTeam($this->user()->currentTeam)
+            ->whereHas('approvals', fn ($q) => $q->where('approver_id', auth()->id())->where('status', 'pending'))
+            ->with(['taskList:id,team_id,name,is_inbox,owner_id', 'blockedBy:id,status'])
+            ->orderBy('tasks.id')->limit(self::SHOWN)->get();
+    }
+
     /** @return Collection<int, Task> */
     #[Computed]
     public function upcoming(): Collection
@@ -274,7 +284,7 @@ class MyDay extends Component
 
     private function forget(): void
     {
-        unset($this->planIds, $this->plan, $this->leftOver, $this->overdue, $this->dueOnDay, $this->attention, $this->upcoming, $this->finished, $this->week);
+        unset($this->planIds, $this->plan, $this->leftOver, $this->overdue, $this->dueOnDay, $this->attention, $this->toApprove, $this->upcoming, $this->finished, $this->week);
     }
 
     public function render(): View

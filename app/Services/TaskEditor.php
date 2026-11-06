@@ -103,6 +103,10 @@ class TaskEditor
         $task->update(['assignee_id' => $assignee?->id]);
         $this->history->record($task, 'people', $assignee ? 'Assigned it to '.$assignee->name : 'Left it unassigned');
 
+        if ($assignee) {
+            app(Automations::class)->fire('assigned', $task, "assigned:{$task->id}:{$assignee->id}:".now()->timestamp);
+        }
+
         if ($assignee && $assignee->id !== $by->id) {
             $assignee->notify(new TaskAssignedNotification($task));
             if (app(NotificationPreferences::class)->wants($assignee, 'assigned', 'email')) {

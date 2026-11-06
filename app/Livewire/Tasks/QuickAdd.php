@@ -12,6 +12,7 @@ use App\Services\TaskHistory;
 use App\Services\TaskSentenceReader;
 use App\Services\TaskTemplates;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -114,20 +115,25 @@ class QuickAdd extends Component
 
         $list = $this->lists->firstWhere('id', (int) $this->listId) ?? abort(403);
 
-        $task = Task::create([
-            'task_list_id' => $list->id,
-            'creator_id' => $this->user()->id,
-            'title' => mb_substr($read['title'], 0, 255),
-            'status' => 'todo',
-            'priority' => $read['priority'] ?? 'medium',
-            'due_date' => $read['due_date'],
-            'sort_order' => (int) $list->tasks()->where('status', 'todo')->max('sort_order') + 1,
-        ]);
-        app(TaskHistory::class)->record($task, 'created', 'Created it');
+        // Together, so a rule that fires on a new task sees it with its person already on it.
+        $task = DB::transaction(function () use ($list, $read) {
+            $task = Task::create([
+                'task_list_id' => $list->id,
+                'creator_id' => $this->user()->id,
+                'title' => mb_substr($read['title'], 0, 255),
+                'status' => 'todo',
+                'priority' => $read['priority'] ?? 'medium',
+                'due_date' => $read['due_date'],
+                'sort_order' => (int) $list->tasks()->where('status', 'todo')->max('sort_order') + 1,
+            ]);
+            app(TaskHistory::class)->record($task, 'created', 'Created it');
 
-        if ($read['assignee_id']) {
-            app(TaskEditor::class)->assign($task, User::find($read['assignee_id']), $this->user());
-        }
+            if ($read['assignee_id']) {
+                app(TaskEditor::class)->assign($task, User::find($read['assignee_id']), $this->user());
+            }
+
+            return $task;
+        });
 
         $this->added($task, $list);
     }

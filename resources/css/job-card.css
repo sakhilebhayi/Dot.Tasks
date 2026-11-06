@@ -355,6 +355,11 @@ button { cursor: pointer; }
 .comment-acts { display: flex; gap: 10px; margin-top: 2px; font-size: 12px; }
 .comment-acts .link { color: var(--muted); }
 
+.rule-rows { border: 0; padding: 0; }
+.rule-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-bottom: 6px; }
+.rule-row .input, .rule-row .select { flex: 1 1 130px; width: auto; }
+.rule-row .icon-btn { flex: none; width: 28px; height: 28px; }
+
 .understood { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--raised); }
 .step { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .step-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }

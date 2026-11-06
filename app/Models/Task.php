@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\Archivable;
 use App\Models\Scopes\NotArchivedScope;
+use App\Services\Automations;
 use App\Support\Today;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -46,6 +47,8 @@ class Task extends Model
     /** Whatever changed a task, it sits in a column of its own board that matches its status. */
     protected static function booted(): void
     {
+        static::created(fn (Task $task) => app(Automations::class)->fire('created', $task, 'created:'.$task->id));
+
         static::saving(function (Task $task) {
             if ($task->status_id && ! $task->isDirty(['task_list_id', 'status', 'status_id'])) {
                 return;
@@ -74,6 +77,12 @@ class Task extends Model
 
         $query->whereHas('taskList', fn (Builder $list) => $list->where('team_id', $teamId)
             ->where(fn (Builder $mine) => $mine->where('is_inbox', false)->orWhere('owner_id', auth()->id())));
+    }
+
+    /** A team's tasks with nobody signed in: only for rules and reports, and never with anyone's Inbox. @param Builder<Task> $query */
+    public function scopeForTeamUnscoped(Builder $query, int $team): void
+    {
+        $query->whereHas('taskList', fn (Builder $list) => $list->where('team_id', $team)->where('is_inbox', false));
     }
 
     /**
@@ -196,6 +205,11 @@ class Task extends Model
     public function fieldValues(): HasMany
     {
         return $this->hasMany(TaskFieldValue::class);
+    }
+
+    public function approvals(): HasMany
+    {
+        return $this->hasMany(TaskApproval::class)->latest('id');
     }
 
     public function attachments(): HasMany

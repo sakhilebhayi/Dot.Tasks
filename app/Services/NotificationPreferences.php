@@ -17,10 +17,12 @@ class NotificationPreferences
         'completed' => 'A task I am part of is finished',
         'unblocked' => 'A task of mine is no longer held up',
         'recurring' => 'A repeating task of mine comes round again',
+        'approval' => 'An approval is asked of me, or answered',
+        'automation' => 'A rule needs my attention',
     ];
 
     /** On unless turned off. The rest wait to be turned on, so a busy board stays quiet. */
-    private const ON_BY_DEFAULT = ['assigned', 'mentioned', 'comment', 'due_soon', 'unblocked'];
+    private const ON_BY_DEFAULT = ['assigned', 'mentioned', 'comment', 'due_soon', 'unblocked', 'approval', 'automation'];
 
     /** Dot.Notify carries these by email. The others are in-app only. */
     public const EMAILED = ['assigned', 'mentioned', 'due_soon'];

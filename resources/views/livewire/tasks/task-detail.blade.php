@@ -216,6 +216,32 @@
                 @error('template')<p role="alert" class="error">{{ $message }}</p>@enderror
                 @if($templateSaved)<p role="status" style="color:var(--muted)">Saved as a template.</p>@endif
 
+                <h3 class="section-title" style="font-size:14px">Approval</h3>
+                @error('approval')<p role="alert" class="error">{{ $message }}</p>@enderror
+                @foreach($task->approvals as $approval)
+                    <div class="step" wire:key="approval-{{ $approval->id }}" x-data="{ note: '' }" style="flex-wrap:wrap">
+                        <span class="step-title">{{ $approval->approver->name }}@if($approval->note): {{ $approval->note }}@endif</span>
+                        <span @class(['chip', 'go' => $approval->status === 'approved', 'stop' => $approval->status === 'declined', 'wait' => $approval->status === 'pending'])>{{ ucfirst($approval->status) }}</span>
+                        @if($approval->status === 'pending' && $approval->approver_id === auth()->id())
+                            <input class="input" style="flex:1 1 100%;min-height:30px" aria-label="Note, optional" placeholder="Note, optional" x-model="note">
+                            <button type="button" class="btn small primary" style="opacity:1" x-on:click="$wire.answerApproval({{ $approval->id }}, true, note)">Approve</button>
+                            <button type="button" class="btn small" style="opacity:1" x-on:click="$wire.answerApproval({{ $approval->id }}, false, note)">Decline</button>
+                        @endif
+                    </div>
+                @endforeach
+                @if($task->approvals->isEmpty())<p style="color:var(--muted)">No approval needed.</p>@endif
+                @can('update', $task)
+                    <label class="sr" for="ask-approval">Ask someone to approve this</label>
+                    <select class="select" style="margin-top:6px" id="ask-approval" wire:key="ask-{{ $task->approvals->count() }}" wire:change="askForApproval($event.target.value)">
+                        <option value="">Ask someone to approve this...</option>
+                        @foreach($this->assignableUsers as $member)
+                            @if($member->id !== auth()->id())
+                                <option value="{{ $member->id }}">{{ $member->name }}</option>
+                            @endif
+                        @endforeach
+                    </select>
+                @endcan
+
                 <h3 class="section-title" style="font-size:14px">Blocked by</h3>
                 @error('blocker')<p role="alert" class="error">{{ $message }}</p>@enderror
                 @forelse($task->blockedBy as $blocker)
