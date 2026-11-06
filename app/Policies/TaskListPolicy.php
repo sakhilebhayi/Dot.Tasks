@@ -6,19 +6,19 @@ use App\Models\TaskList;
 use App\Models\User;
 use App\Policies\Concerns\ChecksTeamRole;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class TaskListPolicy
 {
     use ChecksTeamRole;
     use HandlesAuthorization;
 
-    public function view(User $user, TaskList $taskList): bool
+    /** Refused as not found, so ids cannot be walked to learn which boards exist. */
+    public function view(User $user, TaskList $taskList): Response
     {
-        if ($taskList->is_inbox) {
-            return $user->id === $taskList->owner_id;
-        }
+        $allowed = $taskList->is_inbox ? $user->id === $taskList->owner_id : $user->belongsToTeam($taskList->team);
 
-        return $user->belongsToTeam($taskList->team);
+        return $allowed ? Response::allow() : Response::denyAsNotFound();
     }
 
     /** Creating a board puts it on the user's current team, so that is the team checked. */

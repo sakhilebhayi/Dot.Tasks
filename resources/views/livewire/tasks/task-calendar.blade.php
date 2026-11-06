@@ -9,7 +9,7 @@
         <button type="button" class="btn small" wire:click="goToday">Today</button>
         <div class="tabs" style="margin-left:auto">
             @foreach(\App\Livewire\Tasks\TaskCalendar::RANGES as $key => $name)
-                <button type="button" class="tab" aria-pressed="{{ $this->rangeName === $key ? 'true' : 'false' }}" @if($this->rangeName === $key) aria-selected="true" @endif wire:click="$set('range', '{{ $key }}')">{{ $name }}</button>
+                <button type="button" class="tab" aria-pressed="{{ $this->rangeName === $key ? 'true' : 'false' }}" wire:click="$set('range', '{{ $key }}')">{{ $name }}</button>
             @endforeach
         </div>
     </div>
@@ -23,9 +23,9 @@
                     @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $name)<span>{{ $name }}</span>@endforeach
                 </div>
             @endif
-            <div @class(['cal-grid', 'tall' => $this->rangeName !== 'month']) role="grid" aria-label="{{ $this->title }}">
+            <div @class(['cal-grid', 'tall' => $this->rangeName !== 'month']) role="list" aria-label="{{ $this->title }}">
                 @foreach($this->days as $day)
-                    <div @class(['cal-day', 'out' => ! $day['inRange'], 'today' => $day['today'], 'quiet' => $day['tasks']->isEmpty() && ! $day['today']]) role="gridcell" aria-label="{{ $day['label'] }}" wire:key="day-{{ $day['date'] }}"
+                    <div @class(['cal-day', 'out' => ! $day['inRange'], 'today' => $day['today'], 'quiet' => $day['tasks']->isEmpty() && ! $day['today']]) role="listitem" aria-label="{{ $day['label'] }}" wire:key="day-{{ $day['date'] }}"
                          x-data="{ adding: false, title: '' }">
                         <div class="cal-date">
                             <b>{{ $this->rangeName === 'month' ? $day['number'] : $day['label'] }}</b>

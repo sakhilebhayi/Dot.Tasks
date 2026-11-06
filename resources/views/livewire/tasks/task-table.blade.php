@@ -62,7 +62,7 @@
             @foreach($this->groups as $group)
                 <div role="rowgroup" wire:key="group-{{ $this->groupBy }}-{{ $group['key'] }}">
                     @if($group['name'] !== '')
-                        <h3 class="group-head">{{ $group['name'] }} <span class="count">{{ $group['tasks']->count() }}</span></h3>
+                        <div role="row"><div role="cell"><h2 class="group-head">{{ $group['name'] }} <span class="count">{{ $group['tasks']->count() }}</span></h2></div></div>
                     @endif
                     <div class="tgroup" data-name="{{ $group['name'] }}"
                          @if($this->canDrag)

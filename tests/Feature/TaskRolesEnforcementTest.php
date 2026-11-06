@@ -157,12 +157,12 @@ class TaskRolesEnforcementTest extends TestCase
     {
         $f = $this->teamFixture();
 
-        $this->actingAs($f->outsider)->get(route('task-lists.show', $f->list))->assertForbidden();
+        $this->actingAs($f->outsider)->get(route('task-lists.show', $f->list))->assertNotFound();
 
         Livewire::actingAs($f->outsider)
             ->test(TaskDetail::class)
             ->call('openTask', $f->task->id)
-            ->assertForbidden();
+            ->assertNotFound();
     }
 
     public function test_the_task_list_model_is_not_changed_by_a_forbidden_viewer_request(): void

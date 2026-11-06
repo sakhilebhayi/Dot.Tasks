@@ -401,7 +401,7 @@ class TaskDepthTest extends TestCase
 
         $task = $this->series($f);
 
-        Livewire::actingAs($f->outsider)->test(TaskRepeat::class, ['task' => $task])->assertForbidden();
+        Livewire::actingAs($f->outsider)->test(TaskRepeat::class, ['task' => $task])->assertNotFound();
     }
 
     public function test_finishing_twice_still_makes_one_occurrence(): void

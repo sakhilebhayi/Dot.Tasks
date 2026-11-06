@@ -130,18 +130,22 @@
     </header>
 
     <div class="content-wrap" data-shell-page>
-        <main>{{ $slot }}</main>
+        <main>
+            {{ $slot }}
+            @auth
+                <p class="sr" id="drag-help">Press Enter to open. Hold Alt and use the arrow keys to move it.</p>
+                <p class="sr" id="person-help">Press Enter to open. Hold Alt and use the left and right arrows to hand it to someone else.</p>
+                <p class="sr" id="date-help">Press Enter to open. Hold Alt and use the arrow keys to change its date by a day or a week.</p>
+                <p class="sr" id="bar-help">Press Enter to open. Hold Alt and use the left and right arrows to move it. Add Shift to change its length.</p>
+                <div class="sr" id="announce" role="status" aria-live="polite"></div>
+            @endauth
+        </main>
     </div>
 
     @auth
         <livewire:tasks.task-detail />
         <livewire:tasks.quick-add :board="request()->route('taskList')?->id" />
         <livewire:tasks.find-tasks />
-        <p class="sr" id="drag-help">Press Enter to open. Hold Alt and use the arrow keys to move it.</p>
-        <p class="sr" id="person-help">Press Enter to open. Hold Alt and use the left and right arrows to hand it to someone else.</p>
-        <p class="sr" id="date-help">Press Enter to open. Hold Alt and use the arrow keys to change its date by a day or a week.</p>
-        <p class="sr" id="bar-help">Press Enter to open. Hold Alt and use the left and right arrows to move it. Add Shift to change its length.</p>
-        <div class="sr" id="announce" role="status" aria-live="polite"></div>
     @endauth
 
     @stack('modals')
