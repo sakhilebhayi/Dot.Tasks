@@ -9,6 +9,7 @@ use App\Models\TaskAttachment;
 use App\Models\TaskRule;
 use App\Models\TaskTemplate;
 use App\Services\AuditLog;
+use App\Services\InboxLists;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
@@ -66,6 +67,16 @@ class AuditAndRestoreTest extends TestCase
         $board->unarchive();
 
         $this->assertSame(['Added the board "Road"', 'Archived the board "Road"', 'Restored the board "Road"'], $this->said($f));
+    }
+
+    public function test_a_private_inbox_stays_out_of_the_log(): void
+    {
+        $f = $this->teamFixture();
+        AuditEvent::query()->delete();
+
+        app(InboxLists::class)->for($f->editor, $f->team);
+
+        $this->assertSame([], $this->said($f));
     }
 
     public function test_columns_fields_and_templates_are_recorded_from_their_screens(): void

@@ -1,7 +1,7 @@
 <div>
     @if($task)
         <div class="veil" wire:click="close"></div>
-        <aside class="sheet" role="dialog" aria-modal="true" aria-label="Task">
+        <div class="sheet" role="dialog" aria-modal="true" aria-label="Task">
             <div class="sheet-head">
                 @can('update', $task)
                     <div class="sheet-title">
@@ -353,7 +353,7 @@
                         <div style="display:flex;flex-wrap:wrap;gap:4px">
                             @foreach($this->teamLabels as $label)
                                 @php $on = $task->labels->contains('id', $label->id); @endphp
-                                <button type="button" wire:click="toggleLabel({{ $label->id }})" aria-pressed="{{ $on ? 'true' : 'false' }}" style="border:0;background:none;padding:0;opacity:{{ $on ? 1 : 0.55 }}">
+                                <button type="button" class="label-pick" wire:click="toggleLabel({{ $label->id }})" aria-pressed="{{ $on ? 'true' : 'false' }}">
                                     <x-label-chip :label="$label" />
                                 </button>
                             @endforeach
@@ -541,6 +541,6 @@
                 @endcanany
 
             </div>
-        </aside>
+        </div>
     @endif
 </div>

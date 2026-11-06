@@ -126,9 +126,9 @@
             <span>Menu</span>
         </button>
         @auth
-            <button type="button" class="find" data-open-search><x-icon name="search" /> <span>Find a task</span> <kbd>/</kbd></button>
+            <button type="button" class="find" data-open-search aria-label="Find a task"><x-icon name="search" /> <span>Find a task</span> <kbd>/</kbd></button>
             <div class="grow"></div>
-            <button type="button" class="btn primary" data-open-quick-add><x-icon name="plus" /> <span class="topbar-hide">New task</span></button>
+            <button type="button" class="btn primary" data-open-quick-add aria-label="New task"><x-icon name="plus" /> <span class="topbar-hide">New task</span></button>
             <livewire:notification-bell />
         @endauth
         <button type="button" id="theme-toggle" class="icon-btn" aria-label="Switch between light and dark"><x-icon name="moon" /></button>

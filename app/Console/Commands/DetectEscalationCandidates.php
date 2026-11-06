@@ -26,20 +26,27 @@ class DetectEscalationCandidates extends Command
 
     public function handle(): int
     {
-        $cutoff = Today::date()->subDays(self::OVERDUE_THRESHOLD_DAYS)->toDateString();
+        // A day wider than the threshold: which date it is depends on each business's clock, checked below.
+        $cutoff = Today::date()->addDay()->subDays(self::OVERDUE_THRESHOLD_DAYS)->toDateString();
 
         // whereHas('taskList') leaves out tasks on archived boards; archived and
         // deleted tasks are already excluded by the model's scopes.
         $tasks = Task::query()
             ->whereHas('taskList')
             ->whereNotNull('due_date')
-            ->whereDate('due_date', '<', $cutoff)
+            ->whereDate('due_date', '<=', $cutoff)
             ->where('status', '!=', 'done')
+            ->with('taskList.team')
             ->get();
 
         $proposed = 0;
 
         foreach ($tasks as $task) {
+            Today::use($task->taskList->team?->timezone);
+            if ($task->due_date->gte(Today::date()->subDays(self::OVERDUE_THRESHOLD_DAYS))) {
+                continue;
+            }
+
             $hasPendingProposal = TaskEscalationProposal::where('task_id', $task->id)
                 ->where('status', 'pending')
                 ->exists();
@@ -58,6 +65,8 @@ class DetectEscalationCandidates extends Command
 
             $proposed++;
         }
+
+        Today::use(null);
 
         $this->info("Proposed {$proposed} task escalation(s).");
 

@@ -7,10 +7,13 @@ use App\Models\TaskEscalationProposal;
 use App\Models\TaskList;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
+use Tests\Concerns\CreatesTeamFixtures;
 use Tests\TestCase;
 
 class DetectEscalationCandidatesCommandTest extends TestCase
 {
+    use CreatesTeamFixtures;
     use RefreshDatabase;
 
     private function taskList(User $owner): TaskList
@@ -106,5 +109,29 @@ class DetectEscalationCandidatesCommandTest extends TestCase
 
         $this->assertDatabaseCount('task_escalation_proposals', 2);
         $this->assertSame(1, TaskEscalationProposal::where('task_id', $task->id)->where('status', 'pending')->count());
+    }
+
+    public function test_overdue_is_counted_on_the_clock_of_the_business(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-10 22:00:00', 'UTC'));
+        $f = $this->teamFixture();
+        $f->team->forceFill(['timezone' => 'Pacific/Auckland'])->save(); // Already the 11th there.
+        $f->task->update(['due_date' => '2026-06-03']);
+
+        $this->artisan('tasks:detect-escalation-candidates')->assertSuccessful();
+
+        $this->assertSame('Overdue by 8 days.', TaskEscalationProposal::sole()->reason);
+    }
+
+    public function test_a_business_still_on_the_threshold_day_is_left_alone(): void
+    {
+        $this->travelTo(Carbon::parse('2026-06-11 02:00:00', 'UTC'));
+        $f = $this->teamFixture();
+        $f->team->forceFill(['timezone' => 'America/New_York'])->save(); // Still the 10th there.
+        $f->task->update(['due_date' => '2026-06-03']);
+
+        $this->artisan('tasks:detect-escalation-candidates')->assertSuccessful();
+
+        $this->assertSame(0, TaskEscalationProposal::count());
     }
 }

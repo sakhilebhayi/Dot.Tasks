@@ -475,6 +475,9 @@ input, textarea { caret-color: var(--text); }
 .reading ul { padding-left: 20px; list-style: disc; }
 .reading a { text-decoration: underline; text-underline-offset: 2px; }
 
+.label-pick { padding: 0; border: 0; background: none; }
+.label-pick[aria-pressed='true'] .chip { box-shadow: inset 0 0 0 1px var(--text); color: var(--text); }
+
 .filter-rest { display: contents; }
 .filter-toggle { display: none; }
 
