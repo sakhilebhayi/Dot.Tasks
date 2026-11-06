@@ -44,6 +44,7 @@
                 ['tasks.team', 'team', 'Team'],
                 ['dashboard', 'home', 'Overview'],
                 ['tasks.templates', 'copy', 'Templates'],
+                ['tasks.automation', 'bolt', 'Automation'],
                 ['labels.index', 'label', 'Labels and fields'],
                 ['removed.index', 'trash', 'Removed'],
             ] as [$route, $icon, $label])

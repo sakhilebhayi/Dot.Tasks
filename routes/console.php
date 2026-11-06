@@ -19,6 +19,7 @@ Schedule::job(new QueueHeartbeat)->everyFiveMinutes()->name('queue-heartbeat');
 
 // Dot.Tasks scheduled tasks
 Schedule::command('tasks:check-due-soon')->dailyAt('07:00');
+Schedule::command('tasks:run-rules')->everyFiveMinutes()->withoutOverlapping()->onOneServer();
 Schedule::command('tasks:detect-escalation-candidates')->dailyAt('07:30');
 
 // Publish each company's daily aggregate numbers to Dot.Analytics (nothing happens until ANALYTICS_INGEST_URL and

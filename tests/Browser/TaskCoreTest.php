@@ -131,6 +131,30 @@ class TaskCoreTest extends DuskTestCase
         @unlink($file);
     }
 
+    public function test_a_rule_is_written_read_turned_on_and_runs(): void
+    {
+        [$user, $list] = $this->board();
+
+        $this->browse(function (Browser $browser) use ($user, $list) {
+            $browser->loginAs($user)->openLivewire('/automation')
+                ->press('New rule')->waitFor('#rule-name')
+                ->type('#rule-name', 'Note new work')->settle()
+                ->select('[aria-label="Action 1"]', 'priority')->settle()
+                ->select('[aria-label="Action 1: priority"]', 'high')->settle()
+                ->waitForTextIn('#rule-preview', 'When a task is created, then set the priority to high.')
+                ->press('Save rule')->waitForText('Note new work');
+
+            $browser->script("window.confirm = () => true");
+            $browser->press('Turn on')->settle()->waitForText('Turn off');
+
+            $browser->visit("/lists/{$list->id}")->waitFor('.slot-foot .add-line')
+                ->click('.slot-foot .add-line')->waitFor('[aria-label="New task in To Do"]')
+                ->keys('[aria-label="New task in To Do"]', 'Fresh work', '{enter}')->waitForText('Fresh work');
+
+            $this->assertSame('high', Task::where('title', 'Fresh work')->sole()->priority);
+        });
+    }
+
     public function test_typing_q_into_a_field_stays_in_the_field(): void
     {
         [$user, $list] = $this->board();

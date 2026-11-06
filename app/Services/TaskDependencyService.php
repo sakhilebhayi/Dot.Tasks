@@ -57,6 +57,10 @@ class TaskDependencyService
 
         DB::table('task_dependencies')->insert(['task_id' => $task->id, 'blocked_by_id' => $blocker->id, 'type' => $type]);
 
+        if ($task->fresh('blockedBy')->isBlocked()) {
+            app(Automations::class)->fire('blocked', $task, "blocked:{$task->id}:{$blocker->id}");
+        }
+
         return $blocker;
     }
 

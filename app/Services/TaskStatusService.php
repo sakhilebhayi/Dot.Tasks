@@ -43,6 +43,14 @@ class TaskStatusService
             }
         }
 
+        if ($status === 'done' && $task->status !== 'done') {
+            $waiting = $task->approvals()->where('status', 'pending')->with('approver')->first();
+
+            if ($waiting) {
+                throw ValidationException::withMessages(['status' => 'Waiting for approval from '.$waiting->approver->name.'.']);
+            }
+        }
+
         if ($task->status === 'todo' && in_array($status, ['in_progress', 'review'], true)) {
             $open = $this->dependencies->blockersOfStart($task);
 
@@ -99,10 +107,20 @@ class TaskStatusService
             $this->notifier->completed($task);
         }
 
+        $rules = app(Automations::class);
+        $stamp = now()->timestamp;
+        $rules->fire($task->status === 'done' ? 'completed' : 'moved', $task, "status:{$task->id}:{$task->status_id}:{$stamp}");
+
+        $parent = $task->parent_id ? Task::find($task->parent_id) : null;
+        if ($parent && $task->status === 'done' && ! $parent->subtasks()->where('status', '!=', 'done')->exists()) {
+            $rules->fire('subtasks_done', $parent, "subtasks:{$parent->id}:{$parent->subtasks()->count()}");
+        }
+
         // Finishing, or starting, can free up what waits on this task.
         foreach ($task->blocking()->with('blockedBy:id,status')->get() as $waiting) {
             if ($waiting->status !== 'done' && ! $waiting->isBlocked()) {
                 $this->notifier->unblocked($waiting);
+                $rules->fire('unblocked', $waiting, "unblocked:{$waiting->id}:{$stamp}");
             }
         }
     }

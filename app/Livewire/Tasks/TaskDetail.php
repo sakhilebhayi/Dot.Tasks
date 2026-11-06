@@ -13,6 +13,7 @@ use App\Models\TaskTemplate;
 use App\Models\User;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
+use App\Services\TaskApprovals;
 use App\Services\TaskArchiveService;
 use App\Services\TaskAttachments;
 use App\Services\TaskCommentService;
@@ -38,7 +39,7 @@ class TaskDetail extends Component
     use WithFileUploads;
 
     /** Everything the drawer shows, loaded together. */
-    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'watchers', 'attachments.user', 'fieldValues', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
+    private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'approvals.approver', 'watchers', 'attachments.user', 'fieldValues', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
 
@@ -358,6 +359,29 @@ class TaskDetail extends Component
 
         $field = $this->customFields->firstWhere('id', $fieldId) ?? abort(404);
         app(TaskFieldValues::class)->set($this->task, $field, $value);
+
+        $this->refreshTask();
+    }
+
+    public function askForApproval(int $userId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        $person = $this->assignableUsers->firstWhere('id', $userId) ?? abort(403);
+        app(TaskApprovals::class)->request($this->task, $person, auth()->user());
+
+        $this->refreshTask();
+    }
+
+    public function answerApproval(int $approvalId, bool $approved, ?string $note = null): void
+    {
+        $approval = $this->task?->approvals()->find($approvalId) ?? abort(404);
+
+        app(TaskApprovals::class)->decide($approval, auth()->user(), $approved, $note ? mb_substr(trim($note), 0, 500) : null);
 
         $this->refreshTask();
     }
