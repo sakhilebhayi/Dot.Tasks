@@ -15,6 +15,16 @@
                 <button class="icon-btn" wire:click="close" aria-label="Close"><x-icon name="close" /></button>
             </div>
             <div class="sheet-body">
+                @if($clash)
+                    <div class="alert" role="alert">
+                        <p>Someone else changed the {{ $clash['name'] }} while you were typing. Theirs is showing. Yours was:</p>
+                        <p style="margin-top:4px;overflow-wrap:anywhere;white-space:pre-line">{{ \Illuminate\Support\Str::limit($clash['mine'], 400) }}</p>
+                        <div style="display:flex;gap:8px;margin-top:8px">
+                            <button type="button" class="btn small" wire:click="useMine">Use mine</button>
+                            <button type="button" class="btn small quiet" wire:click="keepTheirs">Keep theirs</button>
+                        </div>
+                    </div>
+                @endif
                 @error('status')<p role="alert" class="alert">{{ $message }}</p>@enderror
                 @if($this->openBlockers->isNotEmpty() && $task->status !== 'done')
                     <p class="blocked-line" style="margin:0 0 8px">This task cannot be marked done until {{ $this->openBlockers->count() === 1 ? 'its blocker is' : 'its blockers are' }} done.</p>

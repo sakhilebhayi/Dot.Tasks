@@ -3,8 +3,9 @@
         <div class="slot kanban-col" wire:key="slot-{{ $lane['key'] }}-{{ $column->id }}">
             <h2 class="slot-head">{{ $column->name }} <span class="count">{{ $lane['columns'][$column->id]->count() }}</span></h2>
             <div class="slot-body" data-list data-status="{{ $column->id }}" data-category="{{ $column->category }}" data-name="{{ $column->name }}" @if($lane['key'] !== '') data-lane="{{ $lane['key'] }}" @endif
-                 @if($canWork) wire:key="cards-{{ $lane['key'] }}-{{ $column->id }}" x-data="boardColumn" x-on:keydown="keys($event)" @endif>
-                @foreach($lane['columns'][$column->id] as $task)
+                 @if($canWork) wire:key="cards-{{ $lane['key'] }}-{{ $column->id }}" x-data="boardColumn" x-on:keydown="keys($event)" @endif
+                 @if($lane['columns'][$column->id]->count() > $this->batch) data-after="{{ $lane['columns'][$column->id]->get($this->batch)->id }}" @endif>
+                @foreach($lane['columns'][$column->id]->take($this->batch) as $task)
                     <div @class(['card', 'is-done' => $task->status === 'done']) wire:key="card-{{ $task->id }}" tabindex="0" role="button"
                          data-task="{{ $task->id }}" data-status="{{ $task->status_id }}" data-title="{{ $task->title }}" @if($canWork) aria-describedby="drag-help" @endif
                          @if($task->isBlocked()) data-blocked @endif
@@ -37,6 +38,9 @@
                     </div>
                 @endforeach
             </div>
+            @if($lane['columns'][$column->id]->count() > $this->batch)
+                <button type="button" class="add-line" wire:click="showMore">Show more, {{ number_format($lane['columns'][$column->id]->count() - $this->batch) }} left</button>
+            @endif
             @if($canWork && $column->category !== 'done')
                 <div class="slot-foot" wire:key="foot-{{ $lane['key'] }}-{{ $column->id }}" x-data="{ adding: false, title: '' }">
                     <button type="button" class="add-line" x-show="! adding" x-on:click="adding = true; $nextTick(() => $refs.line.focus())"><x-icon name="plus" /> Add task</button>

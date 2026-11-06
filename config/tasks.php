@@ -14,6 +14,9 @@ return [
 
     'removed_retention_days' => (int) env('REMOVED_RETENTION_DAYS', 90),
 
+    /* How long the audit log keeps an entry. */
+    'audit_months' => (int) env('TASKS_AUDIT_MONTHS', 24),
+
     /*
     | The hours of estimated work due in 7 days before the Team page flags a person. There is no calendar of who is
     | available, so this is one number for everyone.

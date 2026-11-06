@@ -529,6 +529,8 @@ input, textarea { caret-color: var(--text); }
 .comment p { margin-top: 4px; white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .flash { position: fixed; left: 50%; bottom: 20px; z-index: 75; display: flex; align-items: center; gap: 12px; padding: 8px 12px; transform: translateX(-50%); border-radius: var(--radius); background: var(--primary); color: var(--on-primary); box-shadow: var(--float); }
+.flash.connection { bottom: 64px; }
+.flash.connection[hidden] { display: none; }
 .flash button { padding: 0; border: 0; background: none; color: inherit; text-decoration: underline; }
 
 @media (hover: none) { .step .btn, .cal-add { opacity: 1; } }

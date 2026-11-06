@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Livewire\Reports;
+use App\Services\AuditLog;
 use App\Services\TaskReports;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -16,6 +17,8 @@ class ReportExportController extends Controller
 
         [$from, $to] = Reports::rangeFor((string) $request->query('period', '30'), (string) $request->query('from', ''), (string) $request->query('to', ''));
         $board = $team->boards()->whereKey((int) $request->query('board'))->value('id');
+
+        AuditLog::record($team, 'exported', 'Exported the task report for '.$from->toDateString().' to '.$to->toDateString());
 
         $rows = $reports->rows($reports->report($team, $from, $to, $board), $from, $to);
 

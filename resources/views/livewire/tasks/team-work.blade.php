@@ -29,7 +29,7 @@
                     <p class="slot-sums wait" style="padding-bottom:4px">{{ $flag }}</p>
                 @endforeach
                 <div class="slot-body" data-list data-person="{{ $person['key'] }}" data-name="{{ $person['name'] }}" wire:key="held-{{ $person['key'] }}" x-data="personList" x-on:keydown="keys($event)">
-                    @foreach($person['tasks'] as $task)
+                    @foreach($person['tasks']->take($this->batch) as $task)
                         <div class="card" wire:key="held-card-{{ $task->id }}" tabindex="0" role="button" data-task="{{ $task->id }}" data-title="{{ $task->title }}" data-person="{{ $person['key'] }}"
                              aria-describedby="person-help" wire:click="$dispatch('open-task', { taskId: {{ $task->id }} })" x-on:keydown.enter="$dispatch('open-task', { taskId: {{ $task->id }} })">
                             @if(in_array($task->priority, ['urgent', 'high', 'low'], true))
@@ -46,6 +46,9 @@
                         </div>
                     @endforeach
                 </div>
+                @if($person['tasks']->count() > $this->batch)
+                    <button type="button" class="add-line" wire:click="showMore">Show more, {{ number_format($person['tasks']->count() - $this->batch) }} left</button>
+                @endif
             </div>
         @endforeach
     </div>

@@ -60,6 +60,70 @@ jobs:
           BROADCAST_CONNECTION: log
         run: ./vendor/bin/phpunit --colors=never
 
+  postgres:
+    name: Tests on PostgreSQL
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: tasks
+          POSTGRES_PASSWORD: tasks
+          POSTGRES_DB: tasks_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tasks"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          tools: composer:v2
+          coverage: none
+          extensions: pdo_pgsql, pgsql, mbstring, intl, bcmath, curl
+
+      - uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache/files
+          key: ${{ runner.os }}-php-8.4-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-php-8.4-composer-
+
+      - name: Prepare environment
+        run: cp .env.example .env
+
+      - name: Install dependencies
+        run: composer install --no-interaction --prefer-dist
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      # phpunit.xml forces in-memory SQLite, so the copy this job uses points at the service instead.
+      - name: Point the tests at PostgreSQL
+        run: |
+          sed -e 's/name="DB_CONNECTION" value="sqlite"/name="DB_CONNECTION" value="pgsql"/' \
+              -e 's/name="DB_DATABASE" value=":memory:"/name="DB_DATABASE" value="tasks_test"/' phpunit.xml > phpunit.pg.xml
+          grep -q 'value="pgsql"' phpunit.pg.xml && grep -q 'value="tasks_test"' phpunit.pg.xml
+
+      - name: Run tests
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_USERNAME: tasks
+          DB_PASSWORD: tasks
+          CACHE_STORE: array
+          QUEUE_CONNECTION: sync
+          SESSION_DRIVER: array
+          MAIL_MAILER: array
+          BROADCAST_CONNECTION: log
+        run: ./vendor/bin/phpunit -c phpunit.pg.xml --colors=never
+
   browser:
     name: Browser tests (Dusk)
     runs-on: ubuntu-latest

@@ -6,6 +6,8 @@ use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\TaskTemplate;
 use App\Models\User;
+use Facebook\WebDriver\Chrome\ChromeDevToolsDriver;
+use Facebook\WebDriver\WebDriverKeys;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Laravel\Dusk\Browser;
 use Tests\DuskTestCase;
@@ -163,6 +165,53 @@ class TaskCoreTest extends DuskTestCase
             $browser->loginAs($user)->openLivewire("/lists/{$list->id}")
                 ->type('input[type="search"]', 'q')->settle()
                 ->assertMissing('#quick-add-sentence');
+        });
+    }
+
+    /** Acceptance test 27. */
+    public function test_an_edit_made_with_no_connection_saves_when_it_returns(): void
+    {
+        [$user, $list, $task] = $this->board();
+
+        $this->browse(function (Browser $browser) use ($user, $list, $task) {
+            $tools = new ChromeDevToolsDriver($browser->driver);
+            $network = fn (bool $offline) => $tools->execute('Network.emulateNetworkConditions', ['offline' => $offline, 'latency' => 0, 'downloadThroughput' => -1, 'uploadThroughput' => -1]);
+            $tools->execute('Network.enable', []);
+
+            $browser->loginAs($user)->visit(route('task-lists.show', $list))
+                ->click("[data-task=\"{$task->id}\"] .card-title")->waitFor('#task-title');
+            $network(true);
+
+            $browser->script("const t = document.getElementById('task-title'); t.value = 'Inspect the east road'; t.dispatchEvent(new Event('change', {bubbles: true}));");
+            $browser->waitFor('#connection:not([hidden])')->assertSeeIn('#connection', 'Connection lost');
+            $this->assertSame('Inspect the haul road', $task->fresh()->title, 'nothing reached the server');
+
+            $network(false);
+            $browser->waitUntilMissing('#connection:not([hidden])', 12)->waitForText('Your change was saved');
+            $this->assertSame('Inspect the east road', $task->fresh()->title);
+        });
+    }
+
+    public function test_a_card_moved_with_no_connection_goes_back_and_says_so(): void
+    {
+        [$user, $list, $task] = $this->board();
+
+        $this->browse(function (Browser $browser) use ($user, $list, $task) {
+            $tools = new ChromeDevToolsDriver($browser->driver);
+            $tools->execute('Network.enable', []);
+
+            $browser->loginAs($user)->visit(route('task-lists.show', $list))->waitFor("[data-task=\"{$task->id}\"]");
+            $tools->execute('Network.emulateNetworkConditions', ['offline' => true, 'latency' => 0, 'downloadThroughput' => -1, 'uploadThroughput' => -1]);
+
+            $browser->script("document.querySelector('[data-task=\"{$task->id}\"]').focus()");
+            $browser->driver->getKeyboard()->sendKeys([WebDriverKeys::ALT, WebDriverKeys::ARROW_RIGHT]);
+            $browser->driver->getKeyboard()->releaseKey(WebDriverKeys::ALT);
+
+            $browser->waitForText('That did not save')->waitFor('#connection:not([hidden])');
+            $this->assertSame('todo', $task->fresh()->status);
+
+            $tools->execute('Network.emulateNetworkConditions', ['offline' => false, 'latency' => 0, 'downloadThroughput' => -1, 'uploadThroughput' => -1]);
+            $browser->waitUntilMissing('#connection:not([hidden])', 12);
         });
     }
 }

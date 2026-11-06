@@ -243,9 +243,16 @@ class TaskTable extends Component
         app(TaskEditor::class)->set($task, $field, $value);
     }
 
+    /** @return list<int> */
+    #[Computed]
+    public function drawnIds(): array
+    {
+        return collect($this->groups)->flatMap(fn (array $group) => $group['tasks']->take($this->batch)->pluck('id'))->values()->all();
+    }
+
     public function toggleAll(): void
     {
-        $ids = $this->tasks->pluck('id')->all();
+        $ids = $this->drawnIds;
         $this->selected = count($this->selected) === count($ids) ? [] : $ids;
     }
 

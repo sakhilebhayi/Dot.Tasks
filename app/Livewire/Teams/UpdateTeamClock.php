@@ -3,6 +3,7 @@
 namespace App\Livewire\Teams;
 
 use App\Models\Team;
+use App\Services\AuditLog;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Component;
@@ -31,6 +32,7 @@ class UpdateTeamClock extends Component
         $this->validate(['timezone' => ['required', Rule::in(timezone_identifiers_list())]]);
 
         $this->team->forceFill(['timezone' => $this->timezone])->save();
+        AuditLog::record($this->team, 'changed', 'Set the business time zone to '.$this->timezone);
         $this->saved = true;
     }
 

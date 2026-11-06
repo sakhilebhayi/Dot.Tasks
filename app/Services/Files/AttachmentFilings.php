@@ -4,6 +4,7 @@ namespace App\Services\Files;
 
 use App\Models\Task;
 use App\Models\TaskAttachment;
+use App\Services\AuditLog;
 use App\Services\TaskHistory;
 use Illuminate\Support\Facades\Storage;
 
@@ -30,6 +31,7 @@ class AttachmentFilings
 
         $attachment->update(['file_uuid' => (string) ($reply['uuid'] ?? ''), 'open_url' => $this->sameHost((string) ($reply['open_url'] ?? ''))]);
         $this->history->record($task, 'file', 'Kept '.$attachment->name.' in Dot.Files');
+        AuditLog::record($task->taskList->team, 'shared', 'Kept '.$attachment->name.' in Dot.Files');
     }
 
     /** A link from another server is only passed to a person if it goes where it should. */

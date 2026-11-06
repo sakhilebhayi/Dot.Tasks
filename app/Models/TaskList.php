@@ -45,10 +45,13 @@ class TaskList extends Model
     protected static function booted(): void
     {
         static::created(function (TaskList $board) {
-            $order = 0;
-            foreach (TaskStatus::DEFAULTS as $category => $name) {
-                $board->columns()->create(['name' => $name, 'category' => $category, 'sort_order' => ++$order]);
-            }
+            // Part of making the board, so not logged column by column.
+            TaskStatus::withoutEvents(function () use ($board) {
+                $order = 0;
+                foreach (TaskStatus::DEFAULTS as $category => $name) {
+                    $board->columns()->create(['name' => $name, 'category' => $category, 'sort_order' => ++$order]);
+                }
+            });
         });
     }
 }

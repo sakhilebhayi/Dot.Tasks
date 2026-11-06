@@ -85,6 +85,7 @@ Route::middleware([
     Route::get('/automation', fn () => view('tasks.automation'))->name('tasks.automation');
     Route::get('/reports', fn () => view('tasks.reports'))->name('reports.index');
     Route::get('/connections', fn () => view('tasks.integrations'))->name('tasks.connections');
+    Route::get('/audit', fn () => view('tasks.audit'))->name('tasks.audit');
     Route::get('/reports/export', ReportExportController::class)->name('reports.export');
     Route::get('/tasks/{task}/files/{attachment}', [TaskFileController::class, 'show'])->name('tasks.files');
     Route::get('/notifications/settings', fn () => view('notifications.settings'))->name('notifications.settings');

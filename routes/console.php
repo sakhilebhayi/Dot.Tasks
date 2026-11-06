@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AuditEvent;
 use App\Http\Controllers\SchedulerProbeController;
 use App\Jobs\QueueHeartbeat;
 use Illuminate\Foundation\Inspiring;
@@ -25,6 +26,9 @@ Schedule::command('tasks:detect-escalation-candidates')->dailyAt('07:30');
 // Publish each company's daily aggregate numbers to Dot.Analytics (nothing happens until ANALYTICS_INGEST_URL and
 // ANALYTICS_INGEST_SECRET are both set). Quiet hour, UTC, because the snapshot is dated by its UTC day.
 Schedule::command('tasks:publish-metrics')->dailyAt('02:10')->timezone('UTC')->withoutOverlapping();
+
+// The audit log keeps TASKS_AUDIT_MONTHS (default 24).
+Schedule::command('model:prune', ['--model' => [AuditEvent::class]])->dailyAt('03:30')->timezone('UTC')->withoutOverlapping();
 
 // Delete for good what has been on the Removed page longer than REMOVED_RETENTION_DAYS (default 90).
 // `php artisan tasks:purge-removed --dry-run` reports without deleting.
