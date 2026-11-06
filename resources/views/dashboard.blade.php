@@ -10,16 +10,6 @@
             @endcan
         </div>
 
-        <div class="figures">
-            <div class="figure"><span>Boards</span><b>{{ $lists->count() }}</b></div>
-            <div class="figure"><span>Tasks</span><b>{{ $taskCounts['total'] }}</b></div>
-            <div class="figure"><span>In progress</span><b>{{ $taskCounts['in_progress'] }}</b></div>
-            <div class="figure"><span>Due today</span><b>{{ $taskCounts['due_today'] }}</b></div>
-            <div class="figure"><span>Overdue</span><b @class(['overdue' => $taskCounts['overdue'] > 0])>{{ $taskCounts['overdue'] }}</b></div>
-            <div class="figure"><span>Completed this week</span><b>{{ $taskCounts['completed_week'] }}</b></div>
-            <div class="figure"><span>Completed</span><b>{{ $taskCounts['done'] }}</b></div>
-        </div>
-
         <livewire:dashboard />
 
         <h2 class="section-title">Boards</h2>

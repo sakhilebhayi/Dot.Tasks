@@ -134,7 +134,7 @@ class ResponsiveShellTest extends TestCase
     {
         $f = $this->teamFixture();
 
-        $html = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
+        $html = $this->actingAs($f->owner)->get(route('dashboard', ['view' => 'team']))->assertOk()->getContent();
 
         $this->assertSame(1, preg_match_all('/<div class="page">/', $html));
         $this->assertSame(1, preg_match_all('/<div class="figures">/', $html), 'one strip of figures');

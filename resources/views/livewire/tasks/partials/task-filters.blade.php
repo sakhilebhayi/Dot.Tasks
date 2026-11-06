@@ -1,5 +1,7 @@
-<div class="filters">
+<div class="filters" x-data="{ more: false }">
     <input class="input" type="search" wire:model.live.debounce.300ms="search" placeholder="Search tasks..." aria-label="Search tasks">
+    <button type="button" class="btn filter-toggle" x-on:click="more = ! more" x-bind:aria-expanded="more">Filters</button>
+    <div class="filter-rest" x-bind:class="more && 'open'">
     <select class="select bare" wire:model.live="assignee" aria-label="Assignee">
         <option value="">Anyone</option>
         <option value="me">Assigned to me</option>
@@ -59,6 +61,7 @@
     @if($this->filtersActive)
         <button type="button" wire:click="clearFilters" class="link">Clear filters</button>
     @endif
+    </div>
     @can('create', [\App\Models\Task::class, $taskList])
         <button class="btn primary" style="margin-left:auto" wire:click="$dispatch('open-create-task', { status: 'todo' })">
             <x-icon name="plus" /> Add task

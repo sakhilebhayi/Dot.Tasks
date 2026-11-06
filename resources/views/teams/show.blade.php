@@ -1,12 +1,12 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">
-            {{ __('Team Settings') }}
-        </h2>
-    </x-slot>
-
-    <div>
-        <div class="max-w-7xl mx-auto py-10 sm:px-6 lg:px-8">
+<x-app-layout title="Team settings">
+    <div class="page">
+        <div class="page-head">
+            <div>
+                <h1>Team settings</h1>
+                <p>Who is on this team, what they can do, and its time zone.</p>
+            </div>
+        </div>
+        <div>
             @livewire('teams.update-team-name-form', ['team' => $team])
 
             @livewire('teams.update-team-clock', ['team' => $team])

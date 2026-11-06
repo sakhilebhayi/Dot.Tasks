@@ -42,6 +42,11 @@ typography:
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
+  micro:
+    fontFamily: Schibsted Grotesk
+    fontSize: 11px
+    fontWeight: 500
+    lineHeight: 16px
 rounded:
   card: 6px
   control: 6px

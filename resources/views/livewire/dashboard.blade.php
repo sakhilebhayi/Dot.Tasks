@@ -32,6 +32,14 @@
         </div>
     @endif
 
+    @if($view === 'team' && $board === '')
+        <div class="figures">
+            @foreach([['Boards', $this->boards->count()], ['Tasks', $this->counts['total']], ['In progress', $this->counts['in_progress']], ['Due today', $this->counts['due_today']], ['Overdue', $this->counts['overdue']], ['Finished this week', $this->counts['completed_week']], ['Finished', $this->counts['done']]] as [$name, $value])
+                <div class="figure"><span>{{ $name }}</span><b @class(['overdue' => $name === 'Overdue' && $value > 0])>{{ $value }}</b></div>
+            @endforeach
+        </div>
+    @endif
+
     <div class="widgets" @if($arranging) x-data="stepList('placeWidget')" wire:key="arranging" @endif>
         @foreach($this->widgets as $widget)
             @unless($widget['hidden'])
