@@ -45,6 +45,8 @@ class TaskDetail extends Component
     use WithFileUploads;
 
     /** Everything the drawer shows, loaded together. */
+    private const LONG_FIELDS = ['title' => 'title', 'description' => 'description', 'completion_criteria' => 'what done means'];
+
     private const RELATIONS = ['taskList.columns', 'assignee', 'collaborators', 'approvals.approver', 'watchers', 'attachments.user', 'fieldValues', 'checklistItems', 'activities.user', 'labels', 'subtasks', 'comments.user', 'taskList.team', 'blockedBy', 'blocking'];
 
     public ?Task $task = null;
@@ -68,6 +70,12 @@ class TaskDetail extends Component
     public $upload = null;
 
     public string $blockerType = 'ff';
+
+    /** @var array<string, string> */
+    public array $seen = [];
+
+    /** @var array{field: string, name: string, mine: string}|null */
+    public ?array $clash = null;
 
     public bool $templateSaved = false;
 
@@ -101,6 +109,8 @@ class TaskDetail extends Component
         $this->authorize('view', $task);
 
         $this->task = $task;
+        $this->rememberWords();
+        $this->clash = null;
         $this->templateSaved = false;
         $this->suggested = [];
         $this->summary = [];
@@ -272,7 +282,35 @@ class TaskDetail extends Component
     private function refreshTask(): void
     {
         $this->task = $this->task->fresh(self::RELATIONS);
+        $this->rememberWords();
         $this->dispatch('task-updated');
+    }
+
+    /** What this panel last showed, to tell when someone else changed the words underneath it. */
+    private function rememberWords(): void
+    {
+        $this->seen = collect(self::LONG_FIELDS)->mapWithKeys(fn (string $name, string $field) => [$field => (string) $this->task->{$field}])->all();
+    }
+
+    /** Keep the words the person just typed, over what the other person saved. */
+    public function useMine(): void
+    {
+        if (! $this->task || ! $this->clash) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+
+        ['field' => $field, 'mine' => $mine] = $this->clash;
+        $this->clash = null;
+        app(TaskEditor::class)->set($this->task, $field, $mine);
+
+        $this->refreshTask();
+    }
+
+    public function keepTheirs(): void
+    {
+        $this->clash = null;
     }
 
     public function updateStatus(string $status): void
@@ -311,6 +349,18 @@ class TaskDetail extends Component
         }
 
         $this->authorize('update', $this->task);
+
+        // Long text is typed over minutes, so another person's save in that time is not silently written over.
+        if (isset(self::LONG_FIELDS[$field])) {
+            $now = (string) Task::whereKey($this->task->id)->value($field);
+
+            if ($now !== ($this->seen[$field] ?? $now) && $now !== (string) $value) {
+                $this->clash = ['field' => $field, 'name' => self::LONG_FIELDS[$field], 'mine' => (string) $value];
+                $this->refreshTask();
+
+                return;
+            }
+        }
 
         app(TaskEditor::class)->set($this->task, $field, $value);
 

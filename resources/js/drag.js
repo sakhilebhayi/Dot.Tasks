@@ -111,7 +111,11 @@ function sortable(element, { handle, canDrop, drop, keepOrder = false, sharing =
 const nextId = (item) => {
     let next = item.nextElementSibling;
     while (next && !next.dataset?.task) next = next.nextElementSibling;
-    return next ? Number(next.dataset.task) : null;
+    if (next) return Number(next.dataset.task);
+
+    // The end of a long list is only the end of what is drawn: the card goes before the first one still to come.
+    const after = item.parentElement?.dataset.after;
+    return after ? Number(after) : null;
 };
 
 const blockedFromDone = (card, list) => (list.dataset.category === 'done' && card.dataset.blocked !== undefined ? 'A blocked task cannot be finished yet.' : null);
@@ -133,12 +137,15 @@ function pulse(seconds = 20) {
     return {
         init() {
             this.timer = setInterval(() => {
-                const busy = document.hidden || document.body.classList.contains('dragging') || document.activeElement?.matches('input, textarea, select');
+                const busy = document.hidden || document.body.classList.contains('offline') || document.body.classList.contains('dragging') || document.activeElement?.matches('input, textarea, select');
                 if (!busy) this.$wire.refreshBoard();
             }, seconds * 1000);
+            this.catchUp = () => this.$wire.refreshBoard();
+            window.addEventListener('connection-back', this.catchUp);
         },
         destroy() {
             clearInterval(this.timer);
+            window.removeEventListener('connection-back', this.catchUp);
         },
     };
 }

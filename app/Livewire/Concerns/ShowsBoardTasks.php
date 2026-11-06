@@ -20,6 +20,7 @@ use Livewire\Attributes\Url;
 trait ShowsBoardTasks
 {
     use FiltersTasks;
+    use ShowsInBatches;
 
     public TaskList $taskList;
 

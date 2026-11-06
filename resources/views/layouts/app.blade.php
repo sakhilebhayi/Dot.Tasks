@@ -39,8 +39,13 @@
             @foreach ([
                 '' => [['tasks.today', 'day', 'My Day'], ['tasks.inbox', 'inbox', 'Inbox'], ['tasks.mine', 'check', 'My tasks'], ['tasks.upcoming', 'calendar', 'Upcoming']],
                 'Team' => [['dashboard', 'home', 'Overview'], ['tasks.team', 'team', 'Who holds what'], ['reports.index', 'report', 'Reports']],
-                'Set up' => [['tasks.templates', 'copy', 'Templates'], ['tasks.automation', 'bolt', 'Automation'], ['labels.index', 'label', 'Labels and fields'], ['tasks.connections', 'link', 'Connections'], ['removed.index', 'trash', 'Removed']],
+                'Set up' => [['tasks.templates', 'copy', 'Templates'], ['tasks.automation', 'bolt', 'Automation'], ['labels.index', 'label', 'Labels and fields'], ['removed.index', 'trash', 'Removed']],
             ] as $group => $items)
+                @php
+                    if ($group === 'Set up' && Auth::user()?->currentTeam && Auth::user()->hasTeamPermission(Auth::user()->currentTeam, 'delete')) {
+                        $items = [...$items, ['tasks.connections', 'link', 'Connections'], ['tasks.audit', 'list', 'Audit log']];
+                    }
+                @endphp
                 @if($group !== '')
                     <div class="nav-group"><span>{{ $group }}</span></div>
                 @endif
@@ -147,6 +152,8 @@
         <livewire:tasks.quick-add :board="request()->route('taskList')?->id" />
         <livewire:tasks.find-tasks />
     @endauth
+
+    <div class="flash connection" id="connection" role="alert" hidden>Connection lost. Keep this page open: edits save when it returns.</div>
 
     @stack('modals')
     @livewireScripts

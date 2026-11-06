@@ -44,7 +44,7 @@
         <div class="grid-scroll" data-rack role="table" aria-label="{{ $taskList->name }} tasks" style="--cols: {{ $columns }}">
             <div class="trow thead" role="row">
                 @if($canWork)
-                    <span role="columnheader" class="cell"><input type="checkbox" aria-label="Select every task shown" wire:click="toggleAll" @checked($selected !== [] && count($selected) === $this->tasks->count())></span>
+                    <span role="columnheader" class="cell"><input type="checkbox" aria-label="Select every task shown" wire:click="toggleAll" @checked($selected !== [] && count($selected) === count($this->drawnIds))></span>
                 @endif
                 @if($this->canDrag)<span role="columnheader" class="cell"><span class="sr">Move</span></span>@endif
                 <span role="columnheader" class="cell"><button type="button" class="thead-sort" wire:click="sortOn('title')">Title</button></span>
@@ -66,10 +66,11 @@
                     @endif
                     <div class="tgroup" data-name="{{ $group['name'] }}"
                          @if($this->canDrag)
+                             @if($group['tasks']->count() > $this->batch) data-after="{{ $group['tasks']->values()->get($this->batch)->id }}" @endif
                              data-list data-handle=".grip" wire:key="list-{{ $this->groupBy }}-{{ $group['key'] }}" x-data="boardColumn" x-on:keydown="keys($event)"
                              @if($this->groupBy === 'status') data-status="{{ $group['key'] }}" data-category="{{ $group['category'] }}" @else data-lane="{{ $group['key'] }}" @endif
                          @endif>
-                        @foreach($group['tasks'] as $task)
+                        @foreach($group['tasks']->take($this->batch) as $task)
                             <div @class(['trow', 'is-done' => $task->status === 'done']) role="row" wire:key="row-{{ $task->id }}-{{ $edits }}"
                                  data-task="{{ $task->id }}" data-status="{{ $task->status_id }}" data-title="{{ $task->title }}" tabindex="-1" x-data="{ open: false }"
                                  @if($task->isBlocked()) data-blocked @endif>
@@ -111,6 +112,9 @@
                             </div>
                         @endforeach
                     </div>
+                    @if($group['tasks']->count() > $this->batch)
+                        <div role="row"><div role="cell"><button type="button" class="add-line" wire:click="showMore">Show more, {{ number_format($group['tasks']->count() - $this->batch) }} left</button></div></div>
+                    @endif
                 </div>
             @endforeach
         </div>

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Tasks;
 
+use App\Livewire\Concerns\ShowsInBatches;
 use App\Models\Task;
 use App\Models\TaskList;
 use App\Models\Team;
@@ -20,6 +21,8 @@ use Livewire\Component;
 /** Who holds what. Each person is a slot of open work, and a card dragged to someone else is handed over. */
 class TeamWork extends Component
 {
+    use ShowsInBatches;
+
     public const SHOWS = ['open' => 'All open work', 'overdue' => 'Overdue', 'blocked' => 'Blocked', 'week' => 'Due in 7 days'];
 
     #[Url(except: '')]
@@ -27,6 +30,11 @@ class TeamWork extends Component
 
     #[Url(except: 'open')]
     public string $show = 'open';
+
+    public function mount(): void
+    {
+        $this->batch = 30;
+    }
 
     private function team(): Team
     {

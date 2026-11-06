@@ -603,4 +603,57 @@ class TaskCoreTest extends TestCase
         $this->assertNotNull($done->fresh()->completed_at);
         $this->assertNull($open->fresh()->completed_at);
     }
+
+    public function test_a_change_by_someone_else_while_typing_is_not_written_over(): void
+    {
+        $f = $this->teamFixture();
+        $panel = Livewire::actingAs($f->editor)->test(TaskDetail::class)->call('openTask', $f->task->id);
+
+        $f->task->fresh()->update(['title' => 'Their title']);
+
+        $panel->call('saveField', 'title', 'My title')->assertSee('Someone else changed the title')->assertSee('My title');
+        $this->assertSame('Their title', $f->task->fresh()->title);
+
+        $panel->call('useMine')->assertDontSee('Someone else changed');
+        $this->assertSame('My title', $f->task->fresh()->title);
+    }
+
+    public function test_their_words_can_be_kept_and_the_next_edit_goes_through(): void
+    {
+        $f = $this->teamFixture();
+        $panel = Livewire::actingAs($f->editor)->test(TaskDetail::class)->call('openTask', $f->task->id);
+
+        $f->task->fresh()->update(['description' => 'Theirs']);
+
+        $panel->call('saveField', 'description', 'Mine')->call('keepTheirs')->assertDontSee('Someone else changed');
+        $this->assertSame('Theirs', $f->task->fresh()->description);
+
+        $panel->call('saveField', 'description', 'Next');
+        $this->assertSame('Next', $f->task->fresh()->description);
+    }
+
+    public function test_saving_the_same_words_or_a_short_field_is_never_a_clash(): void
+    {
+        $f = $this->teamFixture();
+        $panel = Livewire::actingAs($f->editor)->test(TaskDetail::class)->call('openTask', $f->task->id);
+
+        $f->task->fresh()->update(['title' => 'Same', 'priority' => 'low']);
+
+        $panel->call('saveField', 'title', 'Same')->assertDontSee('Someone else changed')
+            ->call('saveField', 'priority', 'high')->assertDontSee('Someone else changed');
+        $this->assertSame('high', $f->task->fresh()->priority);
+    }
+
+    public function test_only_someone_who_can_edit_can_force_their_words(): void
+    {
+        $f = $this->teamFixture();
+        $panel = Livewire::actingAs($f->editor)->test(TaskDetail::class)->call('openTask', $f->task->id);
+        $f->task->fresh()->update(['title' => 'Theirs']);
+        $panel->call('saveField', 'title', 'Mine');
+
+        $f->team->users()->updateExistingPivot($f->editor->id, ['role' => 'viewer']);
+        $panel->call('useMine')->assertForbidden();
+
+        $this->assertSame('Theirs', $f->task->fresh()->title);
+    }
 }
