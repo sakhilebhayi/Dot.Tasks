@@ -176,7 +176,7 @@ class PublishMetricsCommandTest extends TestCase
         $this->assertSame(self::UUID_A, $payload['company_uuid']);
         $this->assertSame('2026-11-05T00:00:00Z', $payload['taken_at'], 'the start of the UTC day');
         $this->assertSame('day', $payload['period']);
-        $this->assertSame(['open', 'overdue', 'created_7d'], array_keys($payload['metrics']));
+        $this->assertSame(['open', 'overdue', 'created_7d', 'completed_7d'], array_keys($payload['metrics']));
         $this->assertSame([], array_diff(array_keys($payload['metrics']), self::CONTRACT_KEYS), 'only keys Dot.Analytics accepts');
         foreach ($payload['metrics'] as $key => $value) {
             $this->assertTrue(is_int($value) || is_float($value), "{$key} is a plain number");

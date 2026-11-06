@@ -55,6 +55,15 @@ return [
         'timeout' => 5,
     ],
 
+    // Dot.Files platform file API. FILES_PLATFORM_SECRET here equals DOT_SERVICE_SECRET_TASKS on Dot.Files.
+    'files' => [
+        'url' => env('FILES_API_URL', 'https://files.infodot.co.za'),
+        'secret' => env('FILES_PLATFORM_SECRET'),
+        'platform' => env('FILES_PLATFORM_KEY', 'tasks'),
+        'folder' => env('FILES_FOLDER', 'Dot.Tasks'),
+        'timeout' => (int) env('FILES_TIMEOUT', 20),
+    ],
+
     'anthropic' => [
         'api_key' => env('ANTHROPIC_API_KEY', ''),
         'model' => env('ANTHROPIC_MODEL', 'claude-opus-5-5'),

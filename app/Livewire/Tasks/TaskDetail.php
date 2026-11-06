@@ -13,6 +13,9 @@ use App\Models\TaskTemplate;
 use App\Models\User;
 use App\Services\AiTaskBreakdownService;
 use App\Services\CommentMentions;
+use App\Services\Files\AttachmentFilings;
+use App\Services\Files\FilesClient;
+use App\Services\Files\FilesRefused;
 use App\Services\TaskApprovals;
 use App\Services\TaskArchiveService;
 use App\Services\TaskAttachments;
@@ -685,6 +688,31 @@ class TaskDetail extends Component
         app(TaskAttachments::class)->store($this->task, $this->upload, auth()->user());
 
         $this->reset('upload');
+        $this->refreshTask();
+    }
+
+    #[Computed]
+    public function filesReady(): bool
+    {
+        return app(FilesClient::class)->enabled();
+    }
+
+    /** Keep a copy in the business's Dot.Files workspace. */
+    public function keepInFiles(int $attachmentId): void
+    {
+        if (! $this->task) {
+            return;
+        }
+
+        $this->authorize('update', $this->task);
+        $this->resetErrorBag('files');
+
+        try {
+            app(AttachmentFilings::class)->file($this->task->attachments()->find($attachmentId) ?? abort(404));
+        } catch (FilesRefused $refused) {
+            $this->addError('files', $refused->getMessage());
+        }
+
         $this->refreshTask();
     }
 

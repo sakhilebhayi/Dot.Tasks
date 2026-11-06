@@ -19,15 +19,11 @@ use Carbon\CarbonInterface;
  *   open        tasks not done yet
  *   overdue     open tasks whose due date is before today (UTC)
  *   created_7d  tasks created in the last 7 days
- *
- * NOT reported: `completed_7d`. Dot.Tasks has no completed-at column (the dashboard's "completed this week"
- * says so: it counts done tasks last *touched* in the window, which also counts an old task edited after it was
- * done). Sending that would be a guess presented as a measurement, so the key is omitted until the app records
- * when a task was completed.
+ *   completed_7d  tasks finished in the last 7 days
  */
 class MetricsCollector
 {
-    /** @return array{open: int, overdue: int, created_7d: int} */
+    /** @return array{open: int, overdue: int, created_7d: int, completed_7d: int} */
     public function collect(Team|int $team, ?CarbonInterface $asOf = null): array
     {
         $now = ($asOf ? $asOf->copy() : now())->utc();
@@ -40,6 +36,7 @@ class MetricsCollector
             'open' => $open()->count(),
             'overdue' => $open()->whereNotNull('tasks.due_date')->whereDate('tasks.due_date', '<', $today)->count(),
             'created_7d' => Task::query()->forTeam($team)->where('tasks.created_at', '>=', $since)->count(),
+            'completed_7d' => Task::query()->forTeam($team)->where('tasks.completed_at', '>=', $since)->count(),
         ];
     }
 }

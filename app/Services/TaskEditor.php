@@ -22,11 +22,12 @@ class TaskEditor
         'estimated_minutes' => ['nullable', 'integer', 'min:0', 'max:1000000'],
         'actual_minutes' => ['nullable', 'integer', 'min:0', 'max:1000000'],
         'completion_criteria' => ['nullable', 'string', 'max:5000'],
+        'project_url' => ['nullable', 'url:https', 'max:500'],
     ];
 
     private const NAMES = [
         'title' => 'title', 'description' => 'description', 'due_date' => 'due date', 'start_date' => 'start date',
-        'estimated_minutes' => 'estimate', 'actual_minutes' => 'time spent', 'completion_criteria' => 'what done means', 'priority' => 'priority',
+        'estimated_minutes' => 'estimate', 'actual_minutes' => 'time spent', 'completion_criteria' => 'what done means', 'priority' => 'priority', 'project_url' => 'project link',
     ];
 
     public function __construct(private readonly TaskHistory $history, private readonly TaskNotifier $notifier) {}
@@ -150,7 +151,7 @@ class TaskEditor
 
         return match ($field) {
             'title' => 'Renamed it to '.$value,
-            'description', 'completion_criteria' => 'Changed the '.self::NAMES[$field],
+            'description', 'completion_criteria', 'project_url' => 'Changed the '.self::NAMES[$field],
             'due_date', 'start_date' => 'Set the '.self::NAMES[$field].' to '.Carbon::parse($value)->format('M j, Y'),
             'estimated_minutes', 'actual_minutes' => 'Set the '.self::NAMES[$field].' to '.$value.' minutes',
             default => 'Set the '.self::NAMES[$field].' to '.$value,

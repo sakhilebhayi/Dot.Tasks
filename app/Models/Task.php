@@ -29,7 +29,7 @@ class Task extends Model
         'title', 'description', 'status', 'priority', 'due_date',
         'estimated_minutes', 'sort_order', 'escalated_at',
         'recurrence_type', 'recurrence_interval', 'recurrence_anchor', 'recurrence_days', 'recurrence_until', 'recurrence_limit', 'recurrence_count', 'recurrence_missed', 'recurrence_parent_id', 'recurrence_source_id',
-        'creator_id', 'status_id', 'start_date', 'actual_minutes', 'completion_criteria', 'completion_note', 'completed_at', 'completed_by',
+        'creator_id', 'project_url', 'status_id', 'start_date', 'actual_minutes', 'completion_criteria', 'completion_note', 'completed_at', 'completed_by',
     ];
 
     protected $casts = [

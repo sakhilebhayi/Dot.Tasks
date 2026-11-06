@@ -61,20 +61,22 @@ class MetricsCollectorTest extends TestCase
 
     public function test_it_reports_exactly_the_keys_it_can_compute_truthfully(): void
     {
-        $this->assertSame(['open', 'overdue', 'created_7d'], array_keys($this->collect($this->company())));
+        $this->assertSame(['open', 'overdue', 'created_7d', 'completed_7d'], array_keys($this->collect($this->company())));
     }
 
-    public function test_completed_7d_is_not_reported_because_the_app_does_not_record_when_a_task_was_completed(): void
+    public function test_completed_7d_counts_the_finish_inside_the_window_and_not_a_later_edit(): void
     {
         $team = $this->company();
-        $this->task($this->board($team), ['status' => 'done']);
+        $board = $this->board($team);
+        $this->task($board, ['status' => 'done', 'completed_at' => now()->subDays(7)]);
+        $this->task($board, ['status' => 'done', 'completed_at' => now()->subDays(8), 'updated_at' => now()]);
 
-        $this->assertArrayNotHasKey('completed_7d', $this->collect($team));
+        $this->assertSame(1, $this->collect($team)['completed_7d']);
     }
 
     public function test_a_company_with_no_tasks_reports_real_zeros_as_whole_numbers(): void
     {
-        $this->assertSame(['open' => 0, 'overdue' => 0, 'created_7d' => 0], $this->collect($this->company()));
+        $this->assertSame(['open' => 0, 'overdue' => 0, 'created_7d' => 0, 'completed_7d' => 0], $this->collect($this->company()));
     }
 
     // ------------------------------------------------------------- open
@@ -213,8 +215,8 @@ class MetricsCollectorTest extends TestCase
             $this->task($listB, ['due_date' => '2026-10-01', 'created_at' => now()->subDay()]);
         }
 
-        $this->assertSame(['open' => 1, 'overdue' => 1, 'created_7d' => 1], $this->collect($a));
-        $this->assertSame(['open' => 4, 'overdue' => 4, 'created_7d' => 4], $this->collect($b));
+        $this->assertSame(['open' => 1, 'overdue' => 1, 'created_7d' => 1, 'completed_7d' => 0], $this->collect($a));
+        $this->assertSame(['open' => 4, 'overdue' => 4, 'created_7d' => 4, 'completed_7d' => 0], $this->collect($b));
     }
 
     public function test_the_numbers_are_the_same_whoever_is_signed_in_or_nobody(): void

@@ -187,6 +187,13 @@
                     <div class="step" wire:key="file-{{ $file->id }}">
                         <a class="step-title link" style="text-decoration:none" href="{{ route('tasks.files', [$task, $file]) }}">{{ $file->name }}</a>
                         <span class="num" style="color:var(--muted);font-size:12px">{{ \Illuminate\Support\Number::fileSize($file->size) }}</span>
+                        @if($file->open_url)
+                            <a class="link" href="{{ $file->open_url }}" rel="noopener" target="_blank">In Dot.Files</a>
+                        @elseif($this->filesReady)
+                            @can('update', $task)
+                                <button type="button" class="btn small quiet" wire:click="keepInFiles({{ $file->id }})">Keep in Dot.Files</button>
+                            @endcan
+                        @endif
                         @can('update', $task)
                             <button type="button" class="btn small quiet" wire:click="removeFile({{ $file->id }})" wire:confirm="Remove {{ $file->name }}?" aria-label="Remove {{ $file->name }}">Remove</button>
                         @endcan
@@ -200,6 +207,7 @@
                     </label>
                     <span wire:loading wire:target="upload" style="color:var(--muted);font-size:12px">Uploading</span>
                     @error('upload')<p class="error">{{ $message }}</p>@enderror
+                    @error('files')<p class="error">{{ $message }}</p>@enderror
                 @endcan
 
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px">
@@ -256,6 +264,15 @@
                 <details class="fold" wire:key="fold-more-{{ $task->id }}" wire:ignore.self>
                     <summary>More details</summary>
                     <div class="props">
+                    <label for="task-project" style="color:var(--muted);font-size:12px">Project link</label>
+                    @can('update', $task)
+                        <div>
+                            <input class="input" id="task-project" type="url" placeholder="https://projects.infodot.co.za/..." value="{{ $task->project_url }}" wire:change="saveField('project_url', $event.target.value)">
+                            @error('project_url')<p class="error">{{ $message }}</p>@enderror
+                        </div>
+                    @else
+                        <div>@if($task->project_url)<a class="link" href="{{ $task->project_url }}" rel="noopener" target="_blank">Open the project</a>@else - @endif</div>
+                    @endcan
                     <label for="task-start" style="color:var(--muted);font-size:12px">Starts</label>
                     @can('update', $task)
                         <div>
