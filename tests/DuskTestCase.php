@@ -68,6 +68,20 @@ abstract class DuskTestCase extends BaseTestCase
     }
 
     /**
+     * Each journey starts with no cookie, so a late request from the last page writes to the old session and not over
+     * the next sign-in. The session driver here is a file: the last writer wins.
+     */
+    protected function tearDown(): void
+    {
+        foreach (static::$browsers ?? [] as $browser) {
+            $browser->driver->manage()->deleteAllCookies();
+            $browser->driver->navigate()->to('about:blank');
+        }
+
+        parent::tearDown();
+    }
+
+    /**
      * Create the RemoteWebDriver instance.
      */
     protected function driver(): RemoteWebDriver
