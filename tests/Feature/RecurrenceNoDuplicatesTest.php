@@ -8,9 +8,8 @@ use App\Models\User;
 use App\Services\TaskRecurrenceService;
 use App\Services\TaskStatusService;
 use Carbon\Carbon;
-use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use RuntimeException;
 use Tests\TestCase;
 
 class RecurrenceNoDuplicatesTest extends TestCase
@@ -174,12 +173,18 @@ class RecurrenceNoDuplicatesTest extends TestCase
     public function test_a_failed_occurrence_leaves_the_task_as_it_was(): void
     {
         $task = $this->recurring();
-        DB::statement("CREATE TRIGGER stop_occurrence BEFORE INSERT ON tasks WHEN NEW.recurrence_parent_id IS NOT NULL BEGIN SELECT RAISE(ABORT, 'stopped'); END");
+        $this->app->bind(TaskRecurrenceService::class, fn () => new class extends TaskRecurrenceService
+        {
+            protected function makeOccurrence(Task $completedTask, Carbon $nextDueDate, Task $series): Task
+            {
+                throw new RuntimeException('The occurrence could not be saved.');
+            }
+        });
 
         try {
             $this->move($task, 'done');
             $this->fail('The insert should have failed.');
-        } catch (QueryException) {
+        } catch (RuntimeException) {
         }
 
         $this->assertSame('todo', $task->fresh()->status);
