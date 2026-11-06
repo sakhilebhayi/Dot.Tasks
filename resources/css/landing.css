@@ -10,6 +10,7 @@ body.app.landing { background: var(--ground); }
 .l-hero h1 { font-size: 48px; line-height: 52px; font-weight: 700; letter-spacing: -0.02em; text-wrap: balance; }
 .l-hero > div > p { margin-top: 16px; max-width: 46ch; font-size: 16px; line-height: 24px; color: var(--muted); }
 .l-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+.l-hero > div > .l-note { margin-top: 12px; font-size: 14px; line-height: 20px; }
 
 .l-rack { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
 .l-col { display: flex; flex-direction: column; gap: 6px; min-height: 272px; padding: 8px; border-radius: var(--radius); background: var(--raised); }
@@ -68,6 +69,11 @@ body.app.landing { background: var(--ground); }
     .l-ways { grid-template-columns: minmax(0, 1fr); }
     .l-ways div { padding-block: 10px; border-bottom: 1px solid var(--rule); }
     .l-facts { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+}
+
+/* The hero's own button is on the first screen, so the small header keeps Sign in. */
+@media (max-width: 419.98px) {
+    .l-join { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
