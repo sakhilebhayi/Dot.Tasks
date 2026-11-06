@@ -43,6 +43,7 @@
                 ['tasks.upcoming', 'calendar', 'Upcoming'],
                 ['tasks.team', 'team', 'Team'],
                 ['dashboard', 'home', 'Overview'],
+                ['reports.index', 'report', 'Reports'],
                 ['tasks.templates', 'copy', 'Templates'],
                 ['tasks.automation', 'bolt', 'Automation'],
                 ['labels.index', 'label', 'Labels and fields'],

@@ -426,6 +426,12 @@ button { cursor: pointer; }
 .plain-table th, .plain-table td, .chart-table th, .chart-table td { padding: 4px 8px 4px 0; border-top: 1px solid var(--rule); text-align: left; font-weight: 400; }
 .plain-table thead th, .chart-table thead th { border-top: 0; color: var(--muted); font-size: 12px; font-weight: 500; }
 
+.report-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); }
+.report-figure { padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.report-figure span { display: block; color: var(--muted); font-size: 12px; }
+.report-figure b { display: block; font-size: 24px; line-height: 32px; font-weight: 600; }
+.report-figure p { color: var(--muted); font-size: 12px; line-height: 16px; }
+
 .understood { margin-bottom: 14px; padding: 10px 12px; border-radius: var(--radius); background: var(--raised); }
 .step { display: flex; align-items: center; gap: 8px; min-height: 32px; }
 .step-title { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -494,6 +500,7 @@ button { cursor: pointer; }
     .find { flex: 1; }
     .find kbd, .topbar-hide { display: none; }
     .widgets { grid-template-columns: minmax(0, 1fr); }
+    .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .hbar { grid-template-columns: 96px minmax(0, 1fr) 28px; }
     .day-wrap { grid-template-columns: minmax(0, 1fr); }
     .week-slot { height: 76px; padding: 6px; }
