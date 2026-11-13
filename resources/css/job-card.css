@@ -463,6 +463,33 @@ input, textarea { caret-color: var(--text); }
 .account-title p { margin-top: 2px; color: var(--muted); }
 .page .input { width: 100%; }
 
+/* Arriving: the logo, a welcome, one action and the cards on this person's name. See resources/views/livewire/landing.blade.php. */
+.land { margin-bottom: 28px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
+.land-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+/* The file carries its own clear space, about a sixth of its width each side: the pull lines the artwork up with the text. */
+.land-logo { display: block; width: auto; height: 112px; margin: -12px 0 0 -26px; }
+.land-logo-night, .dark .land-logo-day { display: none; }
+.dark .land-logo-night { display: block; }
+.land-back { display: flex; gap: 4px; margin-right: -10px; }
+.land-back a { display: inline-flex; align-items: center; min-height: 34px; padding: 0 10px; border-radius: var(--radius); color: var(--muted); }
+.land-back a:hover { color: var(--text); background: var(--raised); }
+.land-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 24px 56px; align-items: start; margin-top: 4px; }
+.land h1 { max-width: 18ch; font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; overflow-wrap: break-word; }
+.land-lead { max-width: 52ch; margin-top: 12px; font-size: 16px; line-height: 24px; color: var(--muted); overflow-wrap: anywhere; }
+.btn.land-go { height: 48px; margin-top: 24px; padding: 0 22px 0 18px; gap: 8px; font-size: 16px; font-weight: 600; transition: transform 120ms var(--ease), background-color 120ms var(--ease); }
+.btn.land-go .icon { width: 18px; height: 18px; stroke-width: 2; }
+.btn.land-go:hover { background: color-mix(in srgb, var(--primary) 84%, var(--ground)); border-color: transparent; }
+.land-note { max-width: 52ch; margin-top: 12px; color: var(--muted); }
+.land-rack { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; border-radius: var(--radius); background: var(--raised); }
+.land-rack .slot-head { padding: 10px 4px 4px; font-size: 14px; line-height: 20px; }
+.land-rack .card:hover { transform: translateY(-1px); }
+.land-board { margin-left: auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.land-open { padding: 18px 14px; border: 1px dashed var(--control); border-radius: var(--radius); color: var(--muted); }
+.land-open b { color: var(--text); font-weight: 500; }
+.land-open p + p { margin-top: 2px; }
+.land-next { font-size: 16px; line-height: 24px; font-weight: 600; }
+.land-boards { align-items: center; margin: 24px 0 8px; }
+
 /* Signing in */
 .auth { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 24px 16px; background: var(--ground); }
 .auth-card { width: min(420px, 100%); margin-top: 16px; padding: 24px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
@@ -582,6 +609,12 @@ input, textarea { caret-color: var(--text); }
     .figures { grid-template-columns: 1fr 1fr; }
     .figure:nth-child(odd) { border-left: 0; }
     .figure:nth-child(n + 3) { border-top: 1px solid var(--rule); }
+    .land-body { grid-template-columns: minmax(0, 1fr); }
+    .land-logo { height: 88px; margin: -8px 0 0 -20px; }
+    .land h1 { font-size: 24px; line-height: 32px; letter-spacing: -0.01em; }
+    .land-back a { min-height: 44px; }
+    .btn.land-go { width: 100%; }
+    .land-rack .add-line { height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

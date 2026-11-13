@@ -21,6 +21,12 @@ colors:
   waiting-wash: "#FBF3E0"
   done-wash: "#E6F3EC"
 typography:
+  arrival:
+    fontFamily: Schibsted Grotesk
+    fontSize: 32px
+    fontWeight: 600
+    lineHeight: 36px
+    letterSpacing: -0.015em
   title:
     fontFamily: Schibsted Grotesk
     fontSize: 24px
@@ -97,11 +103,13 @@ The brand's gold and green live in the logo only. Chrome stays ink.
 
 ## Typography
 
-One face, Schibsted Grotesk, at 24, 16, 14 and 12. Figures are tabular on bare numbers only (counts, totals): in this face the tabular feature also widens commas and full stops, so it never goes on running text. Weight 600 for titles, 500 for a card's title, 400 for the rest. Sentence case, always.
+One face, Schibsted Grotesk, at 24, 16, 14 and 12. One line in the product is larger: the sentence on the overview that greets a person arriving from InfoDot, at 32 (24 on a phone). Figures are tabular on bare numbers only (counts, totals): in this face the tabular feature also widens commas and full stops, so it never goes on running text. Weight 600 for titles, 500 for a card's title, 400 for the rest. Sentence case, always.
 
 ## Layout
 
 A labelled 232px sidebar on the stone, with boards listed under the views. A 52px top bar carries search and quick add. The canvas is fluid with a 24px gutter. One gap value, 12px, inside a board and a list. Pages open on a noun title at 24px with one line under it that states a fact about the work.
+
+The overview is where people arrive, so it opens differently: the logo as drawn, a welcome by first name and company, one filled action (New task) and a slot holding the cards on that person's name. It is the only filled button on that page; the top bar's New task steps back to an outline there. With no cards the slot stays open and says so. Nothing in it moves on arrival.
 
 ## Elevation & Depth
 

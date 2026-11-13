@@ -74,7 +74,15 @@ function shortcuts() {
     const send = (name) => window.Livewire?.dispatch(name);
 
     document.addEventListener('click', (event) => {
-        if (event.target.closest?.('[data-open-quick-add]')) send('open-quick-add');
+        const quickAdd = event.target.closest?.('[data-open-quick-add]');
+        if (quickAdd) {
+            // A link carrying this goes to the Inbox when Livewire is not there to open the box, or when it is opened in a new tab.
+            const followsLink = quickAdd.matches('a[href]') && (!window.Livewire || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey);
+            if (!followsLink) {
+                if (quickAdd.matches('a[href]')) event.preventDefault();
+                send('open-quick-add');
+            }
+        }
         if (event.target.closest?.('[data-open-search]')) send('open-search');
     });
     document.addEventListener('keydown', (event) => {
