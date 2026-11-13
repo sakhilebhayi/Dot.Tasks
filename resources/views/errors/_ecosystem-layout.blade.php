@@ -104,6 +104,9 @@
                     <img src="{{ asset($logoLightPath ?? 'images/logo.png') }}" alt="Dot.Tasks" style="height: 40px; width: auto;">
                 </a>
                 <div style="display: flex; align-items: center; gap: 12px;">
+                    @hasSection('header-action')
+                        @yield('header-action')
+                    @else
                     @auth
                         <a href="{{ route('dashboard') }}" class="press" style="padding: 10px 20px; background: var(--accent); color: #241c0c; font-family: var(--font-display); font-weight: 600; font-size: 14px; border-radius: 999px; text-decoration: none;">Dashboard</a>
                     @else
@@ -111,6 +114,7 @@
                             <a href="{{ route('login') }}" class="link-underline" style="color: rgba(255,255,255,0.85); font-size: 14px; text-decoration: none; padding-bottom: 1px;">Sign in</a>
                         @endif
                     @endauth
+                    @endif
                 </div>
             </nav>
         </header>
@@ -129,7 +133,9 @@
                     @yield('actions')
                 </div>
 
-                @if (!empty($discover))
+                @yield('after')
+
+                @if (!empty($discover) && empty($quiet))
                     <div style="border-top: 1px solid var(--line); padding-top: 28px; text-align: left;">
                         <p class="font-mono" style="font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-soft); margin: 0 0 14px; text-align: center;">While you're here — the rest of the Dot Ecosystem ({{ count($discover) }})</p>
                         <div style="display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 8px; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch;">

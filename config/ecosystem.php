@@ -77,4 +77,24 @@ return [
         'provision' => (bool) env('INFODOT_PROVISION_USERS', true),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Company entitlement
+    |--------------------------------------------------------------------------
+    | InfoDot decides which platforms a company holds. While someone is signed
+    | in, the app asks InfoDot whether their current company still holds this
+    | platform (GET /api/ecosystem/companies/{uuid}/platforms on the redeem
+    | host, with the same service secret), keeps the answer for ten minutes,
+    | and shows a plain 403 page when it does not. No clear answer (an outage,
+    | no secret, an unknown company) means carry on as before. Set the flag to
+    | false to stop asking altogether.
+    */
+
+    'entitlement' => [
+        'check' => (bool) env('TASKS_ENTITLEMENT_CHECK', true),
+        // Only to point somewhere else than the redeem host; {uuid} is replaced with the company.
+        'url' => env('TASKS_ENTITLEMENT_URL'),
+        'timeout' => (int) env('TASKS_ENTITLEMENT_TIMEOUT', 3),
+    ],
+
 ];

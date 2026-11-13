@@ -4,6 +4,7 @@ namespace App\Actions\Ecosystem;
 
 use App\Models\Team;
 use App\Models\User;
+use App\Services\InfoDot\CompanyEntitlement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Jetstream\Jetstream;
@@ -21,6 +22,9 @@ use Laravel\Jetstream\Jetstream;
  *   someone in InfoDot removes their access here at their next sign-in.
  * - The company InfoDot says is active becomes the person's current team.
  * - Personal teams are never linked or removed.
+ * - A company InfoDot marks as not holding this platform (`entitled` present and not true) is left exactly as it
+ *   is: not created, not renamed, no membership or role change, not detached, and never made the current team.
+ *   A reply with no `entitled` key (an older InfoDot) is treated as before.
  */
 class SyncTeamsFromInfoDot
 {
@@ -33,22 +37,62 @@ class SyncTeamsFromInfoDot
             ->filter(fn ($t) => is_array($t) && filled($t['uuid'] ?? null) && ! ($t['personal'] ?? false))
             ->keyBy('uuid');
 
-        DB::transaction(function () use ($user, $listed, $identity) {
-            foreach ($listed as $uuid => $info) {
+        $admitted = $listed->filter(fn ($t) => CompanyEntitlement::admits($t));
+        $refused = $listed->keys()->diff($admitted->keys())->all();
+
+        // Said of the personal workspace at this sign-in; kept for the session (see EnsureCompanyEntitled).
+        $personalRefused = collect($identity['teams'] ?? [])
+            ->contains(fn ($t) => is_array($t) && ($t['personal'] ?? false) && ! CompanyEntitlement::admits($t));
+
+        DB::transaction(function () use ($user, $listed, $admitted, $refused, $personalRefused, $identity) {
+            foreach ($admitted as $uuid => $info) {
                 $this->apply($user, (string) $uuid, $info);
                 $this->forgetCachedTeams($user);
             }
 
+            // Everything InfoDot lists is kept, entitled or not: a company without the platform keeps its people.
             $this->revoke($user, $listed->keys()->all());
             $this->forgetCachedTeams($user);
 
             $active = $identity['current_team_uuid'] ?? null;
-            $team = $active ? Team::where('infodot_team_uuid', $active)->first() : null;
+            $team = $active && $admitted->has($active) ? Team::where('infodot_team_uuid', $active)->first() : null;
 
             if ($team && $user->belongsToTeam($team)) {
                 $user->switchTeam($team);
             }
+
+            $this->leaveRefusedWorkspace($user, $admitted->keys()->all(), $refused, $personalRefused);
         });
+    }
+
+    /**
+     * A person whose current workspace InfoDot refused is moved to one it admitted: an admitted company they
+     * belong to here, or failing that their personal workspace (unless that was the one refused).
+     *
+     * @param  list<string>  $admitted
+     * @param  list<string>  $refused
+     */
+    private function leaveRefusedWorkspace(User $user, array $admitted, array $refused, bool $personalRefused): void
+    {
+        $this->forgetCachedTeams($user);
+        $current = $user->fresh()?->currentTeam;
+
+        $onRefused = $current && (
+            in_array($current->infodot_team_uuid, $refused, true)
+            || ($personalRefused && $current->personal_team && $current->user_id === $user->id)
+        );
+
+        if (! $onRefused) {
+            return;
+        }
+
+        $teams = $user->allTeams();
+        $target = $teams->first(fn ($team) => in_array($team->infodot_team_uuid, $admitted, true))
+            ?? ($personalRefused ? null : $teams->first(fn ($team) => $team->personal_team && $team->user_id === $user->id));
+
+        if ($target) {
+            $user->switchTeam($target);
+        }
     }
 
     /** Membership checks read relations cached on the model; reload after changing them. */
