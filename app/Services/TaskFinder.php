@@ -70,10 +70,11 @@ class TaskFinder
             return new Collection;
         }
 
-        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], $needle).'%';
+        // Same convention as Task::scopeSearchText: lower-case both sides (Postgres LIKE is case sensitive) and escape the wildcards.
+        $like = '%'.str_replace(['\\', '%', '_'], ['\\\\', '\%', '\_'], mb_strtolower($needle)).'%';
 
         return $team->boards()
-            ->whereRaw("name LIKE ? ESCAPE '\\'", [$like])
+            ->whereRaw("LOWER(name) LIKE ? ESCAPE '\\'", [$like])
             ->orderBy('sort_order')->orderBy('name')
             ->limit($limit)
             ->get(['id', 'team_id', 'name', 'color']);
