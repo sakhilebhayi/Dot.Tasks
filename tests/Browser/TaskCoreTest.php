@@ -97,6 +97,30 @@ class TaskCoreTest extends DuskTestCase
         });
     }
 
+    public function test_the_header_pill_opens_the_find_palette_by_click_and_by_enter_and_the_keys_still_work_from_it(): void
+    {
+        [$user, $list] = $this->board();
+
+        $this->browse(function (Browser $browser) use ($user, $list) {
+            $browser->loginAs($user)->openLivewire("/lists/{$list->id}");
+
+            // A click on the pill opens the palette, whose own box takes the text.
+            $browser->click('.topbar-search .dsr-input')->waitFor('#find-input')
+                ->type('#find-input', 'haul')->waitFor('.dialog .row')
+                ->assertSeeIn('.dialog', 'Inspect the haul road')
+                ->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
+
+            // Enter on the focused pill opens it too, and the pill never takes text or submits.
+            $browser->script("document.querySelector('.topbar-search .dsr-input').focus()");
+            $browser->keys('.topbar-search .dsr-input', '{enter}')->waitFor('#find-input')->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
+            $this->assertSame('', $browser->value('.topbar-search .dsr-input'));
+
+            // With the pill focused, Ctrl K still opens the palette.
+            $browser->script("document.querySelector('.topbar-search .dsr-input').focus()");
+            $browser->keys('.topbar-search .dsr-input', ['{control}', 'k'])->waitFor('#find-input');
+        });
+    }
+
     public function test_a_template_is_used_from_quick_add(): void
     {
         [$user, $list] = $this->board();
@@ -163,7 +187,7 @@ class TaskCoreTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $list) {
             $browser->loginAs($user)->openLivewire("/lists/{$list->id}")
-                ->type('input[type="search"]', 'q')->settle()
+                ->type('#dsr-filter-search', 'q')->settle()
                 ->assertMissing('#quick-add-sentence');
         });
     }

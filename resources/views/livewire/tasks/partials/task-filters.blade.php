@@ -1,5 +1,5 @@
 <div class="filters" x-data="{ more: false }">
-    <input class="input" type="search" wire:model.live.debounce.300ms="search" placeholder="Search tasks..." aria-label="Search tasks">
+    <x-dot.filter-search name="search" wire:model.live.debounce.300ms="search" placeholder="Search tasks..." label="Search tasks" />
     <button type="button" class="btn filter-toggle" x-on:click="more = ! more" x-bind:aria-expanded="more">Filters</button>
     <div class="filter-rest" x-bind:class="more && 'open'">
     <select class="select bare" wire:model.live="assignee" aria-label="Assignee">

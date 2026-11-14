@@ -11,6 +11,12 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    {{-- Shared Dot UI (header search pill, platform switcher), served from this site's own public/dot-ui. Loaded before the app CSS so the mapping block in job-card.css wins. --}}
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-fonts.css') }}">
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-tokens.css') }}">
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-search.css') }}">
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-switcher-fonts.css') }}">
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-switcher.css') }}">
     @vite(['resources/css/signed-in.css', 'resources/css/job-card.css', 'resources/js/app.js'])
     <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         (function () {
@@ -121,15 +127,20 @@
     <button type="button" id="shell-backdrop" class="shell-backdrop" tabindex="-1" aria-label="Close menu" data-shell-close></button>
 
     <header class="topbar" data-shell-page>
-        <button type="button" id="shell-menu-button" class="shell-menu-btn" aria-controls="shell-drawer" aria-expanded="false">
+        <button type="button" id="shell-menu-button" class="shell-menu-btn" aria-label="Menu" aria-controls="shell-drawer" aria-expanded="false">
             <x-icon name="menu" />
             <span>Menu</span>
         </button>
         @auth
-            <button type="button" class="find" data-open-search aria-label="Find a task"><x-icon name="search" /> <span>Find a task</span> <kbd>/</kbd></button>
+            {{-- The find palette's trigger in the shared pill look. The input is read-only: it never takes text, it opens the
+                 palette (Livewire FindTasks, unchanged), which holds the real search box. Click, Enter, / and Ctrl K all open it. --}}
+            <div class="topbar-search">
+                <x-dot.search name="find" placeholder="Find a task" label="Find a task" hint="Ctrl K" readonly aria-haspopup="dialog" :form-attributes="['data-open-search' => '']" />
+            </div>
             <div class="grow"></div>
             {{-- On the overview the page itself carries the one filled action, so this one steps back. --}}
             <button type="button" @class(['btn', 'primary' => ! request()->routeIs('dashboard')]) data-open-quick-add aria-label="New task"><x-icon name="plus" /> <span class="topbar-hide">New task</span></button>
+            <x-dot.switcher platform="tasks" :company="Auth::user()->currentTeam?->personal_team ? null : Auth::user()->currentTeam?->infodot_team_uuid" :company-name="Auth::user()->currentTeam?->name" logos="/dot-ui/img/platforms" />
             <livewire:notification-bell />
         @endauth
         <button type="button" id="theme-toggle" class="icon-btn" aria-label="Switch between light and dark"><x-icon name="moon" /></button>
@@ -157,6 +168,7 @@
     <div class="flash connection" id="connection" role="alert" hidden>Connection lost. Keep this page open: edits save when it returns.</div>
 
     @stack('modals')
+    <script src="{{ asset('dot-ui/js/dot-switcher.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
     @livewireScripts
 </body>
 </html>
