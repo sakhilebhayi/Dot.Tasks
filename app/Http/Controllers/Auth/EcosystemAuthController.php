@@ -6,12 +6,14 @@ use App\Actions\Ecosystem\ProvisionUserFromInfoDot;
 use App\Actions\Ecosystem\SyncTeamsFromInfoDot;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\InfoDot\CompanyEntitlement;
 use App\Services\InfoDot\IdentityClient;
 use App\Services\InfoDot\InfoDotUnavailable;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Sanctum\PersonalAccessToken;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class EcosystemAuthController extends Controller
@@ -28,7 +30,7 @@ class EcosystemAuthController extends Controller
      * page: the credential is not shown, echoed, flashed or logged. A GET with ?token= is no longer honoured
      * (the route sends it to the login page), and a token in the query string of a POST is ignored.
      */
-    public function handle(Request $request): RedirectResponse
+    public function handle(Request $request): Response
     {
         if ($request->isMethod('post') && ! $this->postedFromInfoDot($request)) {
             return $this->refused();
@@ -80,13 +82,15 @@ class EcosystemAuthController extends Controller
             : 'We could not sign you in through InfoDot. Please open this app again from InfoDot.');
     }
 
-    public function redeem(Request $request, IdentityClient $infoDot, ProvisionUserFromInfoDot $provision, SyncTeamsFromInfoDot $syncTeams): RedirectResponse
+    public function redeem(Request $request, IdentityClient $infoDot, ProvisionUserFromInfoDot $provision, SyncTeamsFromInfoDot $syncTeams, CompanyEntitlement $entitlement): Response
     {
         $token = $request->post('token');
 
         abort_unless(is_string($token) && $token !== '', 403);
 
         $user = $this->userFromLocalToken($token);
+        $personalEntitled = null;
+        $viaInfoDot = false;
 
         // Production gives each Dot app its own database, so InfoDot's token is not
         // in ours: ask InfoDot to prove it.
@@ -96,6 +100,21 @@ class EcosystemAuthController extends Controller
             } catch (InfoDotUnavailable) {
                 abort(503, 'Sign-in through InfoDot is unavailable right now. Please try again in a moment.');
             }
+
+            // InfoDot answered, and none of this person's workspaces holds this platform: nothing is created,
+            // nobody is signed in, and the page says where to switch it on.
+            if ($identity && ($refusal = $this->nothingEntitled($identity)) !== null) {
+                return response()->view('errors.entitlement', [
+                    'status' => $refusal,
+                    'company' => null,
+                    'manageUrl' => $entitlement->manageUrl(),
+                    'others' => collect(),
+                    'signedIn' => false,
+                ], 403)->header('Cache-Control', 'no-store, private');
+            }
+
+            $personalEntitled = $identity ? CompanyEntitlement::personalAnswer($identity) : null;
+            $viaInfoDot = $identity !== null;
 
             $user = $identity ? $provision($identity) : null;
 
@@ -109,7 +128,36 @@ class EcosystemAuthController extends Controller
         // Auth::login() also regenerates the session id (no fixation).
         Auth::login($user);
 
+        // What InfoDot said of the personal workspace for this platform, remembered alongside the sign-in. An answer
+        // without the key (an older InfoDot) remembers nothing.
+        if ($viaInfoDot && $request->hasSession()) {
+            is_bool($personalEntitled)
+                ? $request->session()->put(CompanyEntitlement::PERSONAL_SESSION_KEY, $personalEntitled)
+                : $request->session()->forget(CompanyEntitlement::PERSONAL_SESSION_KEY);
+        }
+
         return $this->safeRedirect($request->post('redirect')) ?? redirect()->route('dashboard');
+    }
+
+    /**
+     * The reason to show when InfoDot's answer lists workspaces and marks every one of them as not holding this
+     * platform. Null when at least one is admitted, or when the answer carries no `entitled` key at all (an older
+     * InfoDot: behave as before).
+     *
+     * @param  array<string, mixed>  $identity
+     */
+    private function nothingEntitled(array $identity): ?string
+    {
+        $teams = collect($identity['teams'] ?? [])->filter(fn ($t) => is_array($t));
+
+        if ($teams->isEmpty() || $teams->contains(fn ($t) => CompanyEntitlement::admits($t))) {
+            return null;
+        }
+
+        // Worded from a company's reason when there is one; the personal workspace's reason is the fallback.
+        $reason = $teams->sortBy(fn ($t) => (bool) ($t['personal'] ?? false))->first()['access'] ?? null;
+
+        return is_string($reason) ? $reason : '';
     }
 
     /**

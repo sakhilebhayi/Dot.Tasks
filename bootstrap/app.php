@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureCompanyEntitled;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\UseTeamClock;
 use App\Services\Guardian\ErrorCounter;
@@ -19,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Global, so the health check, error pages, Livewire requests and /csp-report carry the headers too.
         $middleware->append(SecurityHeaders::class);
-        $middleware->web(append: UseTeamClock::class);
+        $middleware->web(append: [UseTeamClock::class, EnsureCompanyEntitled::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Feeds the Guardian's hourly error counter. The counter swallows its own failures, so this cannot break reporting.

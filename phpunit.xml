@@ -31,6 +31,7 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array" force="true"/>
         <env name="ANTHROPIC_API_KEY" value=""/>
+        <env name="TASKS_ENTITLEMENT_CHECK" value="false" force="true"/>
         <env name="NOTIFY_INGEST_URL" value="" force="true"/>
         <env name="NOTIFY_INGEST_SECRET" value="" force="true"/>
         <env name="ANALYTICS_INGEST_URL" value="" force="true"/>
