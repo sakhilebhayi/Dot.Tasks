@@ -106,7 +106,7 @@ class LandingExperienceTest extends TestCase
     {
         $text = $this->landingText($this->actingAs($this->newMember())->get(route('dashboard'))->assertOk()->getContent());
 
-        $this->assertStringContainsString('Every job on a card.', $text);
+        $this->assertStringContainsString('Nothing is on your name.', $text);
         $this->assertStringContainsString('Welcome, Lerato. Dot.Tasks is where Mokoena Plant Hire writes work down', $text);
         $this->assertStringNotContainsString('Lerato Mokoena', $text);
     }
@@ -146,57 +146,85 @@ class LandingExperienceTest extends TestCase
         $mine = ['assignee_id' => $f->editor->id, 'status' => 'todo'];
         $f->list->tasks()->create($mine + ['title' => 'Order idler rollers', 'due_date' => '2026-11-18']);
         $f->list->tasks()->create($mine + ['title' => 'Service the gearbox', 'due_date' => '2026-11-01', 'priority' => 'urgent']);
-        $f->list->tasks()->create(['assignee_id' => $f->editor->id, 'status' => 'done', 'title' => 'Finished already', 'completed_at' => now()]);
-        $f->list->tasks()->create(['assignee_id' => $f->admin->id, 'status' => 'todo', 'title' => 'Somebody else holds this']);
+        $f->list->tasks()->create(['assignee_id' => $f->editor->id, 'status' => 'done', 'title' => 'Finished already', 'due_date' => '2026-11-01', 'completed_at' => now()]);
+        $f->list->tasks()->create(['assignee_id' => $f->admin->id, 'status' => 'todo', 'title' => 'Somebody else holds this', 'due_date' => '2026-11-01']);
 
-        $page = $this->actingAs($f->editor)->get(route('dashboard'))->assertOk()->getContent();
-        $text = $this->landingText($page);
+        $text = $this->landingText($this->actingAs($f->editor)->get(route('dashboard'))->assertOk()->getContent());
 
-        $this->assertSame(2, substr_count($page, 'data-land-card'));
-        $this->assertStringContainsString('data-land-count>2<', $page);
-        $this->assertStringNotContainsString('Finished already', $text);
-        $this->assertStringNotContainsString('Somebody else holds this', $text);
-        // Soonest due first.
-        $this->assertLessThan(strpos($text, 'Order idler rollers'), strpos($text, 'Service the gearbox'));
-
-        // Take away what the records put there (the count and the two due dates): no other figure is left.
-        $rest = str_replace(['On your name 2', 'Nov 1 ', 'Nov 18 '], ' ', $text);
+        $this->assertStringContainsString('1 overdue.', $text);
+        $this->assertStringContainsString('2 are open on your name', $text);
+        // Take away what the records put there (the two counts): no other figure is left.
+        $rest = str_replace(['1 overdue.', '2 are open'], ' ', $text);
         $this->assertDoesNotMatchRegularExpression('/\d/', $rest, 'A number is shown that no record backs: '.$rest);
     }
 
-    public function test_the_slot_shows_four_cards_and_counts_the_rest(): void
+    public function test_the_sentence_says_what_is_late_what_is_due_today_or_that_nothing_is(): void
     {
         $f = $this->teamFixture();
-        foreach (range(1, 6) as $n) {
-            $f->list->tasks()->create(['assignee_id' => $f->owner->id, 'status' => 'todo', 'title' => 'Job card '.$n]);
-        }
+        $make = fn (string $title, ?string $due) => $f->list->tasks()->create(['assignee_id' => $f->owner->id, 'status' => 'todo', 'title' => $title, 'due_date' => $due]);
 
-        Livewire::actingAs($f->owner)->test(Landing::class)
-            ->assertSeeHtml('data-land-count>6<')
-            ->assertSee('See all 6 in My tasks')
-            ->assertSeeHtml('href="'.route('tasks.mine').'"');
+        $landing = fn () => Livewire::actingAs($f->owner)->test(Landing::class);
 
-        $page = $this->actingAs($f->owner)->get(route('dashboard'))->getContent();
-        $this->assertSame(Landing::SHOWN, substr_count($page, 'data-land-card'));
+        $landing()->assertSee('Nothing is on your name.')->assertSeeHtml('data-land-empty');
+
+        $make('Undated', null);
+        $landing()->assertSee('Nothing is late. 1 is open.')->assertDontSeeHtml('data-land-empty');
+
+        $make('Soon', '2026-11-20');
+        $landing()->assertSee('Nothing is late. 2 are open.');
+
+        $make('Today', '2026-11-05');
+        $landing()->assertSee('1 due today.')->assertDontSee('overdue')->assertSee('3 are open on your name');
+
+        $make('Late', '2026-11-01');
+        $make('Later', '2026-10-01');
+        $landing()->assertSee('2 overdue, 1 due today.');
     }
 
-    public function test_a_task_written_on_the_page_seats_in_the_slot(): void
+    public function test_a_task_written_on_the_page_changes_the_sentence(): void
     {
         $f = $this->teamFixture();
         $landing = Livewire::actingAs($f->viewer)->test(Landing::class)->assertSee('Nothing is on your name.');
 
         Livewire::actingAs($f->viewer)->test(QuickAdd::class)->dispatch('open-quick-add')->set('sentence', 'Call the supplier')->call('save');
 
-        $landing->dispatch('task-created')->assertSee('Call the supplier')->assertDontSee('Nothing is on your name.')->assertSeeHtml('data-land-count>1<');
+        $landing->dispatch('task-created')->assertSee('Nothing is late. 1 is open.')->assertDontSee('Nothing is on your name.');
     }
 
-    public function test_nobody_sees_another_persons_private_inbox_on_the_landing(): void
+    public function test_nobody_counts_another_persons_private_inbox_on_the_landing(): void
     {
         $f = $this->teamFixture();
         Livewire::actingAs($f->editor)->test(QuickAdd::class)->dispatch('open-quick-add')->set('sentence', 'Private errand')->call('save');
 
-        Livewire::actingAs($f->owner)->test(Landing::class)->assertDontSee('Private errand');
-        Livewire::actingAs($f->outsider)->test(Landing::class)->assertDontSee('Private errand')->assertDontSee('Fixture task');
+        Livewire::actingAs($f->editor)->test(Landing::class)->assertSee('Nothing is late. 1 is open.');
+        Livewire::actingAs($f->owner)->test(Landing::class)->assertSee('Nothing is on your name.');
+        Livewire::actingAs($f->outsider)->test(Landing::class)->assertSee('Nothing is on your name.');
+    }
+
+    public function test_the_overview_has_a_skip_link_and_a_title_in_the_bar(): void
+    {
+        $f = $this->teamFixture();
+
+        $page = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
+
+        $this->assertStringContainsString('<a class="skip" href="#main">', $page);
+        $this->assertStringContainsString('<main id="main" tabindex="-1">', $page);
+        $this->assertStringContainsString('<p class="topbar-title">Overview</p>', $page);
+        $this->assertSame(1, preg_match_all('/<h1\b/', $page), 'one h1: the sentence');
+    }
+
+    public function test_the_arrival_motion_has_a_reduced_motion_rule_and_moves_only_transform_and_opacity(): void
+    {
+        $css = file_get_contents(resource_path('css/job-card.css'));
+        $block = substr($css, strpos($css, '/* Motion. Content only'));
+
+        $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $block);
+        $this->assertStringContainsString('.ra-seat', substr($block, strpos($block, '@media (prefers-reduced-motion')));
+        preg_match_all('/@keyframes ov-[\w-]+ \{(.*?)\}\s*(?=@keyframes|\.d-in)/s', $block, $frames);
+        $this->assertNotEmpty($frames[1]);
+        foreach ($frames[1] as $frame) {
+            $this->assertDoesNotMatchRegularExpression('/\b(width|height|top|left|margin|padding)\s*:/', $frame, 'a keyframe moves layout');
+        }
     }
 
     public function test_the_way_back_to_infodot_and_the_platforms_comes_from_the_ecosystem_config(): void

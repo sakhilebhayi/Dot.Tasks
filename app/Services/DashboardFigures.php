@@ -35,7 +35,7 @@ class DashboardFigures
     {
         $team = $user->currentTeam;
         $today = Today::date();
-        $mine = fn () => Task::forTeam($team)->mine($user)->with(['taskList:id,team_id,name,is_inbox,owner_id', 'blockedBy:id,status']);
+        $mine = fn () => Task::forTeam($team)->mine($user)->with(['taskList:id,team_id,name,is_inbox,owner_id', 'blockedBy:id,title,status']);
 
         $planned = DayPlan::where('user_id', $user->id)->whereDate('day', $today)->pluck('task_id');
         $mentions = $user->unreadNotifications()->where('type', MentionedInCommentNotification::class)->limit(self::LISTED)->get();
@@ -45,6 +45,10 @@ class DashboardFigures
         return [
             'plan' => ['total' => $planned->count(), 'done' => Task::forTeam($team)->whereIn('tasks.id', $planned)->where('tasks.status', 'done')->count()],
             'mine' => $this->open($mine())->count(),
+            'overdue_count' => $this->open($mine())->whereDate('tasks.due_date', '<', $today)->count(),
+            'due_today' => $this->open($mine())->whereDate('tasks.due_date', $today)->count(),
+            'week' => $this->week($user),
+            'no_date' => $this->open($mine())->whereNull('tasks.due_date')->orderByDesc('tasks.id')->limit(self::LISTED)->get(),
             'overdue' => $this->open($mine())->whereDate('tasks.due_date', '<', $today)->orderBy('tasks.due_date')->limit(self::LISTED)->get(),
             'due_soon' => $this->open($mine())->whereDate('tasks.due_date', '>=', $today)->whereDate('tasks.due_date', '<=', $today->copy()->addDays(2))->orderBy('tasks.due_date')->limit(self::LISTED)->get(),
             'upcoming' => $this->open($mine())->whereDate('tasks.due_date', '>', $today->copy()->addDays(2))->whereDate('tasks.due_date', '<=', $today->copy()->addDays(14))->orderBy('tasks.due_date')->limit(self::LISTED)->get(),
@@ -53,6 +57,36 @@ class DashboardFigures
             'recent' => $mine()->where('tasks.status', 'done')->whereNotNull('tasks.completed_at')->orderByDesc('tasks.completed_at')->limit(self::LISTED)->get(),
             'awaiting' => $toApprove->merge($mentioned)->unique('id')->values(),
         ];
+    }
+
+    /**
+     * The week Monday to Sunday: this person's open tasks by due day. One place, so the rack on My Day and the one on the
+     * Overview cannot drift apart.
+     *
+     * @return list<array{date: string, name: string, number: string, today: bool, past: bool, tasks: Collection<int, Task>}>
+     */
+    public function week(User $user): array
+    {
+        $today = Today::date();
+        $monday = $today->copy()->startOfWeek(Carbon::MONDAY);
+
+        $tasks = Task::forTeam($user->currentTeam)->mine($user)->with(['taskList:id,team_id,name,is_inbox,owner_id', 'blockedBy:id,status'])
+            ->where('tasks.status', '!=', 'done')
+            ->whereDate('tasks.due_date', '>=', $monday)->whereDate('tasks.due_date', '<=', $monday->copy()->addDays(6))
+            ->get()->groupBy(fn (Task $task) => $task->due_date->toDateString());
+
+        return collect(range(0, 6))->map(function (int $offset) use ($monday, $today, $tasks) {
+            $day = $monday->copy()->addDays($offset);
+
+            return [
+                'date' => $day->toDateString(),
+                'name' => $day->format('D'),
+                'number' => $day->format('j'),
+                'today' => $day->isSameDay($today),
+                'past' => $day->lt($today),
+                'tasks' => $tasks->get($day->toDateString(), collect()),
+            ];
+        })->all();
     }
 
     /** @return Builder<Task> */
@@ -79,6 +113,7 @@ class DashboardFigures
             ])->sortByDesc('open')->values()->all();
 
         return [
+            'boards' => $board === null ? $this->boardHealth($team) : [],
             'workload' => $workload,
             'status' => $this->byStatus($tasks()),
             'trend' => $this->trend($tasks()),
@@ -92,27 +127,37 @@ class DashboardFigures
         ];
     }
 
-    /** Boards as a whole. No names: the business view is about how work moves, not about any one person. */
-    public function business(Team $team): array
+    /**
+     * Each board as a whole, counts only: open, overdue, blocked, nobody on it, finished in the last 30 days.
+     *
+     * @return list<array{id: int, name: string, color: ?string, open: int, overdue: int, blocked: int, unassigned: int, finished: int}>
+     */
+    private function boardHealth(Team $team): array
     {
         $today = Today::date();
         $since = Carbon::now()->subDays(30);
 
-        $boards = $team->boards()->orderBy('name')->get(['id', 'name'])->map(function (TaskList $board) use ($team, $today, $since) {
+        return $team->boards()->orderBy('name')->get(['id', 'name', 'color'])->map(function (TaskList $board) use ($team, $today, $since) {
             $tasks = fn () => $this->teamTasks($team, $board->id);
-            $open = $this->open($tasks())->with('blockedBy:id,status')->get(['tasks.id', 'tasks.due_date', 'tasks.status']);
+            $open = $this->open($tasks())->with('blockedBy:id,status')->get(['tasks.id', 'tasks.due_date', 'tasks.status', 'tasks.assignee_id']);
 
             return [
                 'id' => $board->id,
                 'name' => $board->name,
+                'color' => $board->color,
                 'open' => $open->count(),
                 'overdue' => $open->filter(fn (Task $task) => $task->due_date && $task->due_date->lt($today))->count(),
                 'blocked' => $open->filter->isBlocked()->count(),
+                'unassigned' => $open->whereNull('assignee_id')->count(),
                 'finished' => $tasks()->where('tasks.completed_at', '>=', $since)->count(),
             ];
         })->all();
+    }
 
-        return ['boards' => $boards, 'status' => $this->byStatus($this->teamTasks($team, null)), 'trend' => $this->trend($this->teamTasks($team, null))];
+    /** Boards as a whole. No names: the business view is about how work moves, not about any one person. */
+    public function business(Team $team): array
+    {
+        return ['boards' => $this->boardHealth($team), 'status' => $this->byStatus($this->teamTasks($team, null)), 'trend' => $this->trend($this->teamTasks($team, null))];
     }
 
     /** @return array<string, int> open and finished work by what its column means */

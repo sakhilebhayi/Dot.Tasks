@@ -30,6 +30,7 @@
     @livewireStyles
 </head>
 <body class="app">
+    <a class="skip" href="#main">Skip to the content</a>
     <div data-shell-page><x-banner /></div>
 
     <aside id="shell-drawer" class="sidebar" aria-label="Dot.Tasks navigation">
@@ -131,6 +132,10 @@
             <x-icon name="menu" />
             <span>Menu</span>
         </button>
+        {{-- The overview names itself in the bar, small; the page spends its large type on what is true today. --}}
+        @if(request()->routeIs('dashboard') && $attributes->get('title'))
+            <p class="topbar-title">{{ $attributes->get('title') }}</p>
+        @endif
         @auth
             {{-- The find palette's trigger in the shared pill look. The input is read-only: it never takes text, it opens the
                  palette (Livewire FindTasks, unchanged), which holds the real search box. Click, Enter, / and Ctrl K all open it. --}}
@@ -147,7 +152,7 @@
     </header>
 
     <div class="content-wrap" data-shell-page>
-        <main>
+        <main id="main" tabindex="-1">
             {{ $slot }}
             @auth
                 <p class="sr" id="drag-help">Press Enter to open. Hold Alt and use the arrow keys to move it.</p>

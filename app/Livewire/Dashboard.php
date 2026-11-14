@@ -3,9 +3,11 @@
 namespace App\Livewire;
 
 use App\Models\DashboardLayout;
+use App\Models\Task;
 use App\Models\Team;
 use App\Services\DashboardFigures;
 use App\Services\DashboardStats;
+use App\Services\RemovedTaskService;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
@@ -17,9 +19,11 @@ class Dashboard extends Component
 {
     /** Widget ids stay put, so a saved layout keeps working if the labels change. */
     public const WIDGETS = [
+        // The order here is the order everyone starts with: what is late, what is stuck, what is due, then the rest.
         'personal' => [
-            1 => ['plan', 'My Day'], 2 => ['overdue', 'Overdue'], 3 => ['due_soon', 'Due in the next 2 days'], 4 => ['awaiting', 'Waiting for my response'],
-            5 => ['blocked', 'Blocked'], 6 => ['high', 'High priority'], 7 => ['upcoming', 'Coming up'], 8 => ['recent', 'Recently finished'],
+            1 => ['plan', 'My Day'], 2 => ['overdue', 'Overdue'], 5 => ['blocked', 'Blocked'], 3 => ['due_soon', 'Due in the next 2 days'],
+            9 => ['no_date', 'No due date'], 4 => ['awaiting', 'Waiting for my response'], 6 => ['high', 'High priority'],
+            7 => ['upcoming', 'Coming up'], 8 => ['recent', 'Recently finished'],
         ],
         'team' => [
             11 => ['workload', 'Who holds what'], 12 => ['status', 'Tasks by status'], 13 => ['trend', 'Finished each week'], 14 => ['attention', 'Needs a manager'],
@@ -29,6 +33,12 @@ class Dashboard extends Component
             21 => ['boards', 'Boards'], 22 => ['trend', 'Finished each week'], 23 => ['status', 'Tasks by status'],
         ],
     ];
+
+    /** The groups that sit in the narrow column beside the main one. Everything else is main. */
+    public const SIDE = ['plan', 'upcoming', 'recent', 'workload', 'status', 'trend'];
+
+    /** Groups that list tasks: the one-listing rule applies to them, and an empty one folds into the "Also checked" line. */
+    private const TASK_GROUPS = ['overdue', 'blocked', 'due_soon', 'no_date', 'awaiting', 'high', 'attention', 'unassigned'];
 
     #[Url(except: 'personal')]
     public string $view = 'personal';
@@ -71,6 +81,13 @@ class Dashboard extends Component
         return ctype_digit($this->board) && $this->boards->contains('id', (int) $this->board) ? (int) $this->board : null;
     }
 
+    /** Whether the Team view is narrowed to one real board of this team; a made-up value narrows nothing. */
+    #[Computed]
+    public function narrowed(): bool
+    {
+        return $this->boardId() !== null;
+    }
+
     /** @return array<string, int> */
     #[Computed]
     public function counts(): array
@@ -89,6 +106,74 @@ class Dashboard extends Component
             'business' => $figures->business($this->team()),
             default => $figures->personal(auth()->user()),
         };
+    }
+
+    /** Boards with the work still open on each, for the Boards list beside the Mine view. */
+    #[Computed]
+    public function boardRows()
+    {
+        return $this->team()->boards()
+            ->withCount(['tasks as open_count' => fn ($q) => $q->where('tasks.status', '!=', 'done')])
+            ->orderBy('sort_order')->orderBy('name')->get();
+    }
+
+    /** @return array{visible: int, removed: int} what the foot line counts: tasks this person can see, and removed tasks */
+    #[Computed]
+    public function foot(): array
+    {
+        return [
+            'visible' => Task::forTeam($this->team())->count(),
+            'removed' => app(RemovedTaskService::class)->query($this->team())->count(),
+        ];
+    }
+
+    /**
+     * What each visible group shows. The one-listing rule lives here, in the view layer: a task already shown by an earlier
+     * group is skipped in the later ones, so it is read once on the page. The figures themselves are untouched.
+     *
+     * @return array{groups: list<array<string, mixed>>, checked: list<string>}
+     */
+    #[Computed]
+    public function sections(): array
+    {
+        $claimed = [];
+        $checked = [];
+        $groups = [];
+
+        foreach ($this->widgets as $widget) {
+            if ($widget['hidden']) {
+                continue;
+            }
+
+            $key = $widget['key'];
+            $tasks = null;
+            $name = $widget['name'];
+
+            if (in_array($key, [...self::TASK_GROUPS, 'upcoming', 'recent'], true)) {
+                $all = $this->data[$key];
+                $tasks = in_array($key, self::TASK_GROUPS, true) ? $all->reject(fn ($task) => isset($claimed[$task->id]))->values() : $all;
+
+                if ($this->arranging === false && $tasks->isEmpty() && in_array($key, self::TASK_GROUPS, true)) {
+                    $checked[] = $name;
+
+                    continue;
+                }
+
+                if ($this->view === 'team' && $key === 'overdue' && $claimed !== []) {
+                    $name = 'Overdue, not listed above';
+                }
+
+                if (in_array($key, self::TASK_GROUPS, true)) {
+                    foreach ($tasks as $task) {
+                        $claimed[$task->id] = true;
+                    }
+                }
+            }
+
+            $groups[] = array_merge($widget, ['name' => $name, 'tasks' => $tasks, 'side' => in_array($key, self::SIDE, true)]);
+        }
+
+        return ['groups' => $groups, 'checked' => $checked];
     }
 
     /** This person's own arrangement, or the team's, or the one everyone starts with. @return array{order: list<int>, hidden: list<int>} */
@@ -121,7 +206,7 @@ class Dashboard extends Component
     {
         DashboardLayout::updateOrCreate(['team_id' => $this->team()->id, 'user_id' => $user, 'view' => $this->view], ['layout' => $layout]);
 
-        unset($this->layout, $this->widgets);
+        unset($this->layout, $this->widgets, $this->sections);
     }
 
     public function placeWidget(int $id, ?int $beforeId = null): void
@@ -149,7 +234,7 @@ class Dashboard extends Component
     {
         DashboardLayout::where('team_id', $this->team()->id)->where('view', $this->view)->where('user_id', auth()->id())->delete();
 
-        unset($this->layout, $this->widgets);
+        unset($this->layout, $this->widgets, $this->sections);
     }
 
     /** Admins can make this arrangement the one the team starts from. */
@@ -164,7 +249,7 @@ class Dashboard extends Component
     #[On('task-updated')]
     public function refreshBoard(): void
     {
-        unset($this->data);
+        unset($this->data, $this->sections, $this->counts, $this->boardRows, $this->foot);
     }
 
     public function render(): View

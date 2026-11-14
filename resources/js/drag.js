@@ -248,6 +248,23 @@ function stepList(method) {
     };
 }
 
+// The Mine / Team / Business tabs: arrow keys, Home and End move between them, as a tab list does.
+function tabKeys() {
+    return {
+        keys(event) {
+            const move = { ArrowRight: 1, ArrowLeft: -1, Home: 'first', End: 'last' }[event.key];
+            if (!move) return;
+            const tabs = [...this.$el.querySelectorAll('[role="tab"]')];
+            const at = tabs.indexOf(document.activeElement);
+            if (at < 0) return;
+            event.preventDefault();
+            const next = move === 'first' ? tabs[0] : move === 'last' ? tabs[tabs.length - 1] : tabs[(at + move + tabs.length) % tabs.length];
+            next.focus();
+            next.click();
+        },
+    };
+}
+
 const shifted = (date, days) => {
     const moved = new Date(`${date}T12:00:00Z`);
     moved.setUTCDate(moved.getUTCDate() + days);
@@ -471,6 +488,7 @@ document.addEventListener('alpine:init', () => {
     window.Alpine.data('timeline', timeline);
     window.Alpine.data('boardColumn', boardColumn);
     window.Alpine.data('stepList', stepList);
+    window.Alpine.data('tabKeys', tabKeys);
     window.Alpine.data('pulse', pulse);
     window.Alpine.data('boardLive', boardLive);
 });
