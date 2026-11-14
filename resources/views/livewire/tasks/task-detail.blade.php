@@ -96,7 +96,7 @@
                     </div>
                     <div class="field">
                         <label for="task-criteria">What done means</label>
-                        <textarea class="textarea" id="task-criteria" rows="1" style="field-sizing:content;min-height:34px" wire:key="criteria-{{ $task->id }}" wire:change="saveField('completion_criteria', $event.target.value)" placeholder="Optional">{{ $task->completion_criteria }}</textarea>
+                        <textarea class="textarea" id="task-criteria" rows="1" style="field-sizing:content;min-height:var(--control-height)" wire:key="criteria-{{ $task->id }}" wire:change="saveField('completion_criteria', $event.target.value)" placeholder="Optional">{{ $task->completion_criteria }}</textarea>
                     </div>
                 @else
                     @if($task->description)
