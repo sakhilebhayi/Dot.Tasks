@@ -85,8 +85,15 @@ function shortcuts() {
         }
         if (event.target.closest?.('[data-open-search]')) send('open-search');
     });
+    // The header pill is a form around a read-only box: Enter on it (or its arrow) opens the palette, it never submits.
+    document.addEventListener('submit', (event) => {
+        if (event.target.matches?.('[data-open-search]')) {
+            event.preventDefault();
+            send('open-search');
+        }
+    });
     document.addEventListener('keydown', (event) => {
-        const typing = event.target.closest?.('input, textarea, select, [contenteditable]');
+        const typing = event.target.closest?.('input:not([readonly]), textarea, select, [contenteditable]');
         if (typing || event.altKey || event.isComposing) return;
         if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
             event.preventDefault();

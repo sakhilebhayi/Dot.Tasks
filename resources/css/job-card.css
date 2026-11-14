@@ -112,9 +112,42 @@ button { cursor: pointer; }
 
 .topbar { position: fixed; inset: 0 0 auto var(--sidebar); z-index: 30; display: flex; align-items: center; gap: 8px; height: var(--topbar-h); padding: 0 var(--pad); background: var(--ground); }
 .topbar-title { min-width: 0; color: var(--muted); }
-.find { flex: 0 1 420px; display: flex; align-items: center; gap: 8px; height: var(--control-height); padding: 0 10px; border: 1px solid var(--control); border-radius: var(--radius); background: var(--surface); color: var(--muted); text-align: left; }
-.find:hover { border-color: var(--text); }
-.find kbd { margin-left: auto; font: inherit; font-size: 12px; }
+/* Header search: the shared Dot UI pill (<x-dot.search>, public/dot-ui/css/dot-search.css), identical to InfoDot's by design.
+   Here it opens the find palette (see the layout), so the input is read-only and shows a pointer. Only its slot is sized. */
+.topbar-search { flex: 0 1 420px; min-width: 0; }
+.topbar-search .dsr { margin: 0; }
+.topbar-search .dsr-input[readonly] { cursor: pointer; }
+/* Under 640px the package hides the shortcut hint but keeps its 104px of right padding: reclaim it, the arrow is all that sits there. */
+@media (max-width: 639.98px) { .topbar-search .dsr .dsr-input { padding-right: var(--dsr-pad-r-nohint); } }
+
+/* Host token mapping for the shared Dot UI. The pill itself is not mapped (the same cream pill in every platform); the
+   dropdown surfaces, the compact in-page filter and the switcher button follow this app's tokens, in light and dark.
+   Package defaults sit under :where() (zero specificity), so this wins in either theme. */
+body.app {
+    --dsr-panel: var(--surface);
+    --dsr-hover: var(--raised);
+    --dsr-rule: var(--rule);
+    --dsr-rule-strong: var(--control);
+    --dsr-text: var(--text);
+    --dsr-text-2: var(--muted);
+    --dsr-text-3: var(--muted);
+    --dsr-radius-panel: var(--radius);
+    /* the package derives these on :root, so they are restated here to follow the body values */
+    --dsr-filter-radius: var(--radius);
+    --dsr-filter-bg: var(--surface);
+    --dsr-filter-ink: var(--text);
+    --dsr-filter-placeholder: var(--muted);
+    --dsr-filter-border: var(--control);
+    --dsr-filter-border-hover: var(--text);
+    --dsr-filter-border-focus: var(--text);
+}
+.topbar .dsw {
+    --dsw-btn-ink: var(--text);
+    --dsw-btn-border: var(--control);
+    --dsw-btn-bg-hover: var(--raised);
+    --dsw-focus: var(--text);
+    --dsw-radius: var(--radius);
+}
 .grow { flex: 1; }
 .icon-btn { position: relative; display: inline-flex; align-items: center; justify-content: center; width: var(--control-height); height: var(--control-height); padding: 0; border: 0; border-radius: var(--radius); background: none; color: var(--muted); }
 .icon-btn:hover { background: var(--raised); color: var(--text); }
@@ -157,7 +190,7 @@ button { cursor: pointer; }
 .error { color: var(--stop); font-size: 12px; }
 .alert { margin-bottom: 12px; padding: 8px 12px; border-radius: var(--radius); background: var(--stop-wash); color: var(--stop); }
 .filters { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
-.filters .input { flex: 0 1 240px; }
+.filters .input, .filters .dsr-filter { flex: 0 1 240px; }
 .tabs { display: flex; gap: 4px; flex-wrap: wrap; }
 .tab { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border: 0; border-radius: var(--radius); background: none; color: var(--muted); }
 .tab:hover { color: var(--text); background: var(--raised); }
@@ -575,12 +608,11 @@ input, textarea { caret-color: var(--text); }
     .shell-backdrop.is-open { display: block; }
     html.shell-locked { overflow: hidden; }
     .topbar { left: 0; padding: 0 8px; gap: 4px; }
-    .find { flex: none; width: 36px; padding: 0; justify-content: center; }
-    .find kbd, .find span, .topbar-hide { display: none; }
+    .topbar-hide { display: none; }
     .filter-toggle { display: inline-flex; }
     .filter-rest { display: none; width: 100%; }
     .filter-rest.open { display: flex; }
-    .filters > .input { flex: 1 1 0; width: auto; }
+    .filters > .input, .filters > .dsr-filter { flex: 1 1 0; width: auto; }
     .widgets { grid-template-columns: minmax(0, 1fr); }
     .report-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .hbar { grid-template-columns: 96px minmax(0, 1fr) 28px; }
@@ -619,4 +651,13 @@ input, textarea { caret-color: var(--text); }
 
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}
+
+/* Phones: the pill needs about 200px to read as a search, and one row of menu, new task, apps, bell and theme leaves under 120.
+   The bar becomes two rows: the controls, then the pill at full width. Everything that keys off the bar height follows the variable. */
+@media (max-width: 479.98px) {
+    :root { --topbar-h: 104px; }
+    .topbar { flex-wrap: wrap; align-content: center; row-gap: 6px; }
+    .topbar-search { order: 10; flex: 1 0 100%; }
+    .brand { height: 52px; }
 }

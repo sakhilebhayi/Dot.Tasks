@@ -437,6 +437,17 @@ jobs:
             echo "== docroot build/ did not exist; linked to $APPDIR/public/build"
           fi
 
+          # ---- shared Dot UI (public/dot-ui): the search pill's CSS, fonts, logos and scripts
+          # Served from the docroot, and git never refreshes a copy there: mirror it, as for build/. Skipped once the
+          # document root is <app>/public (the app folder is then not served and public/ is read in place).
+          CURRENT_DOCROOT="$(uapi --output=json DomainInfo single_domain_data domain=tasks.infodot.co.za 2>/dev/null | sed -n 's/.*"documentroot" *: *"\([^"]*\)".*/\1/p' | head -1)" || CURRENT_DOCROOT=""
+          APP_REAL="$(pwd -P)"
+          if [ "$CURRENT_DOCROOT" != "$APP_REAL/public" ] && [ ! -f .docroot-is-public ]; then
+            if [ -d public/dot-ui ] && [ ! -L "$DOCROOT/dot-ui" ]; then mkdir -p "$DOCROOT/dot-ui" && rsync -a --delete public/dot-ui/ "$DOCROOT/dot-ui/" && echo "== docroot dot-ui/ mirrored"; fi
+          else
+            echo "== docroot is public/: dot-ui/ is served in place"
+          fi
+
           # ---- database
           echo "== Pending migrations:"
           $PHP artisan migrate:status --pending 2>&1 | tail -25 || true

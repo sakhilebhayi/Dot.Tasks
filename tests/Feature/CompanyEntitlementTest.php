@@ -55,6 +55,9 @@ class CompanyEntitlementTest extends TestCase
             'ecosystem.platforms.infodot.url' => 'https://infodot.test',
             'ecosystem.entitlement.check' => true,
             'ecosystem.entitlement.url' => null,
+            // The header switcher (dot-ui) reads the same InfoDot endpoint on its own cache key. It is pointed at a separate
+            // faked address here so these tests keep counting only the entitlement client's reads.
+            'ecosystem.infodot.companies_url' => 'https://infodot.test/switcher-read',
         ]);
         config()->set('ecosystem.infodot.'.'secret', $this->bearer);
     }
@@ -118,7 +121,7 @@ class CompanyEntitlementTest extends TestCase
     private function infodotSays(array|callable $byUuid): void
     {
         Http::swap(new Factory);
-        Http::fake([self::READ => function (Request $request) use ($byUuid) {
+        Http::fake(['https://infodot.test/switcher-read/*' => Http::response('', 503), self::READ => function (Request $request) use ($byUuid) {
             $this->reads++;
             $uuid = Str::between($request->url(), '/companies/', '/platforms');
             $answer = is_callable($byUuid) ? $byUuid($uuid) : ($byUuid[$uuid] ?? Http::response(['error' => 'not_found'], 404));

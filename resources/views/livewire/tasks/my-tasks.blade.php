@@ -1,6 +1,6 @@
 <div>
     <div class="filters">
-        <input class="input" type="search" wire:model.live.debounce.300ms="search" placeholder="Search my tasks..." aria-label="Search my tasks">
+        <x-dot.filter-search name="search" wire:model.live.debounce.300ms="search" placeholder="Search my tasks..." label="Search my tasks" />
         <select class="select bare" wire:model.live="priority" aria-label="Priority">
             <option value="">Any priority</option>
             @foreach(array_reverse(\App\Models\Task::PRIORITIES) as $p)

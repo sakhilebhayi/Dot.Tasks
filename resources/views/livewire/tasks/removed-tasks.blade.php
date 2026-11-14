@@ -21,7 +21,7 @@
             @endforeach
         </select>
         <label class="sr" for="removed-search">Search</label>
-        <input class="input" id="removed-search" wire:model.live.debounce.300ms="search" type="search" maxlength="100" placeholder="Title or description">
+        <x-dot.filter-search name="search" id="removed-search" wire:model.live.debounce.300ms="search" maxlength="100" placeholder="Title or description" label="Search" />
         @if($type !== '' || $board !== '' || trim($search) !== '')
             <button type="button" class="link" wire:click="$set('type', ''); $set('board', ''); $set('search', '')">Clear</button>
         @endif
