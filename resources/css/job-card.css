@@ -117,8 +117,6 @@ button { cursor: pointer; }
 .topbar-search { flex: 0 1 420px; min-width: 0; }
 .topbar-search .dsr { margin: 0; }
 .topbar-search .dsr-input[readonly] { cursor: pointer; }
-/* Under 640px the package hides the shortcut hint but keeps its 104px of right padding: reclaim it, the arrow is all that sits there. */
-@media (max-width: 639.98px) { .topbar-search .dsr .dsr-input { padding-right: var(--dsr-pad-r-nohint); } }
 
 /* Host token mapping for the shared Dot UI. The pill itself is not mapped (the same cream pill in every platform); the
    dropdown surfaces, the compact in-page filter and the switcher button follow this app's tokens, in light and dark.
