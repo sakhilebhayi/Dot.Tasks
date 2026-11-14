@@ -494,30 +494,8 @@ input, textarea { caret-color: var(--text); }
 .account-title p { margin-top: 2px; color: var(--muted); }
 .page .input { width: 100%; }
 
-/* Arriving: the logo, a welcome, one action and the cards on this person's name. See resources/views/livewire/landing.blade.php. */
-.land { margin-bottom: 28px; padding-bottom: 32px; border-bottom: 1px solid var(--border); }
-.land-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+/* Arriving: the logo, one sentence that is true today and one action. The overview below it is the .ov block at the end. */
 /* The file carries its own clear space, about a sixth of its width each side: the pull lines the artwork up with the text. */
-.land-logo { display: block; width: auto; height: 112px; margin: -12px 0 0 -26px; }
-.land-logo-night, .dark .land-logo-day { display: none; }
-.dark .land-logo-night { display: block; }
-.land-back { display: flex; gap: 4px; margin-right: -10px; }
-.land-back a { display: inline-flex; align-items: center; min-height: 34px; padding: 0 10px; border-radius: var(--radius); color: var(--muted); }
-.land-back a:hover { color: var(--text); background: var(--raised); }
-.land-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 400px); gap: 24px 56px; align-items: start; margin-top: 4px; }
-.land h1 { max-width: 18ch; font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; overflow-wrap: break-word; }
-.land-lead { max-width: 52ch; margin-top: 12px; font-size: 16px; line-height: 24px; color: var(--muted); overflow-wrap: anywhere; }
-.btn.land-go { height: 48px; margin-top: 24px; padding: 0 22px 0 18px; gap: 8px; font-size: 16px; font-weight: 600; transition: transform 120ms var(--ease), background-color 120ms var(--ease); }
-.btn.land-go .icon { width: 18px; height: 18px; stroke-width: 2; }
-.btn.land-go:hover { background: color-mix(in srgb, var(--primary) 84%, var(--ground)); border-color: transparent; }
-.land-note { max-width: 52ch; margin-top: 12px; color: var(--muted); }
-.land-rack { display: flex; flex-direction: column; gap: 6px; padding: 0 8px 8px; border-radius: var(--radius); background: var(--raised); }
-.land-rack .slot-head { padding: 10px 4px 4px; font-size: 14px; line-height: 20px; }
-.land-rack .card:hover { transform: translateY(-1px); }
-.land-board { margin-left: auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.land-open { padding: 18px 14px; border: 1px dashed var(--control); border-radius: var(--radius); color: var(--muted); }
-.land-open b { color: var(--text); font-weight: 500; }
-.land-open p + p { margin-top: 2px; }
 .land-next { font-size: 16px; line-height: 24px; font-weight: 600; }
 .land-boards { align-items: center; margin: 24px 0 8px; }
 
@@ -639,12 +617,6 @@ input, textarea { caret-color: var(--text); }
     .figures { grid-template-columns: 1fr 1fr; }
     .figure:nth-child(odd) { border-left: 0; }
     .figure:nth-child(n + 3) { border-top: 1px solid var(--rule); }
-    .land-body { grid-template-columns: minmax(0, 1fr); }
-    .land-logo { height: 88px; margin: -8px 0 0 -20px; }
-    .land h1 { font-size: 24px; line-height: 32px; letter-spacing: -0.01em; }
-    .land-back a { min-height: 44px; }
-    .btn.land-go { width: 100%; }
-    .land-rack .add-line { height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -658,4 +630,204 @@ input, textarea { caret-color: var(--text); }
     .topbar { flex-wrap: wrap; align-content: center; row-gap: 6px; }
     .topbar-search { order: 10; flex: 1 0 100%; }
     .brand { height: 52px; }
+}
+
+/* ===== The Overview (R-51): head, tabs, ledger groups on hairlines, week rack, charts. Nothing here is a card. ===== */
+:root {
+    --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+    --row-compact: 30px; --row-task: 44px; --row-touch: 52px;
+}
+.skip { position: absolute; left: 8px; top: -48px; z-index: 100; padding: 8px 12px; border-radius: var(--radius); background: var(--primary); color: var(--on-primary) !important; }
+.skip:focus { top: 8px; }
+main:focus { outline: none; }
+.topbar-title { flex: none; margin-right: var(--s3); color: var(--text); font-size: 16px; line-height: 24px; font-weight: 600; letter-spacing: -0.005em; }
+.page-ov { max-width: 1240px; }
+
+/* Head: the logo as drawn, one sentence that is true today, one filled action */
+.land { padding-bottom: var(--s5); }
+.land-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4); }
+.land-logo { display: block; width: auto; height: 72px; margin: -8px 0 0 -17px; }
+.land-logo-night, .dark .land-logo-day { display: none; }
+.dark .land-logo-night { display: block; }
+.land-back { display: flex; gap: var(--s1); margin-right: -10px; }
+.land-back a { display: inline-flex; align-items: center; min-height: var(--control-height); padding: 0 10px; border-radius: var(--radius); color: var(--muted); transition: background-color 120ms var(--ease), color 120ms var(--ease); }
+.land-back a:hover { color: var(--text); background: var(--raised); }
+.land-body { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: var(--s4) var(--s6); margin-top: var(--s3); }
+.land h1 { max-width: 28ch; font-size: 32px; line-height: 36px; font-weight: 600; letter-spacing: -0.015em; text-wrap: balance; overflow-wrap: break-word; }
+.land-lead { max-width: 60ch; margin-top: var(--s2); color: var(--muted); overflow-wrap: anywhere; }
+.land-do { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-top: var(--s4); }
+.btn.land-go { height: 40px; padding: 0 18px 0 14px; gap: var(--s2); font-size: 14px; font-weight: 600; transition: background-color 120ms var(--ease), transform 120ms var(--ease); }
+.btn.land-go:hover { background: color-mix(in srgb, var(--primary) 84%, var(--ground)); border-color: transparent; }
+.btn.land-go:active { transform: scale(0.98); }
+.land-note { max-width: 52ch; color: var(--muted); font-size: 12px; line-height: 16px; }
+.land-art { display: block; width: 352px; height: 112px; margin-bottom: 4px; }
+.ra-slot { fill: none; stroke: var(--control); stroke-width: 1.5; stroke-dasharray: 4 4; }
+.ra-face { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.ra-notch { fill: var(--text); }
+.ra-go { fill: var(--go); }
+.ra-line { fill: var(--rule); }
+.dark .ra-line { fill: var(--active); }
+.ra-edge { fill: var(--muted); }
+.ra-edge.go { fill: var(--go); }
+.ra-edge.late { fill: var(--stop); }
+
+/* Tabs and page tools */
+.ov-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s2); padding-bottom: var(--s2); border-bottom: 1px solid var(--border); }
+.ov-bar .tabs { flex-wrap: nowrap; }
+.ov-bar .tab { transition: background-color 120ms var(--ease), color 120ms var(--ease); }
+.ov-bar .select { height: 30px; }
+.ov-arrange-bar { margin-top: var(--s3); }
+
+/* Facts: one label and value layout, one row */
+.facts { display: flex; flex-wrap: wrap; gap: 0 var(--s5); padding: var(--s3) 0; border-bottom: 1px solid var(--rule); }
+.fact { display: flex; align-items: baseline; gap: 6px; min-height: 24px; color: var(--muted); }
+.fact b { color: var(--text); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.fact.late, .fact.late b { color: var(--stop); }
+
+/* Body: main and side. The side stacks under the main on a tablet and a phone. */
+.ov-body { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 4fr); gap: 0 var(--s6); padding-top: var(--s4); align-items: start; }
+.ov-body.is-team { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
+.ov-col { min-width: 0; }
+.ov-arrange { padding-top: var(--s4); max-width: 720px; }
+.ov-arrange .d-group { padding: 0 0 var(--s2); }
+.ov-view { transition: opacity 120ms var(--ease); }
+.ov-view.is-loading .d-row { opacity: 0.6; }
+
+/* The week rack: the Job Card's signature. Seven slots, card edges, today in green. */
+.d-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin-bottom: var(--s5); }
+.d-week a { display: flex; flex-direction: column; gap: var(--s2); height: 76px; padding: 8px 10px; border-radius: var(--radius); background: var(--raised); color: var(--muted); transition: background-color 120ms var(--ease); }
+.d-week a:hover { background: var(--active); }
+.d-week .nm { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s1); font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.d-week .cnt { color: var(--text); font-size: 16px; line-height: 16px; font-weight: 600; }
+.d-week .past .cnt { color: var(--stop); }
+.d-week .today .cnt { color: inherit; }
+.d-week .nm b { color: var(--text); font-weight: 600; }
+.d-week .edges i { transform-origin: left; }
+.d-week .today { background: var(--go-wash); color: var(--go); }
+.d-week .today .nm b { color: inherit; }
+.d-week .today .edges i { background: var(--go); }
+.d-week .past .edges i { background: var(--stop); }
+
+/* Ledger: groups of rows on hairlines. No boxes, no shadows. */
+.d-group { margin-bottom: var(--s5); }
+.d-head { display: flex; align-items: center; gap: var(--s2); min-height: var(--row-compact); border-bottom: 1px solid var(--border); }
+.d-head h2 { font-size: 14px; line-height: 20px; font-weight: 600; }
+.d-head .count { color: var(--muted); font-variant-numeric: tabular-nums; }
+.d-head .more { margin-left: auto; color: var(--muted); font-size: 12px; }
+.d-head .more:hover { color: var(--text); }
+.d-group.late .d-head h2 { color: var(--stop); }
+.d-group.wait .d-head h2 { color: var(--wait); }
+.d-head .grip { margin-left: -4px; }
+.d-empty { display: flex; flex-direction: column; justify-content: center; min-height: var(--row-compact); padding: 4px 0; color: var(--muted); }
+.d-empty p + p { margin-top: 2px; }
+.d-row { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: var(--s4); width: 100%; min-height: var(--row-task); padding: 4px 4px 4px 0; border: 0; border-bottom: 1px solid var(--rule); background: none; text-align: left; color: var(--text); transition: background-color 120ms var(--ease); }
+.d-row:hover { background: color-mix(in srgb, var(--raised) 55%, transparent); }
+.d-row:active { background: var(--raised); }
+.d-row:active { background: var(--raised); }
+.d-row .notch { top: 8px; bottom: 8px; left: -12px; border-radius: 0; }
+.d-main { min-width: 0; }
+.d-main b { display: block; overflow: hidden; font-weight: 500; white-space: nowrap; text-overflow: ellipsis; }
+.d-main span { display: block; overflow: hidden; color: var(--muted); font-size: 12px; line-height: 16px; white-space: nowrap; text-overflow: ellipsis; }
+.d-main span.wait { color: var(--wait); }
+.d-cell { display: flex; align-items: center; gap: var(--s2); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.d-cell .overdue { color: var(--stop); }
+.d-cell .due-today { color: var(--go); font-weight: 500; }
+.d-group.compact .d-row { min-height: var(--row-compact); padding-block: 2px; }
+.d-group.compact .d-main b { font-weight: 400; }
+.d-group.done .d-main b { color: var(--muted); }
+.ov .dot { display: inline-block; flex: none; width: 8px; height: 8px; margin-right: var(--s2); border-radius: 50%; }
+.d-row .d-main b .dot { vertical-align: 0; }
+.d-cell b { color: var(--text); font-weight: 500; }
+.ov-checked { margin: calc(var(--s2) * -1) 0 var(--s5); color: var(--muted); font-size: 12px; }
+.d-dayline { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px var(--s4); min-height: var(--row-task); padding: 8px 0; border-bottom: 1px solid var(--rule); color: var(--muted); }
+.d-dayline b { color: var(--text); font-size: 16px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.d-dayline .link { margin-left: auto; }
+.boards .d-row { grid-template-columns: minmax(0, 1fr) auto; }
+.boards .archived-heading, .boards .section-title { margin-top: var(--s4); font-size: 14px; }
+
+/* Tables (board health): a real table, the whole row is the link */
+.d-table { width: 100%; border-collapse: collapse; }
+.d-table th { height: 32px; padding: 0 var(--s3) 0 0; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; font-weight: 500; text-align: right; white-space: nowrap; }
+.d-table th:first-child, .d-table td:first-child { text-align: left; }
+.d-table td { height: var(--row-task); padding: 0 var(--s3) 0 0; border-bottom: 1px solid var(--rule); text-align: right; font-variant-numeric: tabular-nums; }
+.d-table td:first-child { font-weight: 500; }
+.d-table tbody tr { position: relative; transition: background-color 120ms var(--ease); }
+.d-table tbody tr:hover { background: color-mix(in srgb, var(--raised) 55%, transparent); }
+.d-table td:first-child a { display: inline-flex; align-items: center; }
+.d-table td:first-child a::after { content: ''; position: absolute; inset: 0; }
+.d-table .z { color: var(--muted); }
+.d-table .hot { color: var(--stop); font-weight: 500; }
+.d-table .amber { color: var(--wait); font-weight: 500; }
+
+/* Charts: bars from zero, direct labels, one ink ramp, red only for late */
+.d-hbars { display: flex; flex-direction: column; }
+.d-hbar { display: grid; grid-template-columns: 112px minmax(0, 1fr) 28px; align-items: center; gap: var(--s2); min-height: var(--row-compact); border-bottom: 1px solid var(--rule); }
+.d-hbar .nm { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.d-hbar .track { display: flex; gap: 2px; height: 14px; }
+.d-hbar .seg { display: block; min-width: 2px; background: var(--chart-doing); transform-origin: left; }
+.d-hbar .seg.late { background: var(--stop); }
+.d-hbar .v { text-align: right; }
+.d-legend { display: flex; flex-wrap: wrap; gap: 0 var(--s4); padding-top: var(--s2); color: var(--muted); font-size: 12px; }
+.d-legend .key { display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 2px; }
+.d-legend .key-late { background: var(--stop); }
+.d-legend b { color: var(--text); font-weight: 500; }
+.d-stack { display: flex; gap: 2px; height: 16px; margin-top: var(--s3); transform-origin: left; }
+.d-stack .seg { display: block; flex-basis: 0; min-width: 3px; }
+.d-columns { display: flex; align-items: flex-end; gap: 2px; height: 88px; margin-top: var(--s3); border-bottom: 1px solid var(--control); }
+.d-columns .column { display: flex; flex: 1; align-items: flex-end; height: 100%; }
+.d-columns .column i { display: block; width: 100%; max-width: none; border-radius: 0; background: var(--chart-review); transform-origin: bottom; }
+.d-columns .column.this i { background: var(--go); }
+.d-columns .column:hover i { background: var(--text); }
+.d-axis { display: flex; justify-content: space-between; padding-top: 4px; color: var(--muted); font-size: 12px; }
+.d-axis b { color: var(--text); font-weight: 600; }
+
+.ov-foot { display: flex; flex-wrap: wrap; gap: 4px var(--s4); margin-top: var(--s5); padding-top: var(--s3); border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.ov-foot a:hover { color: var(--text); text-decoration: underline; }
+
+/* Motion. Content only: the bar, the rail and the foot never move. Transform and opacity, 120 to 420ms, ease-out, once on
+   arrival, nothing at rest. Each end state is the real one, so a figure that grows ends on its true size. */
+@keyframes ov-fade { from { opacity: 0; } }
+@keyframes ov-rise { from { opacity: 0; transform: translateY(8px); } }
+@keyframes ov-seat { from { opacity: 0; transform: translateY(-12px); } }
+@keyframes ov-grow-x { from { transform: scaleX(0); } }
+@keyframes ov-grow-y { from { transform: scaleY(0); } }
+.d-in { animation: ov-rise 320ms var(--ease) backwards; animation-delay: calc(var(--i, 0) * 70ms); }
+.d-group { animation: ov-fade 220ms var(--ease) backwards; animation-delay: calc(240ms + var(--g, 0) * 70ms); }
+.d-row, .d-table tbody tr { animation: ov-rise 260ms var(--ease) backwards; animation-delay: calc(280ms + var(--g, 0) * 70ms + var(--r, 0) * 30ms); }
+.d-week a { animation: ov-rise 260ms var(--ease) backwards; animation-delay: calc(300ms + var(--r, 0) * 35ms); }
+.d-week .edges i { animation: ov-grow-x 260ms var(--ease) backwards; animation-delay: calc(480ms + var(--r, 0) * 35ms); }
+.fact b { animation: ov-rise 260ms var(--ease) backwards; animation-delay: calc(120ms + var(--r, 0) * 40ms); }
+.d-stack { animation: ov-grow-x 420ms var(--ease) 320ms backwards; }
+.d-columns .column i { animation: ov-grow-y 360ms var(--ease) backwards; animation-delay: calc(320ms + var(--r, 0) * 25ms); }
+.ra-seat { animation: ov-seat 360ms var(--ease) backwards; animation-delay: calc(420ms + var(--i, 0) * 110ms); }
+@media (prefers-reduced-motion: reduce) {
+    .d-in, .d-group, .d-row, .d-table tbody tr, .d-week a, .d-week .edges i, .fact b, .d-stack, .d-columns .column i, .ra-seat { animation: none; }
+    .d-row, .d-week a, .d-table tbody tr, .ov-view, .btn.land-go, .land-back a, .ov-bar .tab { transition: none; }
+}
+
+/* ===== The Overview on a tablet: the sidebar is the drawer, one column ===== */
+@media (max-width: 1099.98px) {
+    .topbar-title { display: none; }
+    .ov-body, .ov-body.is-team { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 859.98px) {
+    .land-body { grid-template-columns: minmax(0, 1fr); }
+    .land-art { display: none; }
+    .land-back a { min-height: 44px; }
+    .ov-bar .tab { height: 44px; padding: 0 14px; }
+    .ov-bar .select, .ov-bar .btn.quiet { min-height: 44px; }
+    .d-row { min-height: var(--row-touch); }
+    .d-group.compact .d-row { min-height: var(--row-task); }
+    .d-table td { height: var(--row-touch); }
+}
+@media (max-width: 479.98px) {
+    .land-logo { height: 56px; margin: -6px 0 0 -13px; }
+    .land h1 { font-size: 24px; line-height: 32px; letter-spacing: -0.01em; }
+    .btn.land-go { width: 100%; height: 48px; font-size: 16px; }
+    .d-week { gap: 4px; }
+    .d-week a { height: 68px; padding: 6px; }
+    .d-week .cnt { display: none; }
+    .facts { gap: 0 var(--s4); }
+    .d-hbar { grid-template-columns: 88px minmax(0, 1fr) 28px; }
+    .d-table .opt { display: none; }
 }

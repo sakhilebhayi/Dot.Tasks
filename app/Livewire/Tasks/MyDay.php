@@ -4,6 +4,7 @@ namespace App\Livewire\Tasks;
 
 use App\Models\Task;
 use App\Models\User;
+use App\Services\DashboardFigures;
 use App\Services\DayPlanner;
 use App\Services\FocusRanking;
 use App\Services\TaskEditor;
@@ -154,25 +155,7 @@ class MyDay extends Component
     #[Computed]
     public function week(): array
     {
-        $today = Today::date();
-        $monday = $today->copy()->startOfWeek(Carbon::MONDAY);
-
-        $tasks = $this->mine()->where('tasks.status', '!=', 'done')
-            ->whereDate('tasks.due_date', '>=', $monday)->whereDate('tasks.due_date', '<=', $monday->copy()->addDays(6))
-            ->get()->groupBy(fn (Task $task) => $task->due_date->toDateString());
-
-        return collect(range(0, 6))->map(function (int $offset) use ($monday, $today, $tasks) {
-            $day = $monday->copy()->addDays($offset);
-
-            return [
-                'date' => $day->toDateString(),
-                'name' => $day->format('D'),
-                'number' => $day->format('j'),
-                'today' => $day->isSameDay($today),
-                'past' => $day->lt($today),
-                'tasks' => $tasks->get($day->toDateString(), collect()),
-            ];
-        })->all();
+        return app(DashboardFigures::class)->week($this->user());
     }
 
     public function pick(string $date): void

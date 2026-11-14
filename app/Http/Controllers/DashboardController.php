@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Task;
 use App\Services\DashboardStats;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -24,12 +25,13 @@ class DashboardController extends Controller
 
         $lists = $team
             ->boards()
-            ->withCount('tasks')
             ->orderBy('sort_order')
             ->get();
 
         return view('dashboard', [
             'lists' => $lists,
+            // Anything written down at all, a private Inbox included: the page keeps its panels once there is a first task.
+            'anythingWritten' => Task::forTeam($team)->exists(),
             'taskCounts' => $stats->forTeam($team),
         ]);
     }

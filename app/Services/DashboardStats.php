@@ -10,9 +10,10 @@ use Illuminate\Support\Carbon;
 /**
  * The dashboard's task counts for one team, in a single query.
  *
- * Counts go through Task::forTeam like every team-wide query, so another
- * team's tasks never leak in; archived and deleted tasks and tasks on archived
- * boards are already left out by the models' scopes. Due-today and overdue
+ * Counts go through Task::forTeamUnscoped, the team's boards only: no Inbox is ever
+ * counted, neither the signed-in person's nor anyone else's, so a team figure is the
+ * same for every member. Another team's tasks never leak in; archived and deleted
+ * tasks and tasks on archived boards are already left out by the models' scopes. Due-today and overdue
  * mean "not done yet". "Completed this week" counts tasks finished since Monday.
  */
 class DashboardStats
@@ -25,7 +26,7 @@ class DashboardStats
         $today = Today::date()->toDateString();
         $weekStart = Carbon::now()->startOfWeek()->toDateTimeString();
 
-        $row = Task::forTeam($team)
+        $row = Task::forTeamUnscoped($team->id)
             ->toBase()
             ->selectRaw(
                 "COUNT(*) AS total,

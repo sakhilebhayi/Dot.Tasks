@@ -1,7 +1,6 @@
 @php $plan = $this->data['plan']; @endphp
-<div class="widget-figures">
-    <div class="widget-figure"><span>Planned today</span><b>{{ $plan['total'] }}</b></div>
-    <div class="widget-figure"><span>Done of those</span><b>{{ $plan['done'] }}</b></div>
-    <div class="widget-figure"><span>My open tasks</span><b>{{ $this->data['mine'] }}</b></div>
+<div class="d-dayline">
+    <span>Planned today <b class="num">{{ $plan['total'] }}</b></span>
+    <span>Done of those <b class="num">{{ $plan['done'] }}</b></span>
+    <a class="link" href="{{ route('tasks.today') }}">Open My Day</a>
 </div>
-<p style="margin-top:8px"><a class="link" href="{{ route('tasks.today') }}">Open My Day</a></p>

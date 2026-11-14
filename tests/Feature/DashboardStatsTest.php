@@ -6,6 +6,7 @@ use App\Models\TaskList;
 use App\Models\Team;
 use App\Models\User;
 use App\Services\DashboardStats;
+use App\Services\InboxLists;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -133,6 +134,26 @@ class DashboardStatsTest extends TestCase
         $this->assertCount(1, $queries);
         $this->assertStringContainsString('"team_id" = ?', $queries[0]['query'], 'scoped to the team through Task::forTeam');
         $this->assertStringContainsString('SUM(CASE', $queries[0]['query']);
+    }
+
+    public function test_no_inbox_is_counted_in_the_team_figures(): void
+    {
+        Carbon::setTestNow('2026-11-05 09:00:00');
+        $f = $this->teamFixture();
+        $this->add($f->list, 'in_progress', '2026-11-01');
+        $inbox = app(InboxLists::class)->for($f->editor, $f->team);
+        $this->add($inbox, 'todo', '2026-11-01');
+        $this->add($inbox, 'todo', '2026-11-05');
+        $this->add($inbox, 'done');
+
+        $this->actingAs($f->editor);
+        $stats = app(DashboardStats::class)->forTeam($f->team);
+
+        $this->assertEquals(['total' => 2, 'todo' => 1, 'in_progress' => 1, 'overdue' => 1, 'due_today' => 0, 'done' => 0], array_intersect_key($stats, array_flip(['total', 'todo', 'in_progress', 'overdue', 'due_today', 'done'])));
+
+        // Whoever is signed in, the team reads the same.
+        $this->actingAs($f->owner);
+        $this->assertSame($stats, app(DashboardStats::class)->forTeam($f->team));
     }
 
     public function test_the_dashboard_route_shows_the_service_numbers(): void

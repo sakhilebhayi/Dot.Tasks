@@ -253,7 +253,13 @@ class Task extends Model
     /** Is something still standing between this task and finishing? A link says what it waits for: the other task's start or its finish. */
     public function isBlocked(): bool
     {
-        return $this->blockedBy->contains(fn (Task $blocker) => in_array($blocker->pivot->type, ['ff', 'fs'], true)
+        return $this->firstBlocker() !== null;
+    }
+
+    /** The task this one is waiting on first, by the same rule isBlocked uses. */
+    public function firstBlocker(): ?Task
+    {
+        return $this->blockedBy->first(fn (Task $blocker) => in_array($blocker->pivot->type, ['ff', 'fs'], true)
             ? $blocker->status !== 'done'
             : $blocker->status === 'todo');
     }

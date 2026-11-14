@@ -136,10 +136,11 @@ class ResponsiveShellTest extends TestCase
 
         $html = $this->actingAs($f->owner)->get(route('dashboard', ['view' => 'team']))->assertOk()->getContent();
 
-        $this->assertSame(1, preg_match_all('/<div class="page">/', $html));
-        $this->assertSame(1, preg_match_all('/<div class="figures">/', $html), 'one strip of figures');
-        $this->assertSame(7, preg_match_all('/<div class="figure">/', $html), 'seven figures');
-        $this->assertStringContainsString('class="row"', $html);
+        $this->assertSame(1, preg_match_all('/<div class="page page-ov">/', $html));
+        $this->assertSame(1, preg_match_all('/<div class="facts"/', $html), 'one row of figures, not tiles');
+        $this->assertSame(7, preg_match_all('/<span class="fact"/', $html), 'seven figures');
+        $this->assertStringContainsString('class="d-table"', $html);
+        $this->assertStringContainsString('class="ov-body is-team"', $html);
         // No fixed three-column inline style left that a phone could not override.
         $this->assertStringNotContainsString('grid-template-columns:repeat(3,1fr)', $html);
     }
