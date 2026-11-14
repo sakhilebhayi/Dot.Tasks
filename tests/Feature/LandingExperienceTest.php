@@ -201,6 +201,28 @@ class LandingExperienceTest extends TestCase
         Livewire::actingAs($f->outsider)->test(Landing::class)->assertSee('Nothing is on your name.');
     }
 
+    public function test_the_arrival_rack_draws_one_card_per_real_task_of_this_person_and_nobody_elses(): void
+    {
+        $f = $this->teamFixture();
+        $make = fn ($who, string $title, ?string $due, string $priority = 'medium') => $f->list->tasks()->create(['assignee_id' => $who->id, 'status' => 'todo', 'title' => $title, 'due_date' => $due, 'priority' => $priority]);
+
+        $empty = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
+        $this->assertSame(0, substr_count($empty, 'class="ra-card'), 'no tasks, no cards');
+        $this->assertSame(4, substr_count($empty, 'class="ra-slot"'));
+
+        $make($f->owner, 'Later', '2026-11-20');
+        $make($f->owner, 'Late one', '2026-11-01', 'urgent');
+        $make($f->owner, 'Today one', '2026-11-05', 'high');
+        $make($f->admin, 'Somebody else holds this', '2026-11-01');
+
+        $page = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
+
+        $this->assertSame(3, substr_count($page, 'class="ra-card'), 'one card per task on my name, none for the admin\'s');
+        $this->assertStringContainsString('class="ra-edge late"', $page, 'the late card has a red edge');
+        $this->assertSame(1, substr_count($page, 'width="5" height="68"'), 'the urgent card has the wide notch');
+        $this->assertSame(1, substr_count($page, 'class="ra-go"'), 'the high-priority card due today has the green notch');
+    }
+
     public function test_the_overview_has_a_skip_link_and_a_title_in_the_bar(): void
     {
         $f = $this->teamFixture();

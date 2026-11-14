@@ -29,6 +29,6 @@
                 </p>
             </div>
         </div>
-        <x-rack-art class="land-art" :cards="$isEmpty ? 0 : min(3, $open)" />
+        <x-rack-art class="land-art" :cards="$rack" />
     </div>
 </section>

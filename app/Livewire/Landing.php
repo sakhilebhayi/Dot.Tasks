@@ -48,12 +48,39 @@ class Landing extends Component
         ];
     }
 
+    /**
+     * The cards of the arrival rack: up to four of this person's own open tasks, the earliest due first (late ones lead,
+     * undated ones last). The picture is drawn from these rows, so it never shows work that is not theirs.
+     *
+     * @return list<array{state: string, priority: string, title: int}>
+     */
+    #[Computed]
+    public function rack(): array
+    {
+        $today = Today::date();
+
+        return Task::forTeam($this->user()->currentTeam)->mine($this->user())
+            ->where('tasks.status', '!=', 'done')
+            ->orderByRaw('tasks.due_date IS NULL')->orderBy('tasks.due_date')->orderByPriorityRank()->orderBy('tasks.id')
+            ->limit(4)->get(['tasks.id', 'tasks.title', 'tasks.due_date', 'tasks.priority'])
+            ->map(fn (Task $task) => [
+                'state' => match (true) {
+                    $task->due_date === null => 'open',
+                    $task->due_date->lt($today) => 'late',
+                    $task->due_date->isSameDay($today) => 'today',
+                    default => 'open',
+                },
+                'priority' => (string) $task->priority,
+                'title' => mb_strlen((string) $task->title),
+            ])->all();
+    }
+
     /** A task was written or changed somewhere on the page: read the counts again. */
     #[On('task-created')]
     #[On('task-updated')]
     public function refreshState(): void
     {
-        unset($this->state);
+        unset($this->state, $this->rack);
     }
 
     public function render(): View
@@ -77,6 +104,7 @@ class Landing extends Component
         return view('livewire.landing', [
             'sentence' => $sentence,
             'isEmpty' => $state['open'] === 0,
+            'rack' => $this->rack,
             'open' => $state['open'],
             'firstName' => Str::of($user->name)->trim()->before(' ')->toString(),
             'company' => $user->currentTeam->name,
