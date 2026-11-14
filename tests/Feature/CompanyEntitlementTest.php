@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\TaskList;
 use App\Models\Team;
 use App\Models\User;
+use App\Services\InfoDot\CompanyEntitlement;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Factory;
@@ -272,7 +273,7 @@ class CompanyEntitlementTest extends TestCase
 
     public function test_the_personal_answer_is_remembered_in_the_session_true_false_or_absent(): void
     {
-        $key = \App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY;
+        $key = CompanyEntitlement::PERSONAL_SESSION_KEY;
 
         $this->signIn('ann@acme.test', [$this->listed(self::OWN, "Ann's Team", true, personal: true)]);
         $this->assertTrue(session($key));
@@ -294,7 +295,7 @@ class CompanyEntitlementTest extends TestCase
 
         foreach ([$user->personalTeam(), $local] as $team) {
             $user->switchTeam($team);
-            $this->withSession([\App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY => false])
+            $this->withSession([CompanyEntitlement::PERSONAL_SESSION_KEY => false])
                 ->actingAs($user->fresh())->get('/dashboard')
                 ->assertStatus(403)
                 ->assertSee('Dot.Tasks needs a company that has switched it on')
@@ -311,7 +312,7 @@ class CompanyEntitlementTest extends TestCase
         $user = User::factory()->withPersonalTeam()->create();
         $this->infodotSays([]);
 
-        $this->withSession([\App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY => true])->actingAs($user)->get('/dashboard')->assertOk();
+        $this->withSession([CompanyEntitlement::PERSONAL_SESSION_KEY => true])->actingAs($user)->get('/dashboard')->assertOk();
         $this->actingAs($user)->get('/dashboard')->assertOk();
         $this->actingAs($user)->get('/inbox')->assertRedirect();
 
@@ -325,7 +326,7 @@ class CompanyEntitlementTest extends TestCase
         $user->switchTeam($personal);
         $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
 
-        $session = [\App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY => false];
+        $session = [CompanyEntitlement::PERSONAL_SESSION_KEY => false];
         $this->withSession($session)->actingAs($user->fresh())->get('/dashboard')
             ->assertStatus(403)->assertSee('Acme Ltd')->assertDontSee('Your own workspace');
 
