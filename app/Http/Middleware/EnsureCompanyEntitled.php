@@ -40,14 +40,13 @@ class EnsureCompanyEntitled
             return $next($request);
         }
 
-        // The personal workspace is not a company here, so there is nothing to ask InfoDot: what it said at this
-        // sign-in stands for the session.
+        // A personal workspace, or any team with no InfoDot company, is never asked about. Individuals hold the free
+        // core only, so what redeem said of the personal workspace at this sign-in decides: exactly false is refused;
+        // true, or nothing remembered (an older InfoDot, a session from before this release), carries on.
         if ($team->personal_team || blank($team->infodot_team_uuid)) {
-            $refusal = $team->personal_team && $team->user_id === $user->id && $request->hasSession()
-                ? $request->session()->get('ecosystem.personal_refused')
-                : null;
+            $remembered = $request->hasSession() ? $request->session()->get(CompanyEntitlement::PERSONAL_SESSION_KEY) : null;
 
-            return is_string($refusal) ? $this->refuse($request, 'company_required', personal: true) : $next($request);
+            return $remembered === false ? $this->refuse($request, 'company_required', personal: true) : $next($request);
         }
 
         $answer = $this->entitlement->of((string) $team->infodot_team_uuid);
@@ -80,6 +79,11 @@ class EnsureCompanyEntitled
         return false;
     }
 
+    private function localAllowed(Request $request): bool
+    {
+        return ! $request->hasSession() || $request->session()->get(CompanyEntitlement::PERSONAL_SESSION_KEY) !== false;
+    }
+
     private function refuse(Request $request, string $status, bool $personal = false): Response
     {
         $user = $request->user();
@@ -90,7 +94,11 @@ class EnsureCompanyEntitled
             'company' => $personal ? null : $current->name,
             'manageUrl' => $this->entitlement->manageUrl(),
             // The person's own other workspaces, by name only: nothing of theirs is read to draw this page.
-            'others' => $user->allTeams()->reject(fn ($team) => $team->id === $current->id)->values(),
+            // Teams with no InfoDot company are not offered when the personal answer rules them out.
+            'others' => $user->allTeams()
+                ->reject(fn ($team) => $team->id === $current->id)
+                ->filter(fn ($team) => filled($team->infodot_team_uuid) || $this->localAllowed($request))
+                ->values(),
             'signedIn' => true,
         ], 403)->header('Cache-Control', 'no-store, private');
     }

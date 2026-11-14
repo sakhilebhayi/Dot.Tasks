@@ -89,7 +89,8 @@ class EcosystemAuthController extends Controller
         abort_unless(is_string($token) && $token !== '', 403);
 
         $user = $this->userFromLocalToken($token);
-        $personalRefused = null;
+        $personalEntitled = null;
+        $viaInfoDot = false;
 
         // Production gives each Dot app its own database, so InfoDot's token is not
         // in ours: ask InfoDot to prove it.
@@ -112,8 +113,8 @@ class EcosystemAuthController extends Controller
                 ], 403)->header('Cache-Control', 'no-store, private');
             }
 
-            $personalRefused = $identity !== null && collect($identity['teams'] ?? [])
-                ->contains(fn ($t) => is_array($t) && ($t['personal'] ?? false) && ! CompanyEntitlement::admits($t));
+            $personalEntitled = $identity ? CompanyEntitlement::personalAnswer($identity) : null;
+            $viaInfoDot = $identity !== null;
 
             $user = $identity ? $provision($identity) : null;
 
@@ -127,11 +128,12 @@ class EcosystemAuthController extends Controller
         // Auth::login() also regenerates the session id (no fixation).
         Auth::login($user);
 
-        // What InfoDot said of the personal workspace at this sign-in, for the length of the session.
-        if ($personalRefused !== null && $request->hasSession()) {
-            $personalRefused
-                ? $request->session()->put('ecosystem.personal_refused', 'no_personal_access')
-                : $request->session()->forget('ecosystem.personal_refused');
+        // What InfoDot said of the personal workspace for this platform, remembered alongside the sign-in. An answer
+        // without the key (an older InfoDot) remembers nothing.
+        if ($viaInfoDot && $request->hasSession()) {
+            is_bool($personalEntitled)
+                ? $request->session()->put(CompanyEntitlement::PERSONAL_SESSION_KEY, $personalEntitled)
+                : $request->session()->forget(CompanyEntitlement::PERSONAL_SESSION_KEY);
         }
 
         return $this->safeRedirect($request->post('redirect')) ?? redirect()->route('dashboard');

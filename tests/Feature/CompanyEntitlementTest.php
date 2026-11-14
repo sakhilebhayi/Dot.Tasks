@@ -264,10 +264,73 @@ class CompanyEntitlementTest extends TestCase
         // Going back to the personal workspace in this session shows the page, with the way out.
         $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
         $this->put(route('current-team.update'), ['team_id' => $user->personalTeam()->id])->assertRedirect();
-        $this->get('/dashboard')->assertStatus(403)->assertSee('Dot.Tasks needs a company')->assertSee('Acme Ltd');
+        $this->get('/dashboard')->assertStatus(403)->assertSee('Dot.Tasks needs a company that has switched it on')->assertSee('Acme Ltd');
 
         $this->put(route('current-team.update'), ['team_id' => $acme->id])->assertRedirect();
         $this->get('/dashboard')->assertOk();
+    }
+
+    public function test_the_personal_answer_is_remembered_in_the_session_true_false_or_absent(): void
+    {
+        $key = \App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY;
+
+        $this->signIn('ann@acme.test', [$this->listed(self::OWN, "Ann's Team", true, personal: true)]);
+        $this->assertTrue(session($key));
+
+        $this->signIn('bo@acme.test', [$this->listed(self::OWN, "Bo's Team", false, 'no_personal_access', personal: true), $this->listed(self::ACME, 'Acme Ltd')]);
+        $this->assertFalse(session($key));
+
+        // An older InfoDot gives no key: nothing is remembered, and a stale answer is not carried over.
+        $this->signIn('cy@acme.test', [$this->listed(self::OWN, "Cy's Team", null, personal: true)]);
+        $this->assertNull(session($key));
+    }
+
+    public function test_remembered_false_refuses_the_personal_workspace_and_any_team_without_an_infodot_company(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $local = Team::factory()->create(['user_id' => $user->id, 'personal_team' => false, 'name' => 'Local only']);
+        TaskList::create(['team_id' => $user->personalTeam()->id, 'owner_id' => $user->id, 'name' => 'My private board']);
+        $this->infodotSays([]);
+
+        foreach ([$user->personalTeam(), $local] as $team) {
+            $user->switchTeam($team);
+            $this->withSession([\App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY => false])
+                ->actingAs($user->fresh())->get('/dashboard')
+                ->assertStatus(403)
+                ->assertSee('Dot.Tasks needs a company that has switched it on')
+                ->assertSee('href="https://infodot.test/platforms/tasks"', false)
+                ->assertDontSee('My private board');
+        }
+
+        $this->assertDatabaseHas('task_lists', ['name' => 'My private board']);
+        $this->assertSame(0, $this->readCalls(), 'a team with no InfoDot company is never asked about');
+    }
+
+    public function test_remembered_true_or_nothing_remembered_keeps_the_personal_inbox(): void
+    {
+        $user = User::factory()->withPersonalTeam()->create();
+        $this->infodotSays([]);
+
+        $this->withSession([\App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY => true])->actingAs($user)->get('/dashboard')->assertOk();
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+        $this->actingAs($user)->get('/inbox')->assertRedirect();
+
+        $this->assertSame(0, $this->readCalls());
+    }
+
+    public function test_a_refused_personal_workspace_still_offers_the_entitled_company_and_exempt_routes_stay_open(): void
+    {
+        $user = $this->memberOfCompany();
+        $personal = $user->personalTeam();
+        $user->switchTeam($personal);
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
+
+        $session = [\App\Services\InfoDot\CompanyEntitlement::PERSONAL_SESSION_KEY => false];
+        $this->withSession($session)->actingAs($user->fresh())->get('/dashboard')
+            ->assertStatus(403)->assertSee('Acme Ltd')->assertDontSee('Your own workspace');
+
+        $this->withSession($session)->actingAs($user->fresh())->get('/cookies')->assertOk();
+        $this->withSession($session)->actingAs($user->fresh())->post('/logout')->assertRedirect();
     }
 
     // ---- during a session ---------------------------------------------------------------------------------------

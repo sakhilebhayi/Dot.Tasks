@@ -22,6 +22,25 @@ class CompanyEntitlement
 
     private const FAILURE_SECONDS = 60;
 
+    /** Session key: what redeem said of the person's personal workspace for this platform (true or false). */
+    public const PERSONAL_SESSION_KEY = 'ecosystem.personal_entitled';
+
+    /**
+     * The `entitled` value redeem gave the person's personal workspace, or null when it gave none.
+     *
+     * @param  array<string, mixed>  $identity
+     */
+    public static function personalAnswer(array $identity): ?bool
+    {
+        foreach ((array) ($identity['teams'] ?? []) as $team) {
+            if (is_array($team) && ($team['personal'] ?? false) && is_bool($team['entitled'] ?? null)) {
+                return $team['entitled'];
+            }
+        }
+
+        return null;
+    }
+
     public function enabled(): bool
     {
         return (bool) config('ecosystem.entitlement.check', true);

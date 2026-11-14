@@ -10,7 +10,7 @@
         'suspended' => ["Dot.Tasks is suspended for {$who}", 'Access was suspended in InfoDot. An owner or admin of the company can see why there and put it right.'],
         'payment_required' => ["Dot.Tasks needs a payment for {$who}", 'A payment is outstanding in InfoDot. An owner or admin of the company can settle it there.'],
         'subscription_expired', 'expired', 'trial_ended', 'cancelled' => ["Dot.Tasks has ended for {$who}", 'The time the company had on Dot.Tasks is over. An owner or admin can start it again in InfoDot.'],
-        'company_required', 'no_personal_access' => ['Dot.Tasks needs a company', 'Your personal workspace in InfoDot does not include Dot.Tasks. A company you own or belong to can switch it on.'],
+        'company_required', 'no_personal_access' => ['Dot.Tasks needs a company that has switched it on', 'A personal workspace does not include Dot.Tasks. Create or join a company in InfoDot, and switch Dot.Tasks on for it there.'],
         'not_permitted_for_you' => ['Your company has not given you Dot.Tasks', 'The company chooses who uses Dot.Tasks. An owner or admin can add you in InfoDot.'],
         'temporarily_unavailable', 'not_launched' => ["Dot.Tasks is not available for {$who} right now", 'InfoDot shows where it stands and when it can be used again.'],
         default => ["Dot.Tasks is not switched on for {$who}", 'An owner or admin of the company can switch it on in InfoDot.'],

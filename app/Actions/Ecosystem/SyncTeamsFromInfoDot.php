@@ -40,9 +40,9 @@ class SyncTeamsFromInfoDot
         $admitted = $listed->filter(fn ($t) => CompanyEntitlement::admits($t));
         $refused = $listed->keys()->diff($admitted->keys())->all();
 
-        // Said of the personal workspace at this sign-in; kept for the session (see EnsureCompanyEntitled).
-        $personalRefused = collect($identity['teams'] ?? [])
-            ->contains(fn ($t) => is_array($t) && ($t['personal'] ?? false) && ! CompanyEntitlement::admits($t));
+        // Individuals hold the free core only: when InfoDot says the personal workspace does not hold this platform,
+        // no workspace without an InfoDot company is a way in (see EnsureCompanyEntitled).
+        $personalRefused = CompanyEntitlement::personalAnswer($identity) === false;
 
         DB::transaction(function () use ($user, $listed, $admitted, $refused, $personalRefused, $identity) {
             foreach ($admitted as $uuid => $info) {
@@ -67,7 +67,7 @@ class SyncTeamsFromInfoDot
 
     /**
      * A person whose current workspace InfoDot refused is moved to one it admitted: an admitted company they
-     * belong to here, or failing that their personal workspace (unless that was the one refused).
+     * belong to here, or failing that their personal workspace (unless InfoDot refused that too).
      *
      * @param  list<string>  $admitted
      * @param  list<string>  $refused
@@ -79,7 +79,7 @@ class SyncTeamsFromInfoDot
 
         $onRefused = $current && (
             in_array($current->infodot_team_uuid, $refused, true)
-            || ($personalRefused && $current->personal_team && $current->user_id === $user->id)
+            || ($personalRefused && ($current->personal_team || blank($current->infodot_team_uuid)))
         );
 
         if (! $onRefused) {
