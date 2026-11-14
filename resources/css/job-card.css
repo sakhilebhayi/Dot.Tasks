@@ -170,7 +170,7 @@ body.app {
 .icon-btn:hover { background: var(--raised); color: var(--text); }
 .badge { position: absolute; top: 2px; right: 2px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: var(--radius); background: var(--stop); color: #fff; font-size: var(--dot-text-caption-size); font-weight: 600; line-height: 15px; text-align: center; }
 .shell-drawer-close { display: none; align-items: center; gap: 8px; min-height: 44px; padding: 0 10px; border: 0; border-radius: var(--radius); background: none; }
-.content-wrap { margin-left: var(--sidebar); min-height: calc(100vh - var(--topbar-h)); }
+.content-wrap { margin-left: var(--sidebar); min-height: calc(100vh - var(--topbar-h)); min-height: calc(100dvh - var(--topbar-h)); }
 
 /* Pages */
 .page { padding: 8px var(--pad) 48px; }
@@ -254,7 +254,7 @@ body.app {
 
 /* The rack */
 .rack { display: flex; gap: var(--gap); align-items: flex-start; overflow-x: auto; overscroll-behavior-x: contain; padding-bottom: 12px; }
-.slot { flex: 0 0 280px; display: flex; flex-direction: column; max-height: calc(100vh - 180px); border-radius: var(--radius); background: var(--raised); }
+.slot { flex: 0 0 280px; display: flex; flex-direction: column; max-height: calc(100vh - 180px); max-height: calc(100dvh - 180px); border-radius: var(--radius); background: var(--raised); }
 .slot-head { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; font-weight: 600; }
 .slot-head .count { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
 .slot-head .btn { margin-left: auto; }
@@ -868,6 +868,14 @@ main:focus { outline: none; }
     .btn.land-go { height: 44px; }
     .swatch-pick { min-width: 44px; min-height: 44px; }
     label:has(> input[type='checkbox']), label:has(> input[type='radio']) { min-height: 44px; align-items: center; }
+    /* the sidebar (a drawer under 860px, a column above it) and the header search results */
+    .nav-item, .team-switch summary, .team-row, .logout-btn, .who { min-height: 44px; }
+    .nav-group a { min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+    .dsr .dsr-item, .dsr .dsr-chip { min-height: 44px; }
+    /* the task panel */
+    .sheet textarea, .sheet .ghost-input, .sheet .input, .sheet .select { min-height: 44px; }
+    .sheet details > summary, .sheet summary.section-title { display: flex; align-items: center; min-height: 44px; }
+    .sheet button.chip, .label-pick { display: inline-flex; align-items: center; min-height: 44px; }
     .chart-table > summary { display: flex; align-items: center; min-height: 44px; }
     /* small text links keep their look and gain a 44px hit area without moving anything around them */
     .d-head a.more, .d-dayline a.link, .saved-views button.link, .filters button.link { padding: 12px 8px; margin: -12px -8px; }
