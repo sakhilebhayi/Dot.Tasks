@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dot-roboto">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -8,21 +8,21 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-    {{-- Shared Dot UI (header search pill, platform switcher), served from this site's own public/dot-ui. Loaded before the app CSS so the mapping block in job-card.css wins. --}}
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-fonts.css') }}">
+    {{-- Roboto, self-hosted from this site's own public/dot-ui (R-52). No third-party font request, no CDN. --}}
+    <link rel="preload" href="{{ asset('dot-ui/fonts/roboto/roboto-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-roboto.css') }}">
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-type.css') }}">
+    {{-- Shared Dot UI (header, search pill, platform switcher), served from this site's own public/dot-ui. Loaded before the app CSS so the mapping block in job-card.css wins. --}}
     <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-tokens.css') }}">
     <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-search.css') }}">
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-switcher-fonts.css') }}">
     <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-switcher.css') }}">
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-header.css') }}">
     @vite(['resources/css/signed-in.css', 'resources/css/job-card.css', 'resources/js/app.js'])
     <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         (function () {
             var stored = null;
             try { stored = localStorage.getItem('dot-theme'); } catch (e) {}
-            if (stored === 'dark' || (!stored && matchMedia('(prefers-color-scheme: dark)').matches)) {
+            if (stored === 'dark' || (stored !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)) {
                 document.documentElement.classList.add('dark');
             }
         })();
@@ -30,19 +30,66 @@
     @livewireStyles
 </head>
 <body class="app">
-    <a class="skip" href="#main">Skip to the content</a>
+    @php
+        $user = Auth::user();
+        $team = $user?->currentTeam;
+        $unread = $user ? $user->unreadNotifications()->count() : 0;
+        $account = $user ? [
+            'name' => $user->name,
+            'email' => $user->email,
+            'team' => $team?->name,
+            'links' => array_values(array_filter([
+                ['label' => 'Profile and settings', 'href' => route('profile.show'), 'current' => request()->routeIs('profile.*')],
+                $team ? ['label' => 'Team settings', 'href' => route('teams.show', $team->id), 'current' => request()->routeIs('teams.show')] : null,
+                Laravel\Jetstream\Jetstream::hasTeamFeatures() && $user->can('create', Laravel\Jetstream\Jetstream::newTeamModel()) ? ['label' => 'Create new team', 'href' => route('teams.create')] : null,
+                ['label' => 'Notifications', 'href' => route('notifications.index'), 'badge' => $unread > 0 ? ($unread > 99 ? '99+' : $unread) : null],
+            ])),
+            'signOut' => ['action' => route('logout')],
+            'theme' => true,
+        ] : null;
+    @endphp
+
+    {{-- The shared Dot header (dot-ui 0.5.0). Dot.Tasks keeps its sidebar as the primary navigation, so the bar has no nav list of its own
+         (drawer-target adopts the sidebar as the phone menu). The search is centred by the header's grid. --}}
+    <x-dot.header id="dh" :brand-href="$user ? route('dashboard') : url('/')" brand-label="Dot.Tasks home" drawer-target="shell-drawer" skip="#main"
+                  :context="$team && ! $team->personal_team ? $team->name : null" :account="$account">
+        <x-slot:brand>
+            <img src="{{ asset('images/mark-outlined.png') }}" alt="" width="26" height="26">
+            <span class="dh-brand__name">Dot.Tasks</span>
+        </x-slot:brand>
+        @auth
+            <x-slot:search>
+                <livewire:tasks.header-search />
+            </x-slot:search>
+            <x-slot:tools>
+                {{-- On the overview the page itself carries the one filled action, so this one steps back. --}}
+                <button type="button" @class(['btn', 'tk-new', 'primary' => ! request()->routeIs('dashboard')]) data-open-quick-add aria-label="New task"><x-icon name="plus" /> <span class="topbar-hide">New task</span></button>
+                <x-dot.switcher platform="tasks" :company="$team?->personal_team ? null : $team?->infodot_team_uuid" :company-name="$team?->name" logos="/dot-ui/img/platforms" />
+                <livewire:notification-bell />
+            </x-slot:tools>
+        @endauth
+    </x-dot.header>
+
     <div data-shell-page><x-banner /></div>
 
     <aside id="shell-drawer" class="sidebar" aria-label="Dot.Tasks navigation">
+        {{-- Phones: the header's menu button opens this sidebar (dot-ui drawer-target). The brand row only carries the close button. --}}
         <div class="brand">
             <img src="{{ asset('images/mark-outlined.png') }}" alt="">
             <b>Dot.Tasks</b>
-            <button type="button" class="shell-drawer-close" data-shell-close>
+            <button type="button" class="shell-drawer-close" data-dh-close>
                 <x-icon name="close" /> Close
             </button>
         </div>
 
         <nav class="nav" aria-label="Primary">
+            @auth
+                {{-- Under 480px the bar has no room for these two; the drawer carries them (desktop shows them in the bar). --}}
+                <div class="nav-phone">
+                    <a href="{{ route('tasks.inbox') }}" class="nav-item" data-open-quick-add><x-icon name="plus" /> New task</a>
+                    <a href="{{ route('notifications.index') }}" class="nav-item {{ request()->routeIs('notifications.*') ? 'active' : '' }}"><x-icon name="bell" /> Notifications @if($unread > 0)<span class="count">{{ $unread }}</span>@endif</a>
+                </div>
+            @endauth
             @foreach ([
                 '' => [['tasks.today', 'day', 'My Day'], ['tasks.inbox', 'inbox', 'Inbox'], ['tasks.mine', 'check', 'My tasks'], ['tasks.upcoming', 'calendar', 'Upcoming']],
                 'Team' => [['dashboard', 'home', 'Overview'], ['tasks.team', 'team', 'Who holds what'], ['reports.index', 'report', 'Reports']],
@@ -77,14 +124,14 @@
                         <span style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ $board->name }}</span>
                     </a>
                 @empty
-                    <p style="padding:0 8px;color:var(--muted);font-size:12px">No boards yet.</p>
+                    <p style="padding:0 8px;color:var(--muted);font-size:var(--dot-text-caption-size)">No boards yet.</p>
                 @endforelse
             @endauth
         </nav>
 
         @auth
         <div class="sidebar-foot">
-            <a class="who" href="{{ route('profile.show') }}">
+            <a class="who nav-phone" href="{{ route('profile.show') }}">
                 <span class="person">{{ strtoupper(substr(Auth::user()->name, 0, 1)) }}</span>
                 <div>
                     <b>{{ Auth::user()->name }}</b>
@@ -117,7 +164,7 @@
                     </div>
                 </details>
             @endif
-            <form method="POST" action="{{ route('logout') }}">
+            <form method="POST" action="{{ route('logout') }}" class="nav-phone">
                 @csrf
                 <button type="submit" class="logout-btn">Log out</button>
             </form>
@@ -125,33 +172,7 @@
         @endauth
     </aside>
 
-    <button type="button" id="shell-backdrop" class="shell-backdrop" tabindex="-1" aria-label="Close menu" data-shell-close></button>
-
-    <header class="topbar" data-shell-page>
-        <button type="button" id="shell-menu-button" class="shell-menu-btn" aria-label="Menu" aria-controls="shell-drawer" aria-expanded="false">
-            <x-icon name="menu" />
-            <span>Menu</span>
-        </button>
-        {{-- The overview names itself in the bar, small; the page spends its large type on what is true today. --}}
-        @if(request()->routeIs('dashboard') && $attributes->get('title'))
-            <p class="topbar-title">{{ $attributes->get('title') }}</p>
-        @endif
-        @auth
-            {{-- The find palette's trigger in the shared pill look. The input is read-only: it never takes text, it opens the
-                 palette (Livewire FindTasks, unchanged), which holds the real search box. Click, Enter, / and Ctrl K all open it. --}}
-            <div class="topbar-search">
-                <x-dot.search name="find" placeholder="Find a task" label="Find a task" hint="Ctrl K" readonly aria-haspopup="dialog" :form-attributes="['data-open-search' => '']" />
-            </div>
-            <div class="grow"></div>
-            {{-- On the overview the page itself carries the one filled action, so this one steps back. --}}
-            <button type="button" @class(['btn', 'primary' => ! request()->routeIs('dashboard')]) data-open-quick-add aria-label="New task"><x-icon name="plus" /> <span class="topbar-hide">New task</span></button>
-            <x-dot.switcher platform="tasks" :company="Auth::user()->currentTeam?->personal_team ? null : Auth::user()->currentTeam?->infodot_team_uuid" :company-name="Auth::user()->currentTeam?->name" logos="/dot-ui/img/platforms" />
-            <livewire:notification-bell />
-        @endauth
-        <button type="button" id="theme-toggle" class="icon-btn" aria-label="Switch between light and dark"><x-icon name="moon" /></button>
-    </header>
-
-    <div class="content-wrap" data-shell-page>
+    <div class="content-wrap">
         <main id="main" tabindex="-1">
             {{ $slot }}
             @auth
@@ -173,7 +194,9 @@
     <div class="flash connection" id="connection" role="alert" hidden>Connection lost. Keep this page open: edits save when it returns.</div>
 
     @stack('modals')
+    <script src="{{ asset('dot-ui/js/dot-search.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
     <script src="{{ asset('dot-ui/js/dot-switcher.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
+    <script src="{{ asset('dot-ui/js/dot-nav.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
     @livewireScripts
 </body>
 </html>

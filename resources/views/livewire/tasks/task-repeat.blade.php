@@ -1,5 +1,5 @@
 <details class="repeat" @if($task->isRecurring()) open @endif>
-    <summary class="section-title" style="font-size:14px">{{ $task->isRecurring() ? 'Repeats' : 'Repeat this task' }}@if($task->isRecurring() && $task->recurrence_limit) <span class="num" style="color:var(--muted);font-weight:400">{{ $task->recurrence_count }} of {{ $task->recurrence_limit }}</span>@endif</summary>
+    <summary class="section-title" style="font-size:var(--dot-text-body-sm-size)">{{ $task->isRecurring() ? 'Repeats' : 'Repeat this task' }}@if($task->isRecurring() && $task->recurrence_limit) <span class="num" style="color:var(--muted);font-weight:400">{{ $task->recurrence_count }} of {{ $task->recurrence_limit }}</span>@endif</summary>
     @can('update', $task)
         <form wire:submit="save">
             <div class="row-2">

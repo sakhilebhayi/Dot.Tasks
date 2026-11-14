@@ -88,36 +88,39 @@ class TaskCoreTest extends DuskTestCase
 
         $this->browse(function (Browser $browser) use ($user, $list) {
             $browser->loginAs($user)->openLivewire("/lists/{$list->id}");
+            // R-52: "/" focuses the header search (Ctrl K keeps the palette); what is typed there finds the task.
             $browser->driver->getKeyboard()->sendKeys('/');
-            $browser->waitFor('#find-input')
-                ->type('#find-input', 'haul')->waitFor('.dialog .row')
-                ->assertSeeIn('.dialog', 'Inspect the haul road')
-                ->click('.dialog .row')->waitFor('#task-title')
+            $browser->waitFor('.dh-search .dsr-input:focus')
+                ->type('.dh-search .dsr-input', 'haul')->waitFor('.dh-search .dsr-panel [data-find-result]')
+                ->assertSeeIn('.dh-search .dsr-panel', 'Inspect the haul road')
+                ->click('.dh-search .dsr-panel [data-find-result]')->waitFor('#task-title')
                 ->assertValue('#task-title', 'Inspect the haul road');
         });
     }
 
-    public function test_the_header_pill_opens_the_find_palette_by_click_and_by_enter_and_the_keys_still_work_from_it(): void
+    public function test_the_header_search_takes_text_and_opens_a_task_and_ctrl_k_still_opens_the_palette(): void
     {
         [$user, $list] = $this->board();
 
         $this->browse(function (Browser $browser) use ($user, $list) {
             $browser->loginAs($user)->openLivewire("/lists/{$list->id}");
 
-            // A click on the pill opens the palette, whose own box takes the text.
-            $browser->click('.topbar-search .dsr-input')->waitFor('#find-input')
-                ->type('#find-input', 'haul')->waitFor('.dialog .row')
-                ->assertSeeIn('.dialog', 'Inspect the haul road')
-                ->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
+            // R-52: the pill is a real search. Typing shows the matches under it, and choosing one opens the task panel.
+            $browser->click('.dh-search .dsr-input')->type('.dh-search .dsr-input', 'haul')
+                ->waitFor('.dh-search .dsr-panel [data-find-result]')
+                ->assertSeeIn('.dh-search .dsr-panel', 'Inspect the haul road')
+                ->click('.dh-search .dsr-panel [data-find-result]')->waitFor('#task-title')
+                ->assertValue('#task-title', 'Inspect the haul road');
 
-            // Enter on the focused pill opens it too, and the pill never takes text or submits.
-            $browser->script("document.querySelector('.topbar-search .dsr-input').focus()");
-            $browser->keys('.topbar-search .dsr-input', '{enter}')->waitFor('#find-input')->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
-            $this->assertSame('', $browser->value('.topbar-search .dsr-input'));
+            // Escape empties the box, as InfoDot\'s does.
+            $browser->visit("/lists/{$list->id}")->click('.dh-search .dsr-input')->type('.dh-search .dsr-input', 'haul')
+                ->keys('.dh-search .dsr-input', '{escape}')->pause(300);
+            $this->assertSame('', $browser->value('.dh-search .dsr-input'));
 
-            // With the pill focused, Ctrl K still opens the palette.
-            $browser->script("document.querySelector('.topbar-search .dsr-input').focus()");
-            $browser->keys('.topbar-search .dsr-input', ['{control}', 'k'])->waitFor('#find-input');
+            // Ctrl K still opens the find palette (it owns that chord); "/" focuses the header search.
+            $browser->click('main')->keys('body', ['{control}', 'k'])->waitFor('#find-input')->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
+            $browser->keys('body', '/')->pause(200);
+            $this->assertSame('dsr-find', $browser->script('return document.activeElement.id')[0]);
         });
     }
 

@@ -40,7 +40,7 @@
                         </div>
                         @if($canWork)
                             <form x-show="adding" x-cloak style="padding:0 4px 4px" x-on:submit.prevent="if (title.trim()) { $wire.addOn('{{ $day['date'] }}', title); title = ''; adding = false }">
-                                <input class="input" style="min-height:26px;padding:2px 6px;font-size:12px" x-ref="line" x-model="title" maxlength="255" autocomplete="off" aria-label="New task on {{ $day['label'] }}" placeholder="Type, then Enter"
+                                <input class="input" style="min-height:26px;padding:2px 6px;font-size:var(--dot-text-caption-size)" x-ref="line" x-model="title" maxlength="255" autocomplete="off" aria-label="New task on {{ $day['label'] }}" placeholder="Type, then Enter"
                                        x-on:keydown.escape="adding = false; title = ''" x-on:blur="if (! title.trim()) adding = false">
                             </form>
                         @endif
@@ -55,7 +55,7 @@
                     @include('livewire.tasks.partials.calendar-card')
                 @endforeach
             </div>
-            @if($this->undated->isEmpty())<p style="padding:4px;color:var(--muted);font-size:12px">Every task has a date.</p>@endif
+            @if($this->undated->isEmpty())<p style="padding:4px;color:var(--muted);font-size:var(--dot-text-caption-size)">Every task has a date.</p>@endif
         </aside>
     </div>
 

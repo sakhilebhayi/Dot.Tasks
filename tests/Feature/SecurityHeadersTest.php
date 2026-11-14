@@ -77,8 +77,10 @@ class SecurityHeadersTest extends TestCase
     {
         $policy = (string) $this->get('/')->headers->get('Content-Security-Policy');
 
-        $this->assertMatchesRegularExpression("/style-src [^;]*https:\/\/fonts\.googleapis\.com/", $policy);
-        $this->assertMatchesRegularExpression("/font-src [^;]*https:\/\/fonts\.gstatic\.com/", $policy);
+        // Fonts are self-hosted (Roboto): no Google Fonts origin is allowed.
+        $this->assertStringNotContainsString('googleapis', $policy);
+        $this->assertStringNotContainsString('gstatic', $policy);
+        $this->assertMatchesRegularExpression("/font-src 'self' data:(;|$)/", $policy);
         $this->assertMatchesRegularExpression("/img-src [^;]*https:\/\/ui-avatars\.com/", $policy);
         $this->assertMatchesRegularExpression("/connect-src 'self' wss: https:/", $policy, 'Reverb websockets');
         $this->assertStringNotContainsString('unsplash', $policy, 'no view loads it, so it is not allowed');

@@ -50,7 +50,7 @@
                             @if($item->task->archived_at) &middot; archived before it was deleted @endif
                         </span>
                     </div>
-                    <span style="color:var(--muted);font-size:12px" title="{{ $item->task->deleted_at->format('M j, Y H:i') }} UTC">deleted {{ $item->task->deleted_at->diffForHumans() }}</span>
+                    <span style="color:var(--muted);font-size:var(--dot-text-caption-size)" title="{{ $item->task->deleted_at->format('M j, Y H:i') }} UTC">deleted {{ $item->task->deleted_at->diffForHumans() }}</span>
                     <div>
                     @can('restoreDeleted', $item->task)
                         @if($item->blockedBy)

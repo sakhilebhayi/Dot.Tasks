@@ -223,15 +223,14 @@ class LandingExperienceTest extends TestCase
         $this->assertSame(1, substr_count($page, 'class="ra-go"'), 'the high-priority card due today has the green notch');
     }
 
-    public function test_the_overview_has_a_skip_link_and_a_title_in_the_bar(): void
+    public function test_the_overview_has_a_skip_link_and_one_h1(): void
     {
         $f = $this->teamFixture();
 
         $page = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
 
-        $this->assertStringContainsString('<a class="skip" href="#main">', $page);
+        $this->assertMatchesRegularExpression('/<a class="dh-skip skip-link" href="#main">/', $page, 'the shared header carries the skip link');
         $this->assertStringContainsString('<main id="main" tabindex="-1">', $page);
-        $this->assertStringContainsString('<p class="topbar-title">Overview</p>', $page);
         $this->assertSame(1, preg_match_all('/<h1\b/', $page), 'one h1: the sentence');
     }
 

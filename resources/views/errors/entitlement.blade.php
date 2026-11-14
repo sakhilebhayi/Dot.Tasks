@@ -31,13 +31,13 @@
     @if ($signedIn ?? false)
         <form method="POST" action="{{ route('logout') }}" style="margin: 0;">
             @csrf
-            <button type="submit" class="link-underline entitlement-quiet" style="background-color: transparent; border: 0; padding: 10px 0 1px; min-height: 44px; color: rgba(255,255,255,0.85); font: inherit; font-size: 14px; cursor: pointer;">Sign out</button>
+            <button type="submit" class="link-underline entitlement-quiet" style="background-color: transparent; border: 0; padding: 10px 0 1px; min-height: 44px; color: rgba(255,255,255,0.85); font: inherit; font-size: var(--dot-text-body-sm-size); cursor: pointer;">Sign out</button>
         </form>
     @endif
 @endsection
 
 @section('actions')
-    <a href="{{ $manageUrl }}" class="press entitlement-action" data-primary-action style="padding: 12px 24px; background: var(--accent); color: #241c0c; font-family: var(--font-display); font-weight: 600; font-size: 15px; border-radius: 999px; text-decoration: none;">Open Platforms in InfoDot</a>
+    <a href="{{ $manageUrl }}" class="press entitlement-action" data-primary-action style="padding: 12px 24px; background: var(--accent); color: #241c0c; font-family: var(--font-display); font-weight: 600; font-size: var(--dot-text-body-size); border-radius: 999px; text-decoration: none;">Open Platforms in InfoDot</a>
 @endsection
 
 @section('after')
@@ -51,7 +51,7 @@
 
     @if ($others->isNotEmpty())
         <div style="border-top: 1px solid var(--line); padding-top: 28px;">
-            <h2 class="font-display" style="font-size: 16px; font-weight: 600; line-height: 1.5; color: var(--ink); margin: 0 0 14px;">Or work somewhere else</h2>
+            <h2 class="font-display" style="font-size: var(--dot-text-body-size); font-weight: 600; line-height: 1.5; color: var(--ink); margin: 0 0 14px;">Or work somewhere else</h2>
             <ul style="list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
                 @foreach ($others as $other)
                     <li>
@@ -59,7 +59,7 @@
                             @method('PUT')
                             @csrf
                             <input type="hidden" name="team_id" value="{{ $other->id }}">
-                            <button type="submit" class="press entitlement-switch" style="min-height: 44px; max-width: 100%; padding: 10px 18px; background-color: transparent; border: 1px solid rgba(36,28,12,0.28); border-radius: 999px; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: 14px; cursor: pointer; overflow-wrap: anywhere;">{{ $other->personal_team ? 'Your own workspace' : $other->name }}</button>
+                            <button type="submit" class="press entitlement-switch" style="min-height: 44px; max-width: 100%; padding: 10px 18px; background-color: transparent; border: 1px solid rgba(36,28,12,0.28); border-radius: 999px; color: var(--ink); font-family: var(--font-display); font-weight: 600; font-size: var(--dot-text-body-sm-size); cursor: pointer; overflow-wrap: anywhere;">{{ $other->personal_team ? 'Your own workspace' : $other->name }}</button>
                         </form>
                     </li>
                 @endforeach

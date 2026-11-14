@@ -63,10 +63,9 @@ class SecurityHeaders
             "default-src 'self'",
             "script-src 'self' 'nonce-{$nonce}' 'unsafe-eval'{$dev}",
             "script-src-attr 'none'",
-            // fonts.googleapis.com: the Google Fonts stylesheets (all layouts, welcome page, error pages).
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com{$dev}",
-            // fonts.gstatic.com: the font files those stylesheets point at.
-            "font-src 'self' data: https://fonts.gstatic.com",
+            // Fonts are self-hosted (Roboto, public/dot-ui/fonts): no Google Fonts origin in style-src or font-src (R-52).
+            "style-src 'self' 'unsafe-inline'{$dev}",
+            "font-src 'self' data:",
             // ui-avatars.com: Jetstream's default avatar on the team and profile pages.
             "img-src 'self' data: blob: https://ui-avatars.com",
             // Reverb (Laravel Echo) websockets for the live task board; local development talks plaintext ws:.
