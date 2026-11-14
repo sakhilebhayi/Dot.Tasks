@@ -91,9 +91,8 @@ class TaskCoreTest extends DuskTestCase
             // R-52: "/" focuses the header search (Ctrl K keeps the palette); what is typed there finds the task.
             $browser->driver->getKeyboard()->sendKeys('/');
             $browser->waitFor('.dh-search .dsr-input:focus')
-                ->type('.dh-search .dsr-input', 'haul')->waitFor('.dh-search .dsr-panel [data-find-result]')
-                ->assertSeeIn('.dh-search .dsr-panel', 'Inspect the haul road')
-                ->click('.dh-search .dsr-panel [data-find-result]')->waitFor('#task-title')
+                ->type('.dh-search .dsr-input', 'haul')->waitForTextIn('.dh-search .dsr-panel', 'Inspect the haul road')
+                ->click('.dh-search .dsr-panel button[data-find-result]')->waitFor('#task-title')
                 ->assertValue('#task-title', 'Inspect the haul road');
         });
     }
@@ -107,9 +106,8 @@ class TaskCoreTest extends DuskTestCase
 
             // R-52: the pill is a real search. Typing shows the matches under it, and choosing one opens the task panel.
             $browser->click('.dh-search .dsr-input')->type('.dh-search .dsr-input', 'haul')
-                ->waitFor('.dh-search .dsr-panel [data-find-result]')
-                ->assertSeeIn('.dh-search .dsr-panel', 'Inspect the haul road')
-                ->click('.dh-search .dsr-panel [data-find-result]')->waitFor('#task-title')
+                ->waitForTextIn('.dh-search .dsr-panel', 'Inspect the haul road')
+                ->click('.dh-search .dsr-panel button[data-find-result]')->waitFor('#task-title')
                 ->assertValue('#task-title', 'Inspect the haul road');
 
             // Escape empties the box, as InfoDot\'s does.
@@ -118,8 +116,10 @@ class TaskCoreTest extends DuskTestCase
             $this->assertSame('', $browser->value('.dh-search .dsr-input'));
 
             // Ctrl K still opens the find palette (it owns that chord); "/" focuses the header search.
-            $browser->click('main')->keys('body', ['{control}', 'k'])->waitFor('#find-input')->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
-            $browser->keys('body', '/')->pause(200);
+            $browser->driver->getKeyboard()->sendKeys([WebDriverKeys::CONTROL, 'k']);
+            $browser->waitFor('#find-input')->keys('#find-input', '{escape}')->waitUntilMissing('#find-input');
+            $browser->driver->getKeyboard()->sendKeys('/');
+            $browser->pause(200);
             $this->assertSame('dsr-find', $browser->script('return document.activeElement.id')[0]);
         });
     }
