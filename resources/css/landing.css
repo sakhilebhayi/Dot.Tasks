@@ -1,8 +1,8 @@
 /* The public page. Tokens and the rack itself come from job-card.css. */
 body.app.landing { background: var(--ground); }
 .l-wrap { width: min(1120px, 100%); margin-inline: auto; padding-inline: 24px; }
-.l-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 16px; }
-.l-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--dot-text-body-size); color: var(--text); }
+.l-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px; }
+.l-brand { display: inline-flex; align-items: center; gap: 8px; font-weight: 600; font-size: var(--dot-text-body-size); color: var(--text); min-height: 44px; }
 .l-brand img { width: 28px; height: 28px; }
 .l-top nav { display: flex; align-items: center; gap: 8px; }
 
@@ -57,7 +57,8 @@ body.app.landing { background: var(--ground); }
 .l-end .btn { background: var(--surface); color: var(--text); border-color: var(--surface); }
 .l-end .btn.quiet { background: none; color: var(--surface); border-color: color-mix(in srgb, var(--surface) 40%, transparent); }
 
-.l-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-block: 20px; color: var(--muted); font-size: var(--dot-text-caption-size); }
+.l-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; padding-block: 8px; color: var(--muted); font-size: var(--dot-text-caption-size); align-items: center; }
+.l-foot a { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px; }
 
 @media (max-width: 859.98px) {
     .l-hero, .l-split { grid-template-columns: minmax(0, 1fr); gap: 28px; }
