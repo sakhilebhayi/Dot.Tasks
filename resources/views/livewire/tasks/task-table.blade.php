@@ -93,7 +93,7 @@
                                         <span class="blocked-line" style="margin:0">Blocked</span>
                                     @endif
                                     @if($task->subtasks->isNotEmpty())
-                                        <span class="num" style="color:var(--muted);font-size:12px;white-space:nowrap">{{ $task->subtasks->where('status', 'done')->count() }}/{{ $task->subtasks->count() }}</span>
+                                        <span class="num" style="color:var(--muted);font-size:var(--dot-text-caption-size);white-space:nowrap">{{ $task->subtasks->where('status', 'done')->count() }}/{{ $task->subtasks->count() }}</span>
                                     @endif
                                 </span>
                                 @foreach($this->shown as $column)

@@ -8,5 +8,5 @@
 @section('message', "This platform is briefly down for scheduled maintenance — we're making some improvements behind the scenes. Check back shortly; nothing you were working on has been lost.")
 
 @section('actions')
-    <a href="/" class="press" style="padding: 12px 24px; background: var(--accent); color: #241c0c; font-family: var(--font-display); font-weight: 600; font-size: 15px; border-radius: 999px; text-decoration: none;">Try again</a>
+    <a href="/" class="press" style="padding: 12px 24px; background: var(--accent); color: #241c0c; font-family: var(--font-display); font-weight: 600; font-size: var(--dot-text-body-size); border-radius: 999px; text-decoration: none;">Try again</a>
 @endsection

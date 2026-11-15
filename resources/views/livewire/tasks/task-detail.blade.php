@@ -53,7 +53,7 @@
                         <div>{{ $task->taskList->columns->firstWhere('id', $task->status_id)?->name ?? $task->status }}</div>
                     @endcan
 
-                    <label for="task-priority" style="color:var(--muted);font-size:12px">Priority</label>
+                    <label for="task-priority" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Priority</label>
                     @can('update', $task)
                         <select class="select" id="task-priority" wire:change="saveField('priority', $event.target.value)">
                             @foreach(array_reverse(\App\Models\Task::PRIORITIES) as $p)
@@ -64,7 +64,7 @@
                         <div>{{ ucfirst($task->priority) }}</div>
                     @endcan
 
-                    <label for="task-due" style="color:var(--muted);font-size:12px">Due</label>
+                    <label for="task-due" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Due</label>
                     @can('update', $task)
                         <div>
                             <input class="input" id="task-due" type="date" value="{{ $task->due_date?->toDateString() }}" wire:key="due-{{ $task->id }}-{{ $task->due_date?->toDateString() }}" wire:change="saveField('due_date', $event.target.value)">
@@ -74,7 +74,7 @@
                         <div>{{ $task->due_date ? 'Due '.$task->due_date->format('M j, Y') : 'No due date' }}</div>
                     @endcan
 
-                    <label for="task-assignee" style="color:var(--muted);font-size:12px">Assignee</label>
+                    <label for="task-assignee" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Assignee</label>
                     @can('assign', $task)
                         <select class="select" id="task-assignee" wire:change="assignTask($event.target.value ? $event.target.value : null)">
                             <option value="">Unassigned</option>
@@ -96,7 +96,7 @@
                     </div>
                     <div class="field">
                         <label for="task-criteria">What done means</label>
-                        <textarea class="textarea" id="task-criteria" rows="1" style="field-sizing:content;min-height:34px" wire:key="criteria-{{ $task->id }}" wire:change="saveField('completion_criteria', $event.target.value)" placeholder="Optional">{{ $task->completion_criteria }}</textarea>
+                        <textarea class="textarea" id="task-criteria" rows="1" style="field-sizing:content;min-height:var(--control-height)" wire:key="criteria-{{ $task->id }}" wire:change="saveField('completion_criteria', $event.target.value)" placeholder="Optional">{{ $task->completion_criteria }}</textarea>
                     </div>
                 @else
                     @if($task->description)
@@ -120,7 +120,7 @@
                 @endif
 
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px">
-                    <h3 style="font-size:14px;font-weight:600">Subtasks ({{ $task->subtasks->count() }})</h3>
+                    <h3 style="font-size:var(--dot-text-body-sm-size);font-weight:600">Subtasks ({{ $task->subtasks->count() }})</h3>
                     @can('update', $task)
                         <button class="btn small" wire:click="aiBreakdown" wire:loading.attr="disabled">
                             <span wire:loading.remove wire:target="aiBreakdown">Suggest subtasks</span>
@@ -133,7 +133,7 @@
                     <div class="suggested" x-data="{ picked: @js(array_keys($suggested)) }">
                         <p class="suggested-note">Suggested by AI. Nothing is added until you choose.</p>
                         @foreach($suggested as $index => $item)
-                            <label class="pick-line" wire:key="suggested-{{ $index }}"><input type="checkbox" value="{{ $index }}" x-model.number="picked"> {{ $item['title'] }}@if($item['estimated_minutes']) <span class="num" style="color:var(--muted);font-size:12px">{{ $item['estimated_minutes'] }}m</span>@endif</label>
+                            <label class="pick-line" wire:key="suggested-{{ $index }}"><input type="checkbox" value="{{ $index }}" x-model.number="picked"> {{ $item['title'] }}@if($item['estimated_minutes']) <span class="num" style="color:var(--muted);font-size:var(--dot-text-caption-size)">{{ $item['estimated_minutes'] }}m</span>@endif</label>
                         @endforeach
                         <div class="page-actions" style="margin-top:6px">
                             <button type="button" class="btn small primary" style="opacity:1" x-on:click="$wire.acceptSuggested(picked)">Add these</button>
@@ -154,7 +154,7 @@
                                 <span class="tick" role="checkbox" aria-checked="{{ $sub->status === 'done' ? 'true' : 'false' }}" aria-label="{{ $sub->title }}"></span>
                             @endcan
                             <button type="button" class="step-title link" style="text-decoration:none;text-align:left" wire:click="openTask({{ $sub->id }})">{{ $sub->title }}</button>
-                            @if($sub->estimated_minutes)<span class="num" style="color:var(--muted);font-size:12px">{{ $sub->estimated_minutes }}m</span>@endif
+                            @if($sub->estimated_minutes)<span class="num" style="color:var(--muted);font-size:var(--dot-text-caption-size)">{{ $sub->estimated_minutes }}m</span>@endif
                         </div>
                     @endforeach
                     </div>
@@ -169,7 +169,7 @@
                     @error('newSubtask')<p class="error">{{ $message }}</p>@enderror
                 @endcan
 
-                <h3 style="font-size:14px;font-weight:600;margin-top:24px">Checklist @if($task->checklistItems->isNotEmpty())<span class="num" style="color:var(--muted);font-weight:400">{{ $task->checklistItems->whereNotNull('done_at')->count() }}/{{ $task->checklistItems->count() }}</span>@endif</h3>
+                <h3 style="font-size:var(--dot-text-body-sm-size);font-weight:600;margin-top:24px">Checklist @if($task->checklistItems->isNotEmpty())<span class="num" style="color:var(--muted);font-weight:400">{{ $task->checklistItems->whereNotNull('done_at')->count() }}/{{ $task->checklistItems->count() }}</span>@endif</h3>
                 @foreach($task->checklistItems as $item)
                     <div class="step" wire:key="check-{{ $item->id }}">
                         @can('update', $task)
@@ -192,11 +192,11 @@
                     @error('newChecklistItem')<p class="error">{{ $message }}</p>@enderror
                 @endcan
 
-                <h3 class="section-title" style="font-size:14px">Files</h3>
+                <h3 class="section-title" style="font-size:var(--dot-text-body-sm-size)">Files</h3>
                 @foreach($task->attachments as $file)
                     <div class="step" wire:key="file-{{ $file->id }}">
                         <a class="step-title link" style="text-decoration:none" href="{{ route('tasks.files', [$task, $file]) }}">{{ $file->name }}</a>
-                        <span class="num" style="color:var(--muted);font-size:12px">{{ \Illuminate\Support\Number::fileSize($file->size) }}</span>
+                        <span class="num" style="color:var(--muted);font-size:var(--dot-text-caption-size)">{{ \Illuminate\Support\Number::fileSize($file->size) }}</span>
                         @if($file->open_url)
                             <a class="link" href="{{ $file->open_url }}" rel="noopener" target="_blank">In Dot.Files</a>
                         @elseif($this->filesReady)
@@ -215,13 +215,13 @@
                         Attach a file
                         <input class="sr" type="file" wire:model="upload" aria-label="Attach a file">
                     </label>
-                    <span wire:loading wire:target="upload" style="color:var(--muted);font-size:12px">Uploading</span>
+                    <span wire:loading wire:target="upload" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Uploading</span>
                     @error('upload')<p class="error">{{ $message }}</p>@enderror
                     @error('files')<p class="error">{{ $message }}</p>@enderror
                 @endcan
 
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:24px">
-                    <h3 style="font-size:14px;font-weight:600">Comments</h3>
+                    <h3 style="font-size:var(--dot-text-body-sm-size);font-weight:600">Comments</h3>
                     @if($task->comments->count() >= 3)
                         <button type="button" class="btn small" wire:click="aiSummary" wire:loading.attr="disabled" wire:target="aiSummary">Summarise</button>
                     @endif
@@ -230,7 +230,7 @@
                     <div class="suggested">
                         <p class="suggested-note">Summarised by AI. Each point names the comments it came from.</p>
                         @foreach($summary as $point)
-                            <p>{{ $point['text'] }} <span style="color:var(--muted);font-size:12px">{{ implode(', ', $point['sources']) }}</span></p>
+                            <p>{{ $point['text'] }} <span style="color:var(--muted);font-size:var(--dot-text-caption-size)">{{ implode(', ', $point['sources']) }}</span></p>
                         @endforeach
                     </div>
                 @endif
@@ -246,18 +246,18 @@
                 @can('comment', $task)
                     <form wire:submit="addComment" style="margin-top:10px">
                         @if($replyingTo)
-                            <p style="margin-bottom:4px;color:var(--muted);font-size:12px">Replying. <button type="button" class="link" wire:click="replyTo(null)">Cancel</button></p>
+                            <p style="margin-bottom:4px;color:var(--muted);font-size:var(--dot-text-caption-size)">Replying. <button type="button" class="link" wire:click="replyTo(null)">Cancel</button></p>
                         @endif
                         <textarea class="textarea" wire:model="commentBody" rows="2" placeholder="Add a comment..." aria-label="Add a comment"></textarea>
                         @error('commentBody')<p class="error">{{ $message }}</p>@enderror
-                        <p style="margin:4px 0 8px;color:var(--muted);font-size:12px">Type @ and a teammate's full name to notify them.</p>
+                        <p style="margin:4px 0 8px;color:var(--muted);font-size:var(--dot-text-caption-size)">Type @ and a teammate's full name to notify them.</p>
                         <div class="page-actions">
                             <button type="submit" class="btn">Comment</button>
                             <label class="pick-line" style="padding:0"><input type="checkbox" wire:model="commentInternal"> Internal note, hidden from viewers</label>
                         </div>
                     </form>
                     <details class="repeat" x-data="{ person: '', note: '' }">
-                        <summary style="color:var(--muted);font-size:12px;cursor:pointer">Hand this task over</summary>
+                        <summary style="color:var(--muted);font-size:var(--dot-text-caption-size);cursor:pointer">Hand this task over</summary>
                         @error('handover')<p class="error">{{ $message }}</p>@enderror
                         <label class="sr" for="handover-person">Hand over to</label>
                         <select class="select" id="handover-person" x-model="person" style="margin-bottom:6px">
@@ -274,7 +274,7 @@
                 <details class="fold" wire:key="fold-more-{{ $task->id }}" wire:ignore.self>
                     <summary>More details</summary>
                     <div class="props">
-                    <label for="task-project" style="color:var(--muted);font-size:12px">Project link</label>
+                    <label for="task-project" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Project link</label>
                     @can('update', $task)
                         <div>
                             <input class="input" id="task-project" type="url" placeholder="https://projects.infodot.co.za/..." value="{{ $task->project_url }}" wire:change="saveField('project_url', $event.target.value)">
@@ -283,7 +283,7 @@
                     @else
                         <div>@if($task->project_url)<a class="link" href="{{ $task->project_url }}" rel="noopener" target="_blank">Open the project</a>@else - @endif</div>
                     @endcan
-                    <label for="task-start" style="color:var(--muted);font-size:12px">Starts</label>
+                    <label for="task-start" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Starts</label>
                     @can('update', $task)
                         <div>
                             <input class="input" id="task-start" type="date" value="{{ $task->start_date?->toDateString() }}" wire:key="start-{{ $task->id }}-{{ $task->start_date?->toDateString() }}" wire:change="saveField('start_date', $event.target.value)">
@@ -295,7 +295,7 @@
 
                     @can('move', $task)
                         @if($this->otherBoards->isNotEmpty())
-                            <label for="task-board" style="color:var(--muted);font-size:12px">Board</label>
+                            <label for="task-board" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Board</label>
                             <select class="select" id="task-board" wire:key="board-{{ $task->id }}-{{ $task->task_list_id }}" wire:change="moveToBoard($event.target.value)">
                                 <option value="" selected disabled>{{ $task->taskList->is_inbox ? 'Inbox' : $task->taskList->name }}</option>
                                 @foreach($this->otherBoards as $board)
@@ -319,7 +319,7 @@
                         @endcan
                     </div>
 
-                    <label for="task-estimate" style="color:var(--muted);font-size:12px">Estimate</label>
+                    <label for="task-estimate" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Estimate</label>
                     @can('update', $task)
                         <div>
                             <input class="input" id="task-estimate" type="number" min="0" placeholder="Minutes" value="{{ $task->estimated_minutes }}" wire:change="saveField('estimated_minutes', $event.target.value)">
@@ -329,7 +329,7 @@
                         <div>{{ $task->estimated_minutes ? $task->estimated_minutes.' minutes' : '-' }}</div>
                     @endcan
 
-                    <label for="task-actual" style="color:var(--muted);font-size:12px">Time spent</label>
+                    <label for="task-actual" style="color:var(--muted);font-size:var(--dot-text-caption-size)">Time spent</label>
                     @can('update', $task)
                         <div>
                             <input class="input" id="task-actual" type="number" min="0" placeholder="Minutes" value="{{ $task->actual_minutes }}" wire:change="saveField('actual_minutes', $event.target.value)">
@@ -340,7 +340,7 @@
                     @endcan
                     </div>
 
-                <h3 class="section-title" style="font-size:14px;margin-top:12px">Labels</h3>
+                <h3 class="section-title" style="font-size:var(--dot-text-body-sm-size);margin-top:12px">Labels</h3>
                 @error('labels')<p class="error">{{ $message }}</p>@enderror
                 @can('label', $task)
                     @if($this->teamLabels->isEmpty())
@@ -368,12 +368,12 @@
                 @endcan
 
                 @if($this->customFields->isNotEmpty())
-                    <h3 class="section-title" style="font-size:14px">Details</h3>
+                    <h3 class="section-title" style="font-size:var(--dot-text-body-sm-size)">Details</h3>
                     @error('field')<p role="alert" class="error">{{ $message }}</p>@enderror
                     <div class="props">
                         @foreach($this->customFields as $custom)
                             @php $held = $task->fieldValues->firstWhere('task_field_id', $custom->id)?->value; @endphp
-                            <label for="custom-{{ $custom->id }}" style="color:var(--muted);font-size:12px">{{ $custom->name }}</label>
+                            <label for="custom-{{ $custom->id }}" style="color:var(--muted);font-size:var(--dot-text-caption-size)">{{ $custom->name }}</label>
                             @can('update', $task)
                                 @switch($custom->type)
                                     @case('select')
@@ -405,7 +405,7 @@
 
                 <details class="fold" wire:key="fold-waits-{{ $task->id }}" wire:ignore.self @if($task->approvals->isNotEmpty() || $task->blockedBy->isNotEmpty() || $task->blocking->isNotEmpty()) open @endif>
                     <summary>Approval and blockers <span class="count">{{ $task->approvals->count() + $task->blockedBy->count() + $task->blocking->count() }}</span></summary>
-                <h3 class="section-title" style="font-size:14px">Approval</h3>
+                <h3 class="section-title" style="font-size:var(--dot-text-body-sm-size)">Approval</h3>
                 @error('approval')<p role="alert" class="error">{{ $message }}</p>@enderror
                 @foreach($task->approvals as $approval)
                     <div class="step" wire:key="approval-{{ $approval->id }}" x-data="{ note: '' }" style="flex-wrap:wrap">
@@ -431,12 +431,12 @@
                     </select>
                 @endcan
 
-                <h3 class="section-title" style="font-size:14px">Blocked by</h3>
+                <h3 class="section-title" style="font-size:var(--dot-text-body-sm-size)">Blocked by</h3>
                 @error('blocker')<p role="alert" class="error">{{ $message }}</p>@enderror
                 @forelse($task->blockedBy as $blocker)
                     <div wire:key="blocker-{{ $blocker->id }}" style="display:flex;align-items:center;gap:8px;min-height:30px">
                         <span class="tick" style="width:14px;height:14px" aria-checked="{{ $blocker->status === 'done' ? 'true' : 'false' }}" title="{{ $blocker->status === 'done' ? 'Done' : 'Not done yet' }}"></span>
-                        <span style="flex:1">{{ $blocker->title }} <span style="color:var(--muted);font-size:12px">{{ \App\Services\TaskDependencyService::TYPES[$blocker->pivot->type] }}</span></span>
+                        <span style="flex:1">{{ $blocker->title }} <span style="color:var(--muted);font-size:var(--dot-text-caption-size)">{{ \App\Services\TaskDependencyService::TYPES[$blocker->pivot->type] }}</span></span>
                         @if($blocker->isArchived())<span class="chip">archived</span>@endif
                         @can('update', $task)
                             <button type="button" class="btn small quiet" wire:click="removeBlocker({{ $blocker->id }})" aria-label="Remove blocker {{ $blocker->title }}">Remove</button>
@@ -463,7 +463,7 @@
                     @endif
                 @endcan
                 @if($task->blocking->isNotEmpty())
-                    <h3 class="section-title" style="font-size:14px">Blocking</h3>
+                    <h3 class="section-title" style="font-size:var(--dot-text-body-sm-size)">Blocking</h3>
                     @foreach($task->blocking as $waiting)
                         <p wire:key="blocking-{{ $waiting->id }}">{{ $waiting->title }}</p>
                     @endforeach

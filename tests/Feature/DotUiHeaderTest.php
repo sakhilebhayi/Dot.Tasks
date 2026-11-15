@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Livewire\Tasks\FindTasks;
+use App\Livewire\Tasks\HeaderSearch;
+use App\Models\Task;
+use App\Models\TaskList;
 use App\Models\Team;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,12 +17,12 @@ use Livewire\Livewire;
 use Tests\TestCase;
 
 /**
- * The header carries the shared Dot UI (dot-ui): the search pill and the platform switcher.
+ * The header is the shared Dot header (dot-ui 0.5.0): the search pill (typed into, with a real dropdown), the platform
+ * switcher, the bell and the account menu.
  *
- * The header "search" here is the trigger of the find palette (Livewire FindTasks): a button, not a search form. It
- * keeps that job: the pill is a read-only box that opens the palette, which keeps its own input, its reading of a
- * question and its team scope. The switcher only ever shows what InfoDot says the CURRENT company holds, linking through
- * InfoDot's /go (never straight to a host, never with a token).
+ * The header search is a Livewire component (HeaderSearch) over the same query as the find palette (Ctrl K, FindTasks): it
+ * keeps that logic, its reading of a question and its team scope. The switcher only ever shows what InfoDot says the CURRENT
+ * company holds, linking through InfoDot's /go (never straight to a host, never with a token).
  */
 class DotUiHeaderTest extends TestCase
 {
@@ -83,23 +86,144 @@ class DotUiHeaderTest extends TestCase
         return $m[0];
     }
 
-    // ── The search pill (the palette's trigger) ─────────────────────────────
+    // ── The search pill (a real, typed search) ──────────────────────────────
 
-    public function test_the_header_pill_is_the_palette_trigger_and_posts_nowhere(): void
+    /** The markup of the header search only. */
+    private function pillHtml(string $html): string
+    {
+        $this->assertSame(1, preg_match('/<div class="dh-search" id="dh-search".*?<button type="button" class="dh-icon-btn dh-search__close"/s', $html, $m), 'the header holds the search column');
+
+        return $m[0];
+    }
+
+    public function test_the_header_search_is_the_shared_pill_and_takes_text(): void
     {
         $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
         $html = $this->actingAs($this->memberOf(self::ACME, 'Acme Ltd'))->get(route('dashboard'))->assertOk()->getContent();
+        $pill = $this->pillHtml($html);
 
-        $this->assertSame(1, preg_match('/<div class="topbar-search">.*?<\/form>/s', $html, $pill), 'the pill sits in the header slot');
-        $this->assertStringContainsString('class="dsr-input"', $pill[0], 'the shared pill');
-        $this->assertStringContainsString('readonly', $pill[0], 'it never takes text: the palette holds the real input');
-        $this->assertStringContainsString('data-open-search', $pill[0], 'the same hook the old button used');
-        $this->assertStringContainsString('placeholder="Find a task"', $pill[0]);
-        $this->assertStringContainsString('Ctrl K', $pill[0]);
-        $this->assertDoesNotMatchRegularExpression('/<form[^>]*\saction=/', $pill[0], 'it submits nowhere');
-        $this->assertStringNotContainsString('class="find"', $html, 'the old button is gone');
-        // The palette itself is still on the page, unchanged.
+        $this->assertStringContainsString('class="dsr-input"', $pill, 'the shared pill');
+        $this->assertStringNotContainsString('readonly', $pill, 'it takes text now');
+        $this->assertStringContainsString('wire:model.live.debounce.400ms="query"', $pill);
+        $this->assertStringContainsString('placeholder="Find a task"', $pill);
+        $this->assertStringContainsString('data-find-pill', $pill);
+        $this->assertStringContainsString('data-dsr-escape-clear', $pill, 'Escape empties the box, as InfoDot\'s does');
+        $this->assertStringNotContainsString('dsr-kbd', $pill, 'Ctrl K belongs to the palette, so the pill shows no hint and claims no shortcut');
+        $this->assertStringNotContainsString('data-dsr-shortcut', $pill);
+        $this->assertStringNotContainsString('data-open-search', $pill);
+        // The empty box offers the places to go and the team\'s boards, nothing invented.
+        $this->assertStringContainsString('Go to', $pill);
+        // The old palette is still on the page, unchanged.
         $this->assertStringContainsString('find-tasks', $html);
+    }
+
+    public function test_the_header_search_is_on_every_signed_in_page_type(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
+        $user = $this->memberOf(self::ACME, 'Acme Ltd');
+        $board = TaskList::create(['team_id' => $user->currentTeam->id, 'owner_id' => $user->id, 'name' => 'Ops']);
+
+        foreach (['dashboard' => route('dashboard'), 'my tasks' => route('tasks.mine'), 'my day' => route('tasks.today'), 'upcoming' => route('tasks.upcoming'),
+            'board' => route('task-lists.show', $board), 'reports' => route('reports.index'), 'labels' => route('labels.index'), 'templates' => route('tasks.templates'),
+            'removed' => route('removed.index'), 'notifications' => route('notifications.index'), 'profile' => route('profile.show'),
+            'team settings' => route('teams.show', $user->currentTeam->id)] as $name => $url) {
+            $html = $this->actingAs($user)->get($url)->assertOk()->getContent();
+            $this->assertStringContainsString('id="dsr-find"', $html, $name.': the header search is present');
+            $this->assertStringContainsString('data-dh-search-toggle', $html, $name.': and its phone button');
+        }
+    }
+
+    public function test_the_header_search_finds_tasks_of_this_team_only(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME)), self::url(self::GLOBEX) => Http::response(self::body(self::GLOBEX))]);
+        $acme = $this->memberOf(self::ACME, 'Acme Ltd');
+        $globex = $this->memberOf(self::GLOBEX, 'Globex Ltd');
+        $mine = TaskList::create(['team_id' => $acme->currentTeam->id, 'owner_id' => $acme->id, 'name' => 'Acme ops']);
+        $theirs = TaskList::create(['team_id' => $globex->currentTeam->id, 'owner_id' => $globex->id, 'name' => 'Globex ops']);
+        Task::create(['task_list_id' => $mine->id, 'creator_id' => $acme->id, 'title' => 'Order forklift batteries', 'status' => 'todo']);
+        Task::create(['task_list_id' => $theirs->id, 'creator_id' => $globex->id, 'title' => 'Order forklift tyres', 'status' => 'todo']);
+
+        Livewire::actingAs($acme)->test(HeaderSearch::class)
+            ->set('query', 'forklift')
+            ->assertSee('Order forklift batteries')
+            ->assertDontSee('Order forklift tyres')
+            ->assertDontSee('Globex ops');
+        Livewire::actingAs($globex)->test(HeaderSearch::class)
+            ->set('query', 'forklift')
+            ->assertSee('Order forklift tyres')
+            ->assertDontSee('Order forklift batteries');
+    }
+
+    public function test_the_header_search_never_shows_someone_elses_inbox_or_a_board_of_another_team(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
+        $owner = $this->memberOf(self::ACME, 'Acme Ltd');
+        $teammate = User::factory()->create();
+        $owner->currentTeam->users()->attach($teammate, ['role' => 'editor']);
+        $teammate->switchTeam($owner->currentTeam);
+
+        $inbox = TaskList::create(['team_id' => $owner->currentTeam->id, 'owner_id' => $owner->id, 'name' => 'Inbox', 'is_inbox' => true]);
+        Task::create(['task_list_id' => $inbox->id, 'creator_id' => $owner->id, 'title' => 'Private salary note', 'status' => 'todo']);
+        $outside = Team::factory()->create(['user_id' => User::factory()->create()->id, 'name' => 'Other', 'personal_team' => false]);
+        TaskList::create(['team_id' => $outside->id, 'owner_id' => $outside->user_id, 'name' => 'Salary board of another team']);
+
+        Livewire::actingAs($owner)->test(HeaderSearch::class)->set('query', 'salary')->assertSee('Private salary note')->assertDontSee('another team');
+        Livewire::actingAs($teammate->fresh())->test(HeaderSearch::class)->set('query', 'salary')->assertDontSee('Private salary note')->assertDontSee('another team')->assertSee('Nothing matches');
+    }
+
+    public function test_the_header_search_reads_a_question_like_the_palette_and_shows_what_it_understood(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
+        $user = $this->memberOf(self::ACME, 'Acme Ltd');
+        $board = TaskList::create(['team_id' => $user->currentTeam->id, 'owner_id' => $user->id, 'name' => 'Ops']);
+        Task::create(['task_list_id' => $board->id, 'creator_id' => $user->id, 'title' => 'Late filing', 'status' => 'todo', 'due_date' => now()->subDays(3)]);
+        Task::create(['task_list_id' => $board->id, 'creator_id' => $user->id, 'title' => 'Future filing', 'status' => 'todo', 'due_date' => now()->addDays(20)]);
+
+        Livewire::actingAs($user)->test(HeaderSearch::class)
+            ->set('query', 'overdue filing')
+            ->assertSee('Overdue')
+            ->assertSee('Late filing')
+            ->assertDontSee('Future filing');
+        // The same answer from the palette.
+        Livewire::actingAs($user)->test(FindTasks::class)->dispatch('open-search')->set('query', 'overdue filing')->assertSee('Late filing')->assertDontSee('Future filing');
+    }
+
+    public function test_the_header_search_has_empty_and_no_match_states_and_waits_for_two_letters(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
+        $user = $this->memberOf(self::ACME, 'Acme Ltd');
+        $board = TaskList::create(['team_id' => $user->currentTeam->id, 'owner_id' => $user->id, 'name' => 'Ops']);
+        Task::create(['task_list_id' => $board->id, 'creator_id' => $user->id, 'title' => 'Xylophone tuning', 'status' => 'todo']);
+
+        Livewire::actingAs($user)->test(HeaderSearch::class)
+            ->assertSee('Go to')->assertSee('Ops')->assertSee('Type two letters')
+            ->set('query', 'x')->assertDontSee('Xylophone tuning')->assertSee('Type two letters')
+            ->set('query', 'zzzzqq')->assertSee('Nothing matches')
+            ->set('query', 'xylo')->assertSee('Xylophone tuning');
+    }
+
+    public function test_the_header_search_finds_boards_by_name_and_escapes_like_characters(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
+        $user = $this->memberOf(self::ACME, 'Acme Ltd');
+        TaskList::create(['team_id' => $user->currentTeam->id, 'owner_id' => $user->id, 'name' => 'Warehouse']);
+        TaskList::create(['team_id' => $user->currentTeam->id, 'owner_id' => $user->id, 'name' => 'Fleet']);
+
+        Livewire::actingAs($user)->test(HeaderSearch::class)->set('query', 'ware')->assertSee('Warehouse')->assertDontSee('Fleet');
+        // A percent sign is a character, not a wildcard.
+        Livewire::actingAs($user)->test(HeaderSearch::class)->set('query', '%%')->assertDontSee('Warehouse')->assertDontSee('Fleet')->assertSee('Nothing matches');
+    }
+
+    public function test_enter_in_the_header_search_opens_the_first_task_or_goes_to_the_first_board(): void
+    {
+        $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
+        $user = $this->memberOf(self::ACME, 'Acme Ltd');
+        $board = TaskList::create(['team_id' => $user->currentTeam->id, 'owner_id' => $user->id, 'name' => 'Warehouse']);
+        $task = Task::create(['task_list_id' => $board->id, 'creator_id' => $user->id, 'title' => 'Count pallets', 'status' => 'todo']);
+
+        Livewire::actingAs($user)->test(HeaderSearch::class)->set('query', 'pallets')->call('go')->assertDispatched('open-task', taskId: $task->id)->assertSet('query', '');
+        Livewire::actingAs($user)->test(HeaderSearch::class)->set('query', 'warehouse')->call('go')->assertRedirect(route('task-lists.show', $board));
+        Livewire::actingAs($user)->test(HeaderSearch::class)->set('query', 'nothinghere')->call('go')->assertNotDispatched('open-task')->assertNoRedirect();
     }
 
     public function test_the_palette_opens_and_reads_questions_exactly_as_before(): void
@@ -255,7 +379,11 @@ class DotUiHeaderTest extends TestCase
         $response = $this->actingAs($this->memberOf(self::ACME, 'Acme Ltd'))->get(route('dashboard'))->assertOk();
         $html = $response->getContent();
 
-        foreach (['css/dot-fonts.css', 'css/dot-tokens.css', 'css/dot-search.css', 'css/dot-switcher-fonts.css', 'css/dot-switcher.css', 'js/dot-switcher.js'] as $asset) {
+        // dot-ui 0.6.1: one minified stylesheet (roboto, type, tokens, search, switcher, header) and one script (search, switcher, nav, lazy results).
+        foreach (['css/dot-ui.min.css', 'js/dot-ui-core.min.js', 'js/dot-lazy.js'] as $asset) {
+            $this->assertFileExists(public_path('dot-ui/'.$asset));
+        }
+        foreach (['css/dot-ui.min.css', 'js/dot-ui-core.min.js'] as $asset) {
             $this->assertStringContainsString(asset('dot-ui/'.$asset), $html, $asset.' is linked from this site');
             $this->assertFileExists(public_path('dot-ui/'.$asset));
         }
@@ -280,10 +408,10 @@ class DotUiHeaderTest extends TestCase
         // The policy gained no origin.
         $policy = (string) $response->headers->get('Content-Security-Policy');
         preg_match_all('#https?://[^\s;]+#', $policy, $origins);
-        $this->assertEqualsCanonicalizing(['https://fonts.googleapis.com', 'https://fonts.gstatic.com', 'https://ui-avatars.com'], $origins[0]);
+        $this->assertEqualsCanonicalizing(['https://ui-avatars.com'], $origins[0], 'no Google Fonts origin: Roboto is served from this site');
 
         // The script tag carries the request's nonce, as every other script on the page does.
-        $this->assertMatchesRegularExpression('/<script src="[^"]*dot-switcher\.js" defer nonce="[^"]+"><\/script>/', $html);
+        $this->assertMatchesRegularExpression('/<script src="[^"]*dot-ui-core\.min\.js" defer nonce="[^"]+"><\/script>/', $html);
     }
 
     public function test_the_shared_markup_has_no_inline_style_or_script(): void
@@ -291,8 +419,7 @@ class DotUiHeaderTest extends TestCase
         $this->fakeInfoDot([self::url(self::ACME) => Http::response(self::body(self::ACME))]);
         $html = $this->actingAs($this->memberOf(self::ACME, 'Acme Ltd'))->get(route('dashboard'))->getContent();
 
-        $this->assertSame(1, preg_match('/<div class="topbar-search">.*?<\/form>/s', $html, $pill));
-        foreach ([$pill[0], $this->switcherHtml($html)] as $fragment) {
+        foreach ([$this->pillHtml($html), $this->switcherHtml($html)] as $fragment) {
             $this->assertStringNotContainsString(' style=', $fragment);
             $this->assertStringNotContainsString('<style', $fragment);
             $this->assertStringNotContainsString('<script', $fragment);

@@ -22,34 +22,34 @@ colors:
   done-wash: "#E6F3EC"
 typography:
   arrival:
-    fontFamily: Schibsted Grotesk
+    fontFamily: Roboto
     fontSize: 32px
     fontWeight: 600
     lineHeight: 36px
     letterSpacing: -0.015em
   title:
-    fontFamily: Schibsted Grotesk
+    fontFamily: Roboto
     fontSize: 24px
     fontWeight: 600
     lineHeight: 32px
     letterSpacing: -0.01em
   section:
-    fontFamily: Schibsted Grotesk
+    fontFamily: Roboto
     fontSize: 16px
     fontWeight: 600
     lineHeight: 24px
   body:
-    fontFamily: Schibsted Grotesk
+    fontFamily: Roboto
     fontSize: 14px
     fontWeight: 400
     lineHeight: 20px
   small:
-    fontFamily: Schibsted Grotesk
+    fontFamily: Roboto
     fontSize: 12px
     fontWeight: 400
     lineHeight: 16px
   micro:
-    fontFamily: Schibsted Grotesk
+    fontFamily: Roboto
     fontSize: 11px
     fontWeight: 500
     lineHeight: 16px
@@ -103,11 +103,11 @@ The brand's gold and green live in the logo only. Chrome stays ink.
 
 ## Typography
 
-One face, Schibsted Grotesk, at 24, 16, 14 and 12. One line in the product is larger: the sentence on the overview that greets a person arriving from InfoDot, at 32 (24 on a phone). Figures are tabular on bare numbers only (counts, totals): in this face the tabular feature also widens commas and full stops, so it never goes on running text. Weight 600 for titles, 500 for a card's title, 400 for the rest. Sentence case, always.
+One face, Roboto (R-52: the ecosystem's face, self-hosted from `public/dot-ui/fonts/roboto`, no third-party font request), on the shared dot-ui scale: `--dot-text-caption` (12), `--dot-text-body-sm` (14), `--dot-text-body` (16), `--dot-text-h3` (20 to 24, titles) and `--dot-text-h2` (24 to 32, the overview sentence). The stylesheets hold no literal font sizes; a test fails on one. Inputs are 16px on touch (iOS does not zoom). Monospace is the shared `--dot-font-mono`, used only on the error pages' status line. One line in the product is larger: the sentence on the overview that greets a person arriving from InfoDot, at 32 (24 on a phone). Figures are tabular on bare numbers only (counts, totals): in this face the tabular feature also widens commas and full stops, so it never goes on running text. Weight 600 for titles, 500 for a card's title, 400 for the rest. Sentence case, always.
 
 ## Layout
 
-A labelled 232px sidebar on the stone, with boards listed under the views. A 52px top bar carries search and quick add. The canvas is fluid with a 24px gutter. One gap value, 12px, inside a board and a list. Pages open on a noun title at 24px with one line under it that states a fact about the work.
+A labelled 232px sidebar on the stone, with boards listed under the views, under the shared Dot header (R-52, dot-ui 0.5.0): 56px (52px on a phone), the logo on the left, the search centred by the header's grid (typed into, results under it), then New task, Dot Apps, notifications and the account menu. The sidebar is the phone menu. The canvas is fluid with a 24px gutter. One gap value, 12px, inside a board and a list. Pages open on a noun title at 24px with one line under it that states a fact about the work.
 
 The overview is where people arrive, so it opens differently: the logo as drawn, a welcome by first name and company, one filled action (New task) and a slot holding the cards on that person's name. It is the only filled button on that page; the top bar's New task steps back to an outline there. With no cards the slot stays open and says so. Nothing in it moves on arrival.
 
@@ -138,3 +138,12 @@ Tight corners: 6px on cards and controls, 4px on chips. The tick is the one roun
 - Don't show a count tile that nobody acts on.
 - Don't animate anything that doesn't report a change. No entrances, no pulsing dots.
 - Don't draw a real rack: no holes, no metal, no skeuomorphism. The idea is in how it moves.
+
+
+## Header and search (R-52)
+
+The top bar is the shared dot-ui header; Dot.Tasks keeps its sidebar as its primary navigation, so the bar has no nav list of its own and the menu button opens the sidebar (`drawer-target`). The search is `App\Livewire\Tasks\HeaderSearch` in the header's search slot: the same question as the find palette (`App\Services\TaskFinder`, tasks of this team plus the person's own Inbox, read as a sentence by `TaskSearchReader`) and the team's boards by name. Arrow keys move through the list, Enter opens the highlighted row or the first match, Escape empties the box.
+
+Shortcut ownership: **Ctrl K / Cmd K opens the find palette** (unchanged, `FindTasks`); **`/` focuses the header search** (on a phone it opens the search sheet); **`q` opens New task**. The pill shows no "Ctrl K" hint on purpose: dot-ui's hint also makes `dot-search.js` bind Ctrl K to the pill, and two owners of one chord fight.
+
+Under 480px the bar is logo, search, Dot Apps and the menu; New task and Notifications are the first two rows of the menu, and the account rows are at the foot of it.

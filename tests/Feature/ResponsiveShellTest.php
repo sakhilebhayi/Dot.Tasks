@@ -54,16 +54,19 @@ class ResponsiveShellTest extends TestCase
             // Viewport meta, or phones render a 980px canvas.
             $this->assertStringContainsString('<meta name="viewport" content="width=device-width, initial-scale=1"', $html, "{$name}: viewport meta");
 
-            // A labelled Menu button that controls the drawer and starts collapsed.
-            $this->assertSame(1, preg_match('/<button[^>]*id="shell-menu-button"[^>]*>(.*?)<\/button>/s', $html, $button), "{$name}: menu button");
+            // The shared header's Menu button (dot-ui, drawer-target): labelled, controls the sidebar, starts collapsed.
+            $this->assertSame(1, preg_match('/<button[^>]*data-dh-menu-button[^>]*>/', $html, $button), "{$name}: menu button");
             $this->assertStringContainsString('aria-controls="shell-drawer"', $button[0], "{$name}: aria-controls");
             $this->assertStringContainsString('aria-expanded="false"', $button[0], "{$name}: aria-expanded");
-            $this->assertStringContainsString('Menu', strip_tags($button[1]), "{$name}: visible label");
+            $this->assertStringContainsString('aria-label="Menu"', $button[0], "{$name}: accessible name");
 
-            // The drawer is the existing sidebar, labelled, and the backdrop closes it.
-            $this->assertStringContainsString('class="sidebar"', $this->drawerHtml($response), "{$name}: drawer is the sidebar");
-            $this->assertStringContainsString('id="shell-backdrop"', $html, "{$name}: backdrop");
-            $this->assertStringContainsString('class="topbar"', $html, "{$name}: top bar");
+            // The drawer is the existing sidebar, with its own close button; dot-nav.js adds the scrim, so there is no hand-made backdrop.
+            $drawer = $this->drawerHtml($response);
+            $this->assertStringContainsString('class="sidebar"', $drawer, "{$name}: drawer is the sidebar");
+            $this->assertStringContainsString('data-dh-close', $drawer, "{$name}: close button");
+            $this->assertStringNotContainsString('shell-backdrop', $html, "{$name}: the scrim is dot-nav's");
+            $this->assertStringContainsString('<header class="dh ', $html, "{$name}: shared header");
+            $this->assertStringContainsString('/dot-ui/js/dot-ui-core.min.js', $html, "{$name}: header behaviour is loaded");
         }
     }
 
@@ -87,7 +90,7 @@ class ResponsiveShellTest extends TestCase
         $this->assertStringContainsString($f->team->name.' (current)', html_entity_decode($drawer, ENT_QUOTES));
 
         // Log out is a real POST form: the stock Jetstream bar that held it sat unreachable under the top bar.
-        $this->assertSame(1, preg_match('/<form method="POST" action="'.preg_quote(route('logout'), '/').'">.*?Log out/s', $drawer));
+        $this->assertSame(1, preg_match('/<form method="POST" action="'.preg_quote(route('logout'), '/').'"[^>]*>.*?Log out/s', $drawer));
     }
 
     public function test_a_user_with_one_team_sees_no_switch_to_rows(): void
@@ -118,7 +121,9 @@ class ResponsiveShellTest extends TestCase
         $this->assertStringContainsString('@media (max-width: 859.98px)', $css);
         $this->assertStringContainsString('@media (prefers-reduced-motion: reduce)', $css);
         $this->assertStringContainsString('--topbar-h', $css);
-        $this->assertStringContainsString("matchMedia('(min-width: 860px)')", file_get_contents(resource_path('js/shell.js')));
+        // The phone drawer is the shared header's: the sidebar slides on [data-dh-open] (set by dot-nav.js).
+        $this->assertStringContainsString('.sidebar[data-dh-open]', $css);
+        $this->assertStringNotContainsString('--topbar-h: 104px', $css, 'one 52px row on a phone, not two rows');
     }
 
     public function test_alpine_is_not_loaded_a_second_time_from_a_cdn(): void
