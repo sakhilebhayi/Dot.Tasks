@@ -8,15 +8,10 @@
     <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
     <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
     <link rel="apple-touch-icon" sizes="180x180" href="{{ asset('apple-touch-icon.png') }}">
-    {{-- Roboto, self-hosted from this site's own public/dot-ui (R-52). No third-party font request, no CDN. --}}
-    <link rel="preload" href="{{ asset('dot-ui/fonts/roboto/roboto-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-roboto.css') }}">
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-type.css') }}">
-    {{-- Shared Dot UI (header, search pill, platform switcher), served from this site's own public/dot-ui. Loaded before the app CSS so the mapping block in job-card.css wins. --}}
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-tokens.css') }}">
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-search.css') }}">
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-switcher.css') }}">
-    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-header.css') }}">
+    {{-- Shared Dot UI 0.6.1 (Roboto, type scale, tokens, search pill, platform switcher, header) as ONE minified stylesheet from this site's own
+         public/dot-ui. First stylesheet in the head, before the app CSS, so the mapping block in job-card.css wins. No font preload: the largest
+         paint on the dashboard is not text (PERFORMANCE.md). --}}
+    <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-ui.min.css') }}">
     @vite(['resources/css/signed-in.css', 'resources/css/job-card.css', 'resources/js/app.js'])
     <script nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}">
         (function () {
@@ -194,9 +189,8 @@
     <div class="flash connection" id="connection" role="alert" hidden>Connection lost. Keep this page open: edits save when it returns.</div>
 
     @stack('modals')
-    <script src="{{ asset('dot-ui/js/dot-search.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
-    <script src="{{ asset('dot-ui/js/dot-switcher.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
-    <script src="{{ asset('dot-ui/js/dot-nav.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
+    {{-- One file for search, switcher and nav; the results controller loads on first use (it is not needed here: the host drives its own list). --}}
+    <script src="{{ asset('dot-ui/js/dot-ui-core.min.js') }}" defer nonce="{{ \Illuminate\Support\Facades\Vite::cspNonce() }}"></script>
     @livewireScripts
 </body>
 </html>

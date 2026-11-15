@@ -65,8 +65,8 @@ class ResponsiveShellTest extends TestCase
             $this->assertStringContainsString('class="sidebar"', $drawer, "{$name}: drawer is the sidebar");
             $this->assertStringContainsString('data-dh-close', $drawer, "{$name}: close button");
             $this->assertStringNotContainsString('shell-backdrop', $html, "{$name}: the scrim is dot-nav's");
-            $this->assertStringContainsString('<header class="dh"', $html, "{$name}: shared header");
-            $this->assertStringContainsString('/dot-ui/js/dot-nav.js', $html, "{$name}: header behaviour is loaded");
+            $this->assertStringContainsString('<header class="dh ', $html, "{$name}: shared header");
+            $this->assertStringContainsString('/dot-ui/js/dot-ui-core.min.js', $html, "{$name}: header behaviour is loaded");
         }
     }
 

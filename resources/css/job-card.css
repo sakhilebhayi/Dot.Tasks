@@ -877,6 +877,13 @@ main:focus { outline: none; }
     .sheet details > summary, .sheet summary.section-title { display: flex; align-items: center; min-height: 44px; }
     .sheet button.chip, .label-pick { display: inline-flex; align-items: center; min-height: 44px; }
     .chart-table > summary { display: flex; align-items: center; min-height: 44px; }
+    /* My tasks rows: the 20px tick is a real 44px button (the ring is drawn inside it), the row's title button is 44px tall */
+    .row .tick { width: 44px; height: 44px; margin: -12px; border: 0; border-radius: 50%; background: radial-gradient(circle, transparent 8.25px, var(--control) 8.75px, var(--control) 10.25px, transparent 10.75px); }
+    .row .tick:hover { background: radial-gradient(circle, transparent 8.25px, var(--go) 8.75px, var(--go) 10.25px, transparent 10.75px); }
+    .row .tick[aria-checked='true'] { background: radial-gradient(circle, transparent 8.25px, var(--go) 8.75px, var(--go) 10.25px, transparent 10.75px); }
+    .row .tick::after { inset: 15px; }
+    .row .row-main { min-height: 44px; }
+    .d-group.compact .d-row { min-height: var(--row-task); } /* 860-1024px: the compact rows were 41px */
     /* small text links keep their look and gain a 44px hit area without moving anything around them */
-    .d-head a.more, .d-dayline a.link, .saved-views button.link, .filters button.link { padding: 12px 8px; margin: -12px -8px; }
+    .d-head a.more, .d-dayline a.link, .saved-views button.link, .filters button.link, .sheet p > a.link { padding: 12px 8px; margin: -12px -8px; }
 }

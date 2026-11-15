@@ -379,7 +379,11 @@ class DotUiHeaderTest extends TestCase
         $response = $this->actingAs($this->memberOf(self::ACME, 'Acme Ltd'))->get(route('dashboard'))->assertOk();
         $html = $response->getContent();
 
-        foreach (['css/dot-roboto.css', 'css/dot-type.css', 'css/dot-tokens.css', 'css/dot-search.css', 'css/dot-switcher.css', 'css/dot-header.css', 'js/dot-search.js', 'js/dot-switcher.js', 'js/dot-nav.js'] as $asset) {
+        // dot-ui 0.6.1: one minified stylesheet (roboto, type, tokens, search, switcher, header) and one script (search, switcher, nav, lazy results).
+        foreach (['css/dot-ui.min.css', 'js/dot-ui-core.min.js', 'js/dot-lazy.js'] as $asset) {
+            $this->assertFileExists(public_path('dot-ui/'.$asset));
+        }
+        foreach (['css/dot-ui.min.css', 'js/dot-ui-core.min.js'] as $asset) {
             $this->assertStringContainsString(asset('dot-ui/'.$asset), $html, $asset.' is linked from this site');
             $this->assertFileExists(public_path('dot-ui/'.$asset));
         }
@@ -407,7 +411,7 @@ class DotUiHeaderTest extends TestCase
         $this->assertEqualsCanonicalizing(['https://ui-avatars.com'], $origins[0], 'no Google Fonts origin: Roboto is served from this site');
 
         // The script tag carries the request's nonce, as every other script on the page does.
-        $this->assertMatchesRegularExpression('/<script src="[^"]*dot-switcher\.js" defer nonce="[^"]+"><\/script>/', $html);
+        $this->assertMatchesRegularExpression('/<script src="[^"]*dot-ui-core\.min\.js" defer nonce="[^"]+"><\/script>/', $html);
     }
 
     public function test_the_shared_markup_has_no_inline_style_or_script(): void

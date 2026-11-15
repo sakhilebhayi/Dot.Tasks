@@ -34,8 +34,13 @@ class RobotoAndHeaderTest extends TestCase
 
         foreach ($pages as $name => $html) {
             $this->assertStringContainsString('dot-roboto', $html, $name.': Roboto base class on <html>');
-            $this->assertStringContainsString('dot-ui/css/dot-roboto.css', $html, $name.': the font-face file');
-            $this->assertStringContainsString('dot-ui/css/dot-type.css', $html, $name.': the type scale');
+            // The app layout links the one minified bundle (roboto + type + tokens + header); the standalone pages link roboto and type minified.
+            if ($name === 'app layout') {
+                $this->assertStringContainsString('dot-ui/css/dot-ui.min.css', $html, $name.': the minified bundle: font-face, type scale, header');
+            } else {
+                $this->assertStringContainsString('dot-ui/css/dot-roboto.min.css', $html, $name.': the font-face file');
+                $this->assertStringContainsString('dot-ui/css/dot-type.min.css', $html, $name.': the type scale');
+            }
             $this->assertDoesNotMatchRegularExpression('#fonts\.(googleapis|gstatic)\.com|cdn\.|Schibsted|Karla|Space Mono|Material\+Symbols|Figtree#i', $html, $name.': no third-party or retired typeface');
         }
     }
@@ -81,7 +86,7 @@ class RobotoAndHeaderTest extends TestCase
 
     public function test_an_error_page_is_roboto_with_no_icon_font(): void
     {
-        $this->get('/this-page-does-not-exist-r52')->assertStatus(404)->assertSee('dot-ui/css/dot-roboto.css', false)->assertDontSee('material-symbols', false);
+        $this->get('/this-page-does-not-exist-r52')->assertStatus(404)->assertSee('dot-ui/css/dot-roboto.min.css', false)->assertDontSee('material-symbols', false);
     }
 
     // ── The header ─────────────────────────────────────────────────────────
@@ -91,7 +96,7 @@ class RobotoAndHeaderTest extends TestCase
         $f = $this->fixture();
         $html = $this->actingAs($f->owner)->get(route('dashboard'))->assertOk()->getContent();
 
-        $this->assertSame(1, substr_count($html, '<header class="dh"'), 'one header');
+        $this->assertSame(1, substr_count($html, '<header class="dh '), 'one header');
         $this->assertSame(0, substr_count($html, 'class="topbar"'), 'the old bar is gone');
         $this->assertStringContainsString('class="dh-brand"', $html);
         $this->assertStringContainsString('data-dh-search', $html);
@@ -133,7 +138,7 @@ class RobotoAndHeaderTest extends TestCase
     {
         $html = $this->get(route('login'))->assertOk()->getContent();
         $this->assertStringNotContainsString('data-dh-search', $html);
-        $this->assertStringNotContainsString('<header class="dh"', $html);
+        $this->assertStringNotContainsString('<header class="dh ', $html);
     }
 
     public function test_shortcut_ownership_is_documented_in_the_script_and_the_pill_claims_no_chord(): void

@@ -13,8 +13,8 @@
 
         <!-- Fonts: Roboto, self-hosted from this site (R-52) -->
         <link rel="preload" href="{{ asset('dot-ui/fonts/roboto/roboto-latin-wght-normal.woff2') }}" as="font" type="font/woff2" crossorigin>
-        <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-roboto.css') }}">
-        <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-type.css') }}">
+        <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-roboto.min.css') }}">
+        <link rel="stylesheet" href="{{ asset('dot-ui/css/dot-type.min.css') }}">
 
         <!-- Scripts -->
         @vite(['resources/css/app.css', 'resources/css/job-card.css', 'resources/js/app.js'])
