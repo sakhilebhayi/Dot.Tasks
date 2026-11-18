@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Livewire\Dashboard;
 use App\Livewire\Labels\LabelManager;
 use App\Livewire\NotificationBell;
 use App\Livewire\Tasks\ArchivedBoards;
@@ -31,7 +30,6 @@ use App\Models\TaskField;
 use App\Models\TaskList;
 use App\Models\TaskRule;
 use App\Models\TaskRuleRun;
-use App\Models\TaskStatus;
 use App\Models\TaskTemplate;
 use App\Models\TaskView;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -40,6 +38,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -56,7 +55,8 @@ class TenantSweepTest extends TestCase
     use CreatesTeamFixtures;
     use RefreshDatabase;
 
-    private const PUBLIC_ROUTES = ['/', 'auth/ecosystem', 'cookies', 'csp-report', 'privacy-policy', 'ready', 'terms-of-service', 'up', 'up/realtime', 'up/scheduler'];
+    /** R-54: the sso/* routes belong to the shared sign-in package. They are registered always and answer 404 while DOTSSO_ENABLED is false. */
+    private const PUBLIC_ROUTES = ['/', 'auth/ecosystem', 'cookies', 'csp-report', 'privacy-policy', 'ready', 'sso/backchannel-logout', 'sso/callback', 'sso/claim', 'sso/claim/cancel', 'sso/claim/resend', 'sso/login', 'sso/logout', 'terms-of-service', 'up', 'up/realtime', 'up/scheduler'];
 
     /** Actions on a page the attacker owns, with ids that belong to the other business. */
     public static function actions(): array
@@ -147,7 +147,7 @@ class TenantSweepTest extends TestCase
         $f->item = TaskChecklistItem::create(['task_id' => $f->task->id, 'title' => 'I']);
         $f->comment = TaskComment::create(['task_id' => $f->task->id, 'user_id' => $f->victim->id, 'body' => 'C']);
         $f->file = TaskAttachment::create(['task_id' => $f->task->id, 'user_id' => $f->victim->id, 'path' => 'x', 'name' => 'x.pdf', 'mime' => 'application/pdf', 'size' => 1]);
-        $f->notification = (string) \Illuminate\Support\Str::uuid();
+        $f->notification = (string) Str::uuid();
         DB::table('notifications')->insert(['id' => $f->notification, 'type' => 'x', 'notifiable_type' => 'App\\Models\\User', 'notifiable_id' => $f->victim->id, 'data' => '{}', 'created_at' => now(), 'updated_at' => now()]);
 
         return $f;
