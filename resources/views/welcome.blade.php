@@ -1,7 +1,8 @@
 @php
     // Public sign-up here is closed: an account starts on InfoDot, and this app makes its side at the first sign-in.
     $open = \Laravel\Fortify\Features::enabled(\Laravel\Fortify\Features::registration());
-    $join = $open ? route('register') : config('ecosystem.signup_url');
+    $join = \App\Support\CentralSignIn::register($open ? route('register') : config('ecosystem.signup_url'));
+    $signIn = \App\Support\CentralSignIn::login();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dot-roboto">
@@ -29,7 +30,7 @@
                 @auth
                     <a class="btn primary" href="{{ url('/dashboard') }}">Open Dot.Tasks</a>
                 @else
-                    <a class="btn quiet" href="{{ route('login') }}">Sign in</a>
+                    <a class="btn quiet" href="{{ $signIn }}">Sign in</a>
                     <a class="btn primary l-join" href="{{ $join }}">Create account</a>
                 @endauth
             </nav>
@@ -45,11 +46,11 @@
                             <a class="btn primary" href="{{ url('/dashboard') }}">Open Dot.Tasks</a>
                         @else
                             <a class="btn primary" href="{{ $join }}">Create account</a>
-                            <a class="btn" href="{{ route('login') }}">Sign in</a>
+                            <a class="btn" href="{{ $signIn }}">Sign in</a>
                         @endauth
                     </div>
                     @guest
-                        @unless($open)<p class="l-note">Accounts are made on InfoDot. Dot.Tasks opens from there.</p>@endunless
+                        @unless($open)<p class="l-note">Accounts are made on InfoDot. @if (\App\Support\CentralSignIn::active())Sign in or create one there and you come straight back.@else Dot.Tasks opens from there.@endif</p>@endunless
                     @endguest
                 </div>
                 <div class="l-rack" aria-hidden="true">
@@ -140,7 +141,7 @@
                             <a class="btn" href="{{ url('/dashboard') }}">Open Dot.Tasks</a>
                         @else
                             <a class="btn" href="{{ $join }}">Create account</a>
-                            <a class="btn quiet" href="{{ route('login') }}">Sign in</a>
+                            <a class="btn quiet" href="{{ $signIn }}">Sign in</a>
                         @endauth
                     </div>
                 </div>
