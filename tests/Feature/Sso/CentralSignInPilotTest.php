@@ -9,6 +9,7 @@ use App\Sso\TasksProvisioner;
 use Dot\SsoClient\Tests\Support\FakeIdp;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\Sanctum;
@@ -158,6 +159,19 @@ class CentralSignInPilotTest extends TestCase
         $this->assertMatchesRegularExpression('/<label[^>]+for="code"/', $html);
         $this->assertStringContainsString('role="alert"', $html);
         $this->assertSame(1, substr_count($html, '<h1'));
+    }
+
+    public function test_after_an_infodot_sign_out_a_real_auth_sanctum_page_ends_the_session_instead_of_a_500(): void
+    {
+        $this->on();
+        $this->signInVia(['sub' => 'infodot-uuid-3', 'email' => 'out@example.test'])->assertRedirect('/dashboard');
+        $this->get('/dashboard')->assertOk();
+
+        $this->travel(1)->seconds();
+        DB::table('dotsso_revocations')->insert(['sub' => 'infodot-uuid-3', 'revoked_at_ms' => (int) floor(microtime(true) * 1000), 'created_at' => now(), 'updated_at' => now()]);
+
+        $this->get('/dashboard')->assertRedirect('/');
+        $this->assertGuest('web');
     }
 
     public function test_sanctum_api_access_is_untouched_while_sso_is_on(): void
