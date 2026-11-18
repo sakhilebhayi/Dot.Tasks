@@ -167,6 +167,17 @@ class ClaimFlowTest extends DotSsoTestCase
         $this->finishLogin($this->startLogin(), ['email' => 'c@example.test', 'sub' => 'u-c'])->assertStatus(429);
     }
 
+    public function test_busy_sign_in_routes_do_not_use_up_the_claim_forms_allowance(): void
+    {
+        $this->startClaim();
+
+        for ($i = 0; $i < 25; $i++) {
+            $this->get('https://platform.test/sso/callback?state=x&code=y');
+        }
+
+        $this->post('https://platform.test/sso/claim', ['code' => '000001'])->assertSessionHasErrors('code');
+    }
+
     public function test_guessing_is_limited_per_ip_too(): void
     {
         config(['dotsso.claim.verify_per_ip' => 3]);
