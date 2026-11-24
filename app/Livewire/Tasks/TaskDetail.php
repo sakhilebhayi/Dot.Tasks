@@ -796,7 +796,9 @@ class TaskDetail extends Component
         if ($result['source'] !== AiTaskBreakdownService::SOURCE_AI) {
             // Never fall back to canned subtasks: say plainly that the AI is
             // unavailable and create nothing.
-            $this->aiError = 'AI breakdown unavailable: '.$this->aiReason($result['reason'] ?? null);
+            $this->aiError = ($result['reason'] ?? null) === 'feature_off'
+                ? ($result['message'] ?? 'AI task breakdown is temporarily unavailable.')
+                : 'AI breakdown unavailable: '.$this->aiReason($result['reason'] ?? null);
 
             return;
         }

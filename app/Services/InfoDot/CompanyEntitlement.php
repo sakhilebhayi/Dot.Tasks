@@ -58,7 +58,7 @@ class CompanyEntitlement
     }
 
     /**
-     * @return array{entitled: bool, status: string, available: bool, message: ?string}|null null when InfoDot gave no clear answer and none is remembered
+     * @return array{entitled: bool, status: string, available: bool, message: ?string, features: array<string, array{state: string, message: ?string}>}|null null when InfoDot gave no clear answer and none is remembered
      */
     public function of(string $teamUuid): ?array
     {
@@ -123,7 +123,7 @@ class CompanyEntitlement
     }
 
     /**
-     * @return array{entitled: bool, status: string, available: bool, message: ?string}|null
+     * @return array{entitled: bool, status: string, available: bool, message: ?string, features: array<string, array{state: string, message: ?string}>}|null
      */
     private function ask(string $teamUuid): ?array
     {
@@ -168,11 +168,31 @@ class CompanyEntitlement
                     // R-61: an InfoDot from before contract 2 gives no `available`, which is not a switch-off.
                     'available' => ($row['available'] ?? true) !== false,
                     'message' => is_string($row['message'] ?? null) && $row['message'] !== '' ? mb_substr($row['message'], 0, 400) : null,
+                    'features' => self::features($row['features'] ?? null),
                 ];
             }
         }
 
         return $this->unknown('own row missing');
+    }
+
+    /**
+     * The feature switches in the caller's own row (R-61), kept as key => state and message. Anything malformed is ignored, and a feature
+     * that is not listed is available.
+     *
+     * @return array<string, array{state: string, message: ?string}>
+     */
+    private static function features(mixed $raw): array
+    {
+        $out = [];
+
+        foreach (is_array($raw) ? $raw : [] as $key => $row) {
+            if (is_string($key) && is_array($row) && is_string($row['state'] ?? null)) {
+                $out[$key] = ['state' => $row['state'], 'message' => is_string($row['message'] ?? null) && $row['message'] !== '' ? mb_substr($row['message'], 0, 400) : null];
+            }
+        }
+
+        return $out;
     }
 
     /** Logged where the failure is stored, so once per cache window. Never the secret, never a person. */
