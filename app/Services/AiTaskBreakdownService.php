@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Task;
+use App\Services\InfoDot\FeatureSwitch;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
@@ -11,6 +12,9 @@ class AiTaskBreakdownService
     public const SOURCE_AI = 'ai';
 
     public const SOURCE_UNAVAILABLE = 'unavailable';
+
+    /** The key InfoDot lists this feature under (platform_features). */
+    public const FEATURE = 'ai_breakdown';
 
     private const MAX_SUBTASKS = 7;
 
@@ -49,10 +53,18 @@ class AiTaskBreakdownService
      * An unavailable result never carries canned subtasks, so callers cannot
      * present placeholder output as AI-generated.
      *
-     * @return array{source: string, subtasks: list<array{title: string, priority: string, estimated_minutes: int|null}>, reason?: string}
+     * @return array{source: string, subtasks: list<array{title: string, priority: string, estimated_minutes: int|null}>, reason?: string, message?: ?string}
      */
     public function breakdown(Task $task, int $userId): array
     {
+        // R-61: InfoDot can switch this feature off without switching Dot.Tasks off. Checked here, where the work happens, so no way of
+        // reaching it (screen, Livewire call, anything else) gets past a switched-off feature, and before a single token is spent.
+        $switch = app(FeatureSwitch::class)->of($task->taskList?->team?->infodot_team_uuid, self::FEATURE);
+
+        if (! $switch['available']) {
+            return ['source' => self::SOURCE_UNAVAILABLE, 'reason' => 'feature_off', 'message' => $switch['message'], 'subtasks' => []];
+        }
+
         $prompt = $this->buildPrompt($task);
         $answer = $this->client->ask($task, $userId, $prompt, self::SCHEMA);
 

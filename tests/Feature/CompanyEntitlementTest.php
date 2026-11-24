@@ -585,7 +585,7 @@ class CompanyEntitlementTest extends TestCase
 
         $this->actingAs($user)->get('/dashboard')->assertStatus(403);
 
-        $this->assertSame(['answer' => ['entitled' => false, 'status' => 'suspended', 'available' => true, 'message' => null]], Cache::get('infodot:entitlement:tasks:'.self::ACME));
+        $this->assertSame(['answer' => ['entitled' => false, 'status' => 'suspended', 'available' => true, 'message' => null, 'features' => []]], Cache::get('infodot:entitlement:tasks:'.self::ACME));
     }
 
     // ---- R-61 availability contract -------------------------------------------------------------------------------
