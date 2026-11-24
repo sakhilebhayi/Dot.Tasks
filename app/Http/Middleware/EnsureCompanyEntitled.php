@@ -51,6 +51,12 @@ class EnsureCompanyEntitled
 
         $answer = $this->entitlement->of((string) $team->infodot_team_uuid);
 
+        // R-61: a platform InfoDot has switched off (maintenance, unavailable) is off for everyone, whatever they hold. Nothing is deleted
+        // or changed; the page says so plainly. This is checked before what the company holds, because it is a different question.
+        if ($answer !== null && ! $answer['available']) {
+            return $this->unavailable($request, $answer['message']);
+        }
+
         if ($answer === null || $answer['entitled']) {
             return $next($request);
         }
@@ -82,6 +88,16 @@ class EnsureCompanyEntitled
     private function localAllowed(Request $request): bool
     {
         return ! $request->hasSession() || $request->session()->get(CompanyEntitlement::PERSONAL_SESSION_KEY) !== false;
+    }
+
+    private function unavailable(Request $request, ?string $message): Response
+    {
+        if ($request->expectsJson() || $request->is('livewire/*')) {
+            return response()->json(['message' => $message ?? 'Dot.Tasks is temporarily unavailable.', 'reason' => 'platform_unavailable'], 503)->header('Retry-After', '60');
+        }
+
+        return response()->view('errors.platform-unavailable', ['message' => $message, 'signedIn' => true], 503)
+            ->header('Cache-Control', 'no-store, private')->header('Retry-After', '60');
     }
 
     private function refuse(Request $request, string $status, bool $personal = false): Response

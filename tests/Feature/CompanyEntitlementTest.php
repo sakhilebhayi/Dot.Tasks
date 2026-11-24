@@ -446,7 +446,7 @@ class CompanyEntitlementTest extends TestCase
         Log::shouldHaveReceived('warning')->withArgs(fn ($message) => str_starts_with($message, 'InfoDot entitlement check gave no answer'))->once();
     }
 
-    public function test_the_answer_is_cached_per_company_for_ten_minutes(): void
+    public function test_the_answer_is_cached_per_company_for_a_minute(): void
     {
         $user = $this->memberOfCompany();
         $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
@@ -455,12 +455,12 @@ class CompanyEntitlementTest extends TestCase
         $this->actingAs($user)->get('/my-tasks')->assertOk();
         $this->assertSame(1, $this->readCalls());
 
-        $this->travel(9)->minutes();
+        $this->travel(50)->seconds();
         $this->actingAs($user)->get('/dashboard')->assertOk();
         $this->assertSame(1, $this->readCalls());
 
         // After the window InfoDot is asked again, and a changed answer takes effect.
-        $this->travel(2)->minutes();
+        $this->travel(20)->seconds();
         $this->infodotSays([self::ACME => $this->platforms(self::ACME, $this->refusedRow('payment_required'))]);
         $this->actingAs($user)->get('/dashboard')->assertStatus(403)->assertSee('Dot.Tasks needs a payment for Acme Ltd');
         $this->assertSame(2, $this->readCalls());
@@ -585,6 +585,74 @@ class CompanyEntitlementTest extends TestCase
 
         $this->actingAs($user)->get('/dashboard')->assertStatus(403);
 
-        $this->assertSame(['answer' => ['entitled' => false, 'status' => 'suspended']], Cache::get('infodot:entitlement:tasks:'.self::ACME));
+        $this->assertSame(['answer' => ['entitled' => false, 'status' => 'suspended', 'available' => true, 'message' => null]], Cache::get('infodot:entitlement:tasks:'.self::ACME));
+    }
+
+    // ---- R-61 availability contract -------------------------------------------------------------------------------
+
+    private function maintenanceRow(bool $entitled = true): array
+    {
+        return ['status' => 'temporarily_unavailable', 'entitled' => $entitled, 'is_core' => true, 'available' => false, 'state' => 'maintenance', 'message' => 'Dot.Tasks is under maintenance. Your data is safe and nothing about your account has changed. Please try again later.'];
+    }
+
+    public function test_a_platform_switched_off_at_infodot_is_unavailable_even_to_a_company_that_holds_it(): void
+    {
+        $user = $this->memberOfCompany();
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME, $this->maintenanceRow())]);
+
+        $this->actingAs($user)->get('/dashboard')->assertStatus(503)->assertSee('under maintenance')->assertSee('kept as they are')->assertHeader('Retry-After', '60');
+        $this->actingAs($user)->getJson('/my-tasks')->assertStatus(503)->assertJsonPath('reason', 'platform_unavailable');
+        $this->assertDatabaseHas('users', ['id' => $user->id]);
+    }
+
+    public function test_switching_it_back_on_takes_effect_within_a_minute_and_nothing_was_lost(): void
+    {
+        $user = $this->memberOfCompany();
+        $list = TaskList::create(['team_id' => $user->current_team_id, 'owner_id' => $user->id, 'name' => 'Shaft seven overhaul']);
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME, $this->maintenanceRow())]);
+        $this->actingAs($user)->get('/dashboard')->assertStatus(503);
+
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
+        $this->actingAs($user)->get('/dashboard')->assertStatus(503); // still inside the one-minute window
+        $this->travel(70)->seconds();
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+        $this->assertDatabaseHas('task_lists', ['id' => $list->id]);
+    }
+
+    public function test_an_infodot_from_before_the_contract_is_not_a_switch_off(): void
+    {
+        $user = $this->memberOfCompany();
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
+
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+    }
+
+    public function test_an_outage_keeps_the_last_answer_for_six_hours_and_then_carries_on(): void
+    {
+        $user = $this->memberOfCompany();
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME, $this->maintenanceRow())]);
+        $this->actingAs($user)->get('/dashboard')->assertStatus(503);
+
+        // InfoDot goes down: the last answer, "unavailable", still holds.
+        $this->infodotSays([self::ACME => Http::response('', 503)]);
+        $this->travel(90)->seconds();
+        $this->actingAs($user)->get('/dashboard')->assertStatus(503);
+        $this->travel(5)->hours();
+        $this->actingAs($user)->get('/dashboard')->assertStatus(503);
+
+        // Past six hours with no answer at all, the platform carries on rather than locking everyone out.
+        $this->travel(2)->hours();
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+    }
+
+    public function test_a_platform_that_was_available_stays_available_through_an_outage(): void
+    {
+        $user = $this->memberOfCompany();
+        $this->infodotSays([self::ACME => $this->platforms(self::ACME)]);
+        $this->actingAs($user)->get('/dashboard')->assertOk();
+
+        $this->infodotSays([self::ACME => Http::response('', 500)]);
+        $this->travel(2)->minutes();
+        $this->actingAs($user)->get('/dashboard')->assertOk();
     }
 }
