@@ -9,6 +9,7 @@ use App\Models\TaskStatus;
 use App\Models\TaskTemplate;
 use App\Observers\AuditedSetup;
 use App\Services\AuditLog;
+use App\Support\EssentialCron;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Request;
@@ -37,6 +38,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        EssentialCron::listen();
+
         foreach ([TaskField::class, TaskList::class, TaskRule::class, TaskStatus::class, TaskTemplate::class] as $model) {
             $model::observe(AuditedSetup::class);
         }
